@@ -9,19 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-004** HTTP Executor (`src/engine/http-executor.ts`)
-  - Follow TDD: write `src/engine/http-executor.test.ts` first
-  - `execute(config: RequestConfig, env?: Environment, auth?: AuthProfile): Promise<HttpResponse>`
-  - Supports GET, POST, PUT, PATCH, DELETE
-  - Handles JSON body, form body, raw body, query params, custom headers
-  - Variable substitution: replace `{{varName}}` tokens in url, headers, body using active environment
-  - Auth injection: Bearer (Authorization header), API key (header or query param), Basic (base64 Authorization header)
-  - Returns `HttpResponse` with status, body (parsed if JSON), headers, latency in ms
-  - Error responses (4xx, 5xx) are returned as valid `HttpResponse`, not thrown
-  - Network errors (timeout, DNS failure) throw a typed `RequestError`
-  - Use `undici` fetch for HTTP calls
-  - SOLID: single responsibility - executor only fires requests, does not read files or manage state
-
 - [ ] **T-005** Variable Substitutor (`src/engine/variable-substitutor.ts`)
   - Follow TDD: write `src/engine/variable-substitutor.test.ts` first
   - `substitute(template: string, variables: Record<string, string>): string`
