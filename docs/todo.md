@@ -9,15 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-005** Variable Substitutor (`src/engine/variable-substitutor.ts`)
-  - Follow TDD: write `src/engine/variable-substitutor.test.ts` first
-  - `substitute(template: string, variables: Record<string, string>): string`
-  - Replaces all `{{varName}}` occurrences with values from the variables map
-  - Unknown variables are left as-is (do not throw)
-  - `substituteConfig(config: RequestConfig, variables: Record<string, string>): RequestConfig` - applies substitution to url, headers, body (if string), and query params
-  - Pure function - no side effects, no file I/O
-  - Extracted as its own module (DRY: reused by executor and future request chaining)
-
 - [ ] **T-006** Collection Manager (`src/engine/collection-manager.ts`)
   - Follow TDD: write `src/engine/collection-manager.test.ts` first (use temp dirs via `os.tmpdir()`)
   - `CollectionManager` class - takes a `baseDir` (path to `.reqly/collections/`) in constructor (DI, testable)

@@ -8,11 +8,8 @@ export class RequestError extends Error {
   }
 }
 
-function substitute(str: string, variables: Record<string, string>): string {
-  return str.replace(/\{\{(.*?)\}\}/g, (match, key) => {
-    return variables[key] !== undefined ? variables[key] : match;
-  });
-}
+import { substitute } from './variable-substitutor.js';
+
 
 export async function execute(
   config: RequestConfig,
