@@ -5,7 +5,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M1 - Now: Core Engine
+## M1 - Done: Core Engine
 
 **Goal:** A working local execution engine with an MCP interface that AI agents (Cursor, Claude Code) can use immediately. No UI yet. Pure capability.
 
@@ -24,7 +24,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M2 - Next: Localhost UI
+## M2 - Now: Localhost UI
 
 **Goal:** A human-usable interface at `localhost:4242`. Developers who prefer a visual interface can use the same engine their agents use. BYOK prompt interface makes it AI-native.
 
