@@ -22,6 +22,9 @@ export function EnvironmentSwitcher() {
   useEffect(() => {
     loadEnvs();
     
+    const handleReload = () => loadEnvs();
+    window.addEventListener('reqly-reload', handleReload);
+
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         setIsOpen(false);
@@ -37,6 +40,7 @@ export function EnvironmentSwitcher() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('reqly-reload', handleReload);
     };
   }, []);
 
@@ -45,6 +49,7 @@ export function EnvironmentSwitcher() {
       await setActiveEnvironment(name);
       setActive(name);
       setIsOpen(false);
+      window.dispatchEvent(new Event('reqly-reload'));
     } catch (err) {
       console.error(err);
     }
@@ -70,6 +75,7 @@ export function EnvironmentSwitcher() {
       setVariables([{ key: '', value: '' }]);
       loadEnvs();
       await handleSelect(newEnvName.trim());
+      window.dispatchEvent(new Event('reqly-reload'));
     } catch (err) {
       console.error(err);
     }

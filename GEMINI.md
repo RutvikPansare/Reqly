@@ -104,6 +104,16 @@ If you find yourself writing LLM logic into the server, a cron job, or a route h
   - `src/types/` - shared TypeScript types
 - Test files live next to the code they test: `*.test.ts` / `*.test.tsx`
 
+## UI Reference: Hoppscotch
+
+The `example/hoppscotch/` folder contains a clone of the Hoppscotch open source API client (MIT licensed). Use it as a **visual and component reference only** when building `src/ui/`.
+
+- Match Hoppscotch's layout patterns, spacing, and interaction design where possible
+- Do NOT copy their Vue components directly - Reqly's UI is React
+- Do NOT copy their HTTP execution, collection storage, or auth logic - Reqly has its own engine
+- Useful references: `example/hoppscotch/packages/hoppscotch-common/src/components/` for component structure, and the live site at `hoppscotch.io` as a visual target
+- The goal is a UI that feels as polished as Hoppscotch, built on top of Reqly's own `/api/*` endpoints
+
 ## Testing Standards
 
 ### 1. Colocation Policy
