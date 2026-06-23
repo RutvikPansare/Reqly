@@ -7,6 +7,7 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-23
+- [x] **T-020** Auto-Capture Proxy (`src/engine/proxy.ts`)
 - [x] **T-019** Test Assertions engine (`src/engine/assertion-runner.ts`)
 - [x] **T-018** Prompt Bar Component
 - [x] **T-017** Settings Panel Component

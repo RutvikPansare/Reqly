@@ -11,6 +11,27 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
   app.use(express.json());
 
   // Engine API Routes
+  app.post('/api/proxy/start', async (req, res) => {
+    try {
+      await context.proxyServer.start({ 
+        port: req.body.port || 7474, 
+        collectionName: req.body.collectionName || 'captured' 
+      });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/proxy/stop', async (req, res) => {
+    try {
+      await context.proxyServer.stop();
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/collections', async (req, res) => {
     try {
       const cols = await context.collectionManager.listCollections();

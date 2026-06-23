@@ -4,6 +4,7 @@ import * as os from 'os';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
 import { AuthManager } from '../engine/auth-manager.js';
+import { ProxyServer } from '../engine/proxy.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { startServer } from '../mcp/server.js';
 import { EngineContext } from '../mcp/tools/types.js';
@@ -22,11 +23,13 @@ async function main() {
   const collectionManager = new CollectionManager(collectionsDir);
   const environmentManager = new EnvironmentManager(environmentsPath);
   const authManager = new AuthManager(globalConfigPath);
+  const proxyServer = new ProxyServer(collectionManager);
 
   const context: EngineContext = {
     collectionManager,
     environmentManager,
     authManager,
+    proxyServer,
     executeRequest,
     lastResponseCache: new Map()
   };

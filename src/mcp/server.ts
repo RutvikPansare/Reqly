@@ -10,6 +10,9 @@ import * as setEnvironment from './tools/set-environment.js';
 import * as runCollection from './tools/run-collection.js';
 import * as getResponse from './tools/get-response.js';
 
+import * as startProxy from './tools/start-proxy.js';
+import * as stopProxy from './tools/stop-proxy.js';
+
 const tools = [
   runRequest,
   createRequest,
@@ -17,7 +20,9 @@ const tools = [
   listCollections,
   setEnvironment,
   runCollection,
-  getResponse
+  getResponse,
+  startProxy,
+  stopProxy
 ];
 
 export function createServer(context: EngineContext) {

@@ -10,17 +10,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 ## Queue
 
 
-- [ ] **T-020** Auto-Capture Proxy (`src/engine/proxy.ts`)
-  - Local HTTP proxy server listening on a configurable port (default `7474`)
-  - Use `http-proxy` or implement via Node's `http` module with `CONNECT` support for HTTPS tunnelling
-  - When a request passes through the proxy, capture: method, url, request headers, request body, response status, response headers, response body, latency
-  - Convert each captured request into a `CollectionRequest` shape and call `CollectionManager.addRequest()` to save it to a nominated capture collection (default: `captured`)
-  - Deduplication: if a request with the same method + url already exists in the capture collection, skip or update (configurable)
-  - `ProxyServer` class: `start(port: number, collectionName: string): Promise<void>` and `stop(): Promise<void>`
-  - Filter list: ignore requests to `localhost` and `127.0.0.1` by default (configurable) - don't capture Reqly's own traffic
-  - Expose via MCP: add `start_proxy` and `stop_proxy` tools to the MCP server
-  - Expose via REST: `POST /api/proxy/start { port, collectionName }` and `POST /api/proxy/stop`
-  - TDD for capture logic and deduplication; proxy networking verified manually
 
 - [ ] **T-021** Collection Runner (`src/engine/collection-runner.ts`)
   - Follow TDD: write `src/engine/collection-runner.test.ts` first
