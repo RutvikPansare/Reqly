@@ -7,6 +7,7 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-23
+- [x] **T-025** Request Chaining - response context store
 - [x] **T-024** UI: Collection Runner panel
 - [x] **T-023** UI: Assertions editor
 - [x] **T-022** UI: Proxy capture panel
