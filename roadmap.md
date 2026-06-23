@@ -37,7 +37,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M3 - Later: Differentiators
+## M3 - Now: Differentiators
 
 **Goal:** Features that make Reqly genuinely better than Postman or Bruno for the AI-native developer. Auto-capture is the most important - it removes all manual work.
 
