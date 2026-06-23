@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as os from 'os';
 import { EngineContext } from '../mcp/tools/types.js';
 
 export function startExpressServer(context: EngineContext, port: number = 4242) {
@@ -41,6 +43,34 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     try {
       await context.environmentManager.setActiveEnvironment(req.body.name);
       res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  const globalConfigPath = path.join(os.homedir(), '.reqly', 'config.json');
+
+  app.get('/api/config', async (req, res) => {
+    try {
+      const data = await fs.readFile(globalConfigPath, 'utf-8');
+      res.json(JSON.parse(data));
+    } catch (e: any) {
+      if (e.code === 'ENOENT') res.json({});
+      else res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/config', async (req, res) => {
+    try {
+      let currentConfig = {};
+      try {
+        const data = await fs.readFile(globalConfigPath, 'utf-8');
+        currentConfig = JSON.parse(data);
+      } catch (e: any) {}
+      
+      const newConfig = { ...currentConfig, ...req.body };
+      await fs.writeFile(globalConfigPath, JSON.stringify(newConfig, null, 2));
+      res.json(newConfig);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

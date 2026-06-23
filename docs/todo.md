@@ -9,11 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-016** Environment Switcher Component
-  - Dropdown in top bar to switch between dev/staging/prod instantly
-- [ ] **T-017** Settings Panel Component
-  - BYOK API key input stored in `~/.reqly/config.json` via engine API
-  - Model selector (GPT-4o, Claude, etc.)
 - [ ] **T-018** Prompt Bar Component
   - Text input for user prompts
   - Logic to send to LLM (using BYOK API key)

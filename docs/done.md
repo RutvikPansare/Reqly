@@ -7,6 +7,8 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-23
+- [x] **T-017** Settings Panel Component
+- [x] **T-016** Environment Switcher Component
 - [x] **T-015** Response Viewer Component
 - [x] **T-014** Request Editor Component
 - [x] **T-013** Sidebar Component
