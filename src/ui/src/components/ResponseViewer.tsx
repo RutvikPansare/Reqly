@@ -17,7 +17,7 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
 
   if (!response && !isSending) {
     return (
-      <div className="flex-1 flex flex-col bg-gray-900 border border-gray-800 rounded-md overflow-hidden min-h-[300px]">
+      <div className="flex-1 flex flex-col bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
         <div className="flex justify-between items-center px-4 py-2 bg-gray-950 border-b border-gray-800">
           <span className="text-sm font-semibold text-gray-300">Response</span>
         </div>
@@ -65,7 +65,7 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
   };
 
   return (
-    <div className="flex flex-col flex-1 bg-gray-900 border border-gray-800 rounded-md overflow-hidden min-h-[300px]">
+    <div className="flex flex-col flex-1 bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
       <div className="flex justify-between items-center px-4 py-2 bg-gray-950 border-b border-gray-800">
         <span className="text-sm font-semibold text-gray-300">Response</span>
         {isSending ? (
