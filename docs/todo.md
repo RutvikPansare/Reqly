@@ -12,15 +12,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 
 
-- [ ] **T-022** UI: Proxy capture panel
-  - New sidebar section below collections: "Capture" with a toggle switch (on/off)
-  - When toggled on: calls `POST /api/proxy/start`, shows port number and "Listening..." status
-  - When toggled off: calls `POST /api/proxy/stop`
-  - Live feed of captured requests: polls `GET /api/proxy/captured` every 2 seconds while active, shows method + URL + status in a scrollable list
-  - Click a captured request to open it in the Request Editor (read-only preview with "Save to collection" button)
-  - "Save to collection" button: dropdown to pick target collection, then calls `POST /api/collections/:name/requests`
-  - "Clear" button: clears the captured list from memory (does not delete from any collection)
-  - Instructions callout: "Set your app's HTTP proxy to `localhost:7474`"
 
 - [ ] **T-023** UI: Assertions editor
   - New tab in the Request Editor: "Assertions" (after Headers/Body/Auth/Params)

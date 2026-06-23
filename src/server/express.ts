@@ -102,6 +102,35 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.post('/api/run/adhoc', async (req, res) => {
+    try {
+      let env = undefined;
+      if (req.body.environmentName) {
+        const envs = await context.environmentManager.listEnvironments();
+        env = envs.find((e: any) => e.name === req.body.environmentName);
+      } else {
+        env = await context.environmentManager.getActiveEnvironment() || undefined;
+      }
+      
+      let auth = undefined;
+      if (req.body.request.authProfileId) {
+        auth = await context.authManager.getProfile(req.body.request.authProfileId);
+      }
+
+      const response = await context.executeRequest(req.body.request, env, auth);
+      
+      const { runAssertions } = await import('../engine/assertion-runner.js');
+      let assertions: any[] = [];
+      if (req.body.request.assertions) {
+        assertions = runAssertions(response, req.body.request.assertions);
+      }
+
+      res.json({ response, assertions });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/config', async (req, res) => {
     try {
       const data = await fs.readFile(globalConfigPath, 'utf-8');

@@ -9,6 +9,26 @@ import { PromptBar } from './components/PromptBar';
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
+  const [activeRequest, setActiveRequest] = useState<any>({ name: 'New Request', method: 'GET', url: 'https://jsonplaceholder.typicode.com/todos/1' });
+  const [response, setResponse] = useState<any>(null);
+
+  const handleFire = async (req: any) => {
+    try {
+      const res = await fetch('/api/run/adhoc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request: req })
+      });
+      const data = await res.json();
+      if (data.response) {
+        setResponse({ ...data.response, assertions: data.assertions });
+      } else {
+        setResponse({ status: 500, time: 0, data: data.error, headers: {} });
+      }
+    } catch (e: any) {
+      setResponse({ status: 500, time: 0, data: e.message, headers: {} });
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -25,9 +45,9 @@ function App() {
         </aside>
         <main className="flex-1 bg-gray-950 overflow-y-auto p-4 flex flex-col gap-4">
           <div className="h-1/2 min-h-[300px]">
-            <RequestEditor request={{ name: 'New Request', method: 'GET', url: '' }} onFire={() => {}} onSave={() => {}} />
+            <RequestEditor request={activeRequest} onFire={handleFire} onSave={setActiveRequest} />
           </div>
-          <ResponseViewer response={null} />
+          <ResponseViewer response={response} />
         </main>
       </div>
       <PromptBar />

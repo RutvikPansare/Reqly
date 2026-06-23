@@ -38,6 +38,22 @@ export function ResponseViewer({ response }: ResponseViewerProps) {
           Copy
         </button>
       </div>
+      
+      {response.assertions && response.assertions.length > 0 && (
+        <div className="px-4 py-2 bg-gray-900 border-b border-gray-800 flex gap-4 overflow-x-auto">
+          {response.assertions.map((ass: any, i: number) => (
+            <div key={i} className={\`text-xs flex items-center gap-1 px-2 py-1 rounded \${ass.passed ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}\`}>
+              <span>{ass.passed ? '✅' : '❌'}</span>
+              <span className="font-mono">{ass.assertion.field}</span>
+              <span className="text-gray-500">{ass.assertion.operator}</span>
+              <span>{ass.assertion.value}</span>
+              {!ass.passed && (
+                <span className="ml-2 text-red-300 opacity-80">(got: {ass.actual})</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex border-b border-gray-800 px-2 bg-gray-950">
         {['body', 'headers'].map(tab => (
