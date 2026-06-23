@@ -36,7 +36,11 @@ export function Sidebar({ activeRequest, onSelectRequest, onRunCollection }: Sid
     loadData();
     const closeMenu = () => setContextMenu(null);
     document.addEventListener('click', closeMenu);
-    return () => document.removeEventListener('click', closeMenu);
+    window.addEventListener('reqly-reload', loadData);
+    return () => {
+      document.removeEventListener('click', closeMenu);
+      window.removeEventListener('reqly-reload', loadData);
+    };
   }, []);
 
   const handleCreateCol = async () => {
