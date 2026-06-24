@@ -1,0 +1,50 @@
+Reqly is an execution engine for API requests, designed primarily as a Model Context Protocol (MCP) server for AI coding agents. It stores requests in YAML collections within `.reqly/` in the user's project, and it can execute them and report results back to the AI. It also hosts a local React UI at http://localhost:4242.
+
+## Installation and Setup
+
+To install Reqly and configure it for Cursor or Claude Desktop, the user should run:
+```bash
+npm install -g reqly
+reqly setup
+```
+
+## MCP Tools
+
+Reqly exposes the following MCP tools for AI agents:
+- `list_collections`: List all collections and requests.
+- `create_collection`: Scaffold a new collection.
+- `create_request`: Create a new request in a collection.
+- `run_request`: Fire a saved request by name.
+- `run_collection`: Fire all requests in a collection sequentially.
+- `get_response`: Retrieve last response for a request.
+- `set_environment`: Switch active environment.
+- `start_proxy`: Start the auto-capture proxy server.
+- `stop_proxy`: Stop the auto-capture proxy server.
+
+## YAML Collection Format
+
+Reqly collections are stored in `.reqly/` and are plain YAML files.
+Example `payments.yaml`:
+
+```yaml
+id: req_123
+name: payments
+requests:
+  - name: create_payment
+    method: POST
+    url: "{{baseUrl}}/api/payments"
+    headers:
+      Content-Type: application/json
+    body:
+      amount: 100
+      currency: USD
+    assertions:
+      - path: "status"
+        operator: "eq"
+        value: 201
+```
+
+## UI and CLI
+
+- **UI:** The visual UI is available at `http://localhost:4242`.
+- **CLI Runner:** Run tests with `reqly run <collection> [request] --reporter pretty`. Supports `--reporter json` and `--reporter tap` for CI/CD.

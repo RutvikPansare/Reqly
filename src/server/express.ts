@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as os from 'os';
 import { EngineContext } from '../mcp/tools/types.js';
 import { fileURLToPath } from 'url';
@@ -300,7 +301,10 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
   });
 
   const packageRoot = path.resolve(__dirname, '..', '..');
-  const uiBuildPath = path.join(packageRoot, 'src', 'ui', 'dist');
+  let uiBuildPath = path.join(packageRoot, 'dist', 'ui');
+  if (!fsSync.existsSync(uiBuildPath)) {
+    uiBuildPath = path.join(packageRoot, 'src', 'ui', 'dist');
+  }
   app.use(express.static(uiBuildPath));
 
   app.use((req, res) => {

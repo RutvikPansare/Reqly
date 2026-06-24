@@ -13,9 +13,21 @@ import { EngineContext } from '../mcp/tools/types.js';
 
 import { startExpressServer } from './express.js';
 
+import { parseArgs } from './cli-parser.js';
+import { handleRunCommand } from './run-command.js';
+import { handleSetupCommand } from './setup-command.js';
+
 async function main() {
+  const parsed = parseArgs(process.argv);
+  
+  if (parsed.command === 'setup') {
+    const exitCode = await handleSetupCommand(parsed);
+    process.exit(exitCode);
+  }
+
   const globalReqlyDir = path.join(os.homedir(), '.reqly');
-  const projectReqlyDir = path.join(process.cwd(), '.reqly');
+  const cwd = parsed.flags.projectDir ? path.resolve(process.cwd(), parsed.flags.projectDir) : process.cwd();
+  const projectReqlyDir = path.join(cwd, '.reqly');
 
   const collectionsDir = projectReqlyDir;
   const environmentsPath = path.join(projectReqlyDir, 'environments.yaml');
@@ -25,6 +37,13 @@ async function main() {
   const collectionManager = new CollectionManager(collectionsDir);
   const environmentManager = new EnvironmentManager(environmentsPath);
   const authManager = new AuthManager(globalConfigPath);
+
+  if (parsed.command === 'run') {
+    const exitCode = await handleRunCommand(parsed, collectionManager, environmentManager, authManager);
+    process.exit(exitCode);
+  }
+
+  // start command (default)
   const proxyServer = new ProxyServer(collectionManager);
   const responseStore = new ResponseStore();
   const historyStore = new HistoryStore();

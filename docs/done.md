@@ -7,6 +7,12 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-24
+- [x] **T-061** AI-readable README and llms.txt
+- [x] **T-060** `reqly setup` - one-command MCP configuration
+- [x] **T-059** npm package publishing setup
+- [x] **T-058** CI-friendly output reporters
+- [x] **T-057** `reqly run` - CLI collection runner with output and exit codes
+- [x] **T-056** CLI sub-command routing
 - [x] **T-055** UI icon and styling refresh - Lucide React throughout, pill method badges, nav rail active chip
 - [x] **T-054** Widen search bar in top bar, reposition left-of-center
 - [x] **T-053** Move GraphQL to dedicated nav rail section (full workspace)

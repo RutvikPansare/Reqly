@@ -1,0 +1,6 @@
+src/
+example/
+*.test.*
+.env*
+docs/
+!dist/
