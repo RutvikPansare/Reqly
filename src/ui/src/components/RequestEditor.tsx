@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { fetchAuthProfiles, createAuthProfile, fetchEnvironments } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
+import CodeMirror from '@uiw/react-codemirror';
+import { graphql } from 'cm6-graphql';
+import { buildClientSchema } from 'graphql';
+import { json } from '@codemirror/lang-json';
 
 interface RequestEditorProps {
   request: any;
@@ -251,6 +255,16 @@ fragment TypeRef on __Type {
       return (queryType?.fields || []).map((f: any) => f.name).filter(Boolean);
     };
 
+    const gqlSchemaObj = useMemo(() => {
+      if (!schema) return null;
+      try {
+        return buildClientSchema({ __schema: schema });
+      } catch (e) {
+        console.error('Error building GraphQL client schema:', e);
+        return null;
+      }
+    }, [schema]);
+
     // Report live edits so the parent can track dirty state.
     useEffect(() => {
       if (!onChange) return;
@@ -355,22 +369,28 @@ fragment TypeRef on __Type {
                       Schema loaded: {schemaFields().length} query fields - {schemaFields().join(', ')}
                     </div>
                   )}
-                  <textarea
-                    className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
-                    placeholder="query GetUsers {\n  users {\n    id\n    name\n  }\n}"
-                    value={graphqlQuery}
-                    onChange={e => setGraphqlQuery(e.target.value)}
-                    spellCheck={false}
-                  />
+                  <div className="flex-1 min-h-0 bg-gray-950 border border-gray-800 rounded overflow-hidden">
+                    <CodeMirror
+                      value={graphqlQuery}
+                      height="100%"
+                      theme="dark"
+                      extensions={gqlSchemaObj ? [graphql(gqlSchemaObj)] : []}
+                      onChange={(val) => setGraphqlQuery(val)}
+                      className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                    />
+                  </div>
                 </>
               ) : (
-                <textarea
-                  className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
-                  placeholder='{\n  "limit": 10\n}'
-                  value={graphqlVariables}
-                  onChange={e => setGraphqlVariables(e.target.value)}
-                  spellCheck={false}
-                />
+                <div className="flex-1 min-h-0 bg-gray-950 border border-gray-800 rounded overflow-hidden">
+                  <CodeMirror
+                    value={graphqlVariables}
+                    height="100%"
+                    theme="dark"
+                    extensions={[json()]}
+                    onChange={(val) => setGraphqlVariables(val)}
+                    className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                  />
+                </div>
               )}
             </div>
           ) : (

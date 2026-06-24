@@ -7,6 +7,7 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-24
+- [x] **T-051** GraphQL IDE Autocomplete (CodeMirror + cm6-graphql)
 - [x] **T-050** Fix URL input field flickering by updating React useEffect dependencies
 - [x] **T-049** UI state persistence across page refreshes (M4 UI)
 - [x] **T-048** Visual polish pass - match Hoppscotch aesthetic (M4 UI)
