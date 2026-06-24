@@ -14,10 +14,12 @@ describe('run-request', () => {
       environmentManager: { getActiveEnvironment: async () => null },
       authManager: { getProfile: async () => null },
       executeRequest: async () => ({ status: 200 }),
-      responseStore: { set: vi.fn(), get: () => undefined }
+      responseStore: { set: vi.fn(), get: () => undefined },
+      historyStore: { append: vi.fn() }
     };
     const res = await handler({ collectionName: 'C', requestName: 'Req1' }, mockContext);
     expect(res.content[0].text).toContain('200');
     expect(mockContext.responseStore.set).toHaveBeenCalledWith('Req1', { status: 200 });
+    expect(mockContext.historyStore.append).toHaveBeenCalled();
   });
 });

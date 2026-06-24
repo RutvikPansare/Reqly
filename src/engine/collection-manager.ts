@@ -112,4 +112,28 @@ export class CollectionManager {
 
     await fs.unlink(filePath);
   }
+
+  async deleteCollection(name: string): Promise<void> {
+    const colPath = path.join(this.baseDir, name);
+    if (!existsSync(colPath)) {
+      throw new CollectionNotFoundError(`Collection ${name} not found`);
+    }
+    await fs.rm(colPath, { recursive: true, force: true });
+  }
+
+  async renameCollection(oldName: string, newName: string): Promise<void> {
+    const oldPath = path.join(this.baseDir, oldName);
+    if (!existsSync(oldPath)) {
+      throw new CollectionNotFoundError(`Collection ${oldName} not found`);
+    }
+    const newPath = path.join(this.baseDir, newName);
+    // A single atomic rename moves the folder and all its request files.
+    await fs.rename(oldPath, newPath);
+  }
+
+  async duplicateRequest(collectionName: string, requestName: string, newName: string): Promise<void> {
+    const original = await this.getRequest(collectionName, requestName);
+    const copy: CollectionRequest = { ...original, name: newName };
+    await this.addRequest(collectionName, copy);
+  }
 }

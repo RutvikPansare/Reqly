@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { updateRequest } from './api';
-import { Sidebar } from './components/Sidebar';
+import { NavRail } from './components/NavRail';
+import type { NavPanel } from './components/NavRail';
+import { CollectionsPanel } from './components/CollectionsPanel';
+import { EnvironmentsPanel } from './components/EnvironmentsPanel';
+import { HistoryPanel } from './components/HistoryPanel';
+import { CapturePanel } from './components/CapturePanel';
 import { RequestEditor } from './components/RequestEditor';
 import { ResponseViewer } from './components/ResponseViewer';
 import { EnvironmentSwitcher } from './components/EnvironmentSwitcher';
@@ -17,7 +22,8 @@ interface TabData {
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
-  
+  const [activePanel, setActivePanel] = useState<NavPanel>('collections');
+
   const [tabs, setTabs] = useState<TabData[]>([
     {
       id: 'default',
@@ -74,6 +80,7 @@ function App() {
       updateTab(tabId, { response: { status: 500, latency: 0, body: e.message, headers: {} } });
     } finally {
       updateTab(tabId, { isSending: false });
+      window.dispatchEvent(new Event('reqly-reload'));
     }
   };
 
@@ -99,6 +106,18 @@ function App() {
     setActiveTabId(newId);
   };
 
+  const onSelectCaptured = (req: any) => {
+    // Open a captured request in a new tab and surface the editor.
+    const tabId = `captured-${Date.now()}`;
+    setTabs(prev => [...prev, {
+      id: tabId,
+      request: { ...req, _collection: 'captured' },
+      response: null,
+      isSending: false
+    }]);
+    setActiveTabId(tabId);
+  };
+
   return (
     <div className="h-screen flex flex-col relative overflow-hidden">
       <header className="h-14 border-b border-gray-800 bg-gray-950 flex items-center justify-between px-4 shrink-0">
@@ -118,16 +137,35 @@ function App() {
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden min-h-0">
+        <NavRail
+          active={activePanel}
+          onSelect={(panel) => {
+            if (panel === 'settings') {
+              setShowSettings(true);
+            } else {
+              setActivePanel(panel);
+            }
+          }}
+        />
         <aside className="w-64 border-r border-gray-800 bg-gray-900 flex flex-col overflow-hidden min-h-0">
           <div className="flex-1 overflow-y-auto">
-            <Sidebar 
-              activeRequest={activeTab?.request}
-              onSelectRequest={handleSelectRequestFromSidebar}
-              onRunCollection={setRunningCollection} 
-            />
+            {activePanel === 'collections' && (
+              <CollectionsPanel
+                activeRequest={activeTab?.request}
+                onSelectRequest={handleSelectRequestFromSidebar}
+                onRunCollection={setRunningCollection}
+              />
+            )}
+            {activePanel === 'environments' && <EnvironmentsPanel />}
+            {activePanel === 'history' && (
+              <HistoryPanel onSelectRequest={handleSelectRequestFromSidebar} />
+            )}
+            {activePanel === 'capture' && (
+              <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
+            )}
           </div>
         </aside>
-        
+
         <main className="flex-1 bg-gray-950 overflow-hidden flex flex-col min-h-0 relative">
           <div className="flex bg-gray-900 border-b border-gray-800 shrink-0 overflow-x-auto">
             {tabs.map(tab => (

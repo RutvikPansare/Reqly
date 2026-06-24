@@ -9,7 +9,7 @@ export function CapturePanel({ onSelectCaptured }: { onSelectCaptured: (req: any
       await fetch('/api/proxy/stop', { method: 'POST' });
       setActive(false);
     } else {
-      await fetch('/api/proxy/start', { 
+      await fetch('/api/proxy/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port: 7474, collectionName: 'captured' })
@@ -38,52 +38,61 @@ export function CapturePanel({ onSelectCaptured }: { onSelectCaptured: (req: any
   }, [active]);
 
   return (
-    <div className="mt-4 border-t border-gray-800 pt-4">
-      <div className="px-4 mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Capture</h3>
-        <button 
+    <div className="p-3 flex flex-col gap-3 h-full">
+      <div className="flex items-center justify-between shrink-0">
+        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Capture</h2>
+        <button
           onClick={toggleProxy}
-          className={`w-8 h-4 rounded-full relative transition-colors \${active ? 'bg-blue-600' : 'bg-gray-700'}`}
+          title={active ? 'Stop proxy' : 'Start proxy'}
+          className={`w-9 h-5 rounded-full relative transition-colors ${active ? 'bg-blue-600' : 'bg-gray-700'}`}
         >
-          <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all \${active ? 'left-[18px]' : 'left-0.5'}`} />
+          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-[18px]' : 'left-0.5'}`} />
         </button>
       </div>
 
       {active && (
-        <div className="px-4 mb-2 text-xs text-blue-400">
-          Listening on port 7474...<br/>
+        <div className="text-xs text-blue-400 shrink-0">
+          Listening on port 7474...
+          <br />
           <span className="text-gray-500">Set your app's HTTP proxy to localhost:7474</span>
         </div>
       )}
 
       {requests.length > 0 && (
-        <div className="px-4 mb-2 flex justify-end">
+        <div className="flex justify-end shrink-0">
           <button onClick={clearCaptured} className="text-xs text-gray-500 hover:text-white">Clear</button>
         </div>
       )}
 
-      <div className="max-h-48 overflow-y-auto">
-        {requests.map((req, i) => (
-          <div 
-            key={i} 
-            className="px-4 py-2 hover:bg-gray-800 cursor-pointer flex flex-col gap-1 border-b border-gray-800/50"
-            onClick={() => onSelectCaptured(req)}
-          >
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-bold \${
-                req.method === 'GET' ? 'text-blue-400' : 
-                req.method === 'POST' ? 'text-green-400' : 
-                req.method === 'PUT' ? 'text-yellow-400' : 
-                req.method === 'DELETE' ? 'text-red-400' : 'text-gray-400'
-              }`}>
-                {req.method}
-              </span>
-              <span className="text-xs text-gray-300 truncate" title={req.url}>
-                {new URL(req.url).pathname}
-              </span>
+      <div className="flex-1 overflow-y-auto">
+        {requests.length === 0 && !active && (
+          <p className="text-xs text-gray-600 italic px-1">Start the proxy to capture traffic.</p>
+        )}
+        {requests.map((req, i) => {
+          let path = req.url;
+          try { path = new URL(req.url).pathname; } catch {}
+          return (
+            <div
+              key={i}
+              className="px-2 py-2 hover:bg-gray-800 cursor-pointer flex flex-col gap-1 border-b border-gray-800/50 rounded"
+              onClick={() => onSelectCaptured(req)}
+            >
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold ${
+                  req.method === 'GET' ? 'text-green-400' :
+                  req.method === 'POST' ? 'text-yellow-400' :
+                  req.method === 'PUT' ? 'text-blue-400' :
+                  req.method === 'DELETE' ? 'text-red-400' : 'text-gray-400'
+                }`}>
+                  {req.method}
+                </span>
+                <span className="text-xs text-gray-300 truncate" title={req.url}>
+                  {path}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

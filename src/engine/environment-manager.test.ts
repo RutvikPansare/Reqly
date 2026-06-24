@@ -60,4 +60,27 @@ describe('EnvironmentManager', () => {
   it('should throw if getting missing environment', async () => {
     await expect(manager.getEnvironment('missing')).rejects.toThrow();
   });
+
+  it('should delete an environment', async () => {
+    await manager.createEnvironment('dev', {});
+    await manager.createEnvironment('prod', {});
+
+    await manager.deleteEnvironment('dev');
+
+    const envs = await manager.listEnvironments();
+    expect(envs.map(e => e.name)).toEqual(['prod']);
+  });
+
+  it('should throw if deleting a missing environment', async () => {
+    await expect(manager.deleteEnvironment('missing')).rejects.toThrow();
+  });
+
+  it('should clear active when deleting the active environment', async () => {
+    await manager.createEnvironment('dev', {});
+    await manager.setActiveEnvironment('dev');
+
+    await manager.deleteEnvironment('dev');
+
+    expect(await manager.getActiveEnvironment()).toBeNull();
+  });
 });

@@ -23,7 +23,7 @@ describe('run-collection', () => {
         if (req.name === 'R2') throw new Error('Network error');
         return { status: 200 };
       },
-      responseStore: { set: () => {}, get: () => undefined }
+      responseStore: { set: () => {}, get: () => undefined }, historyStore: { append: () => {} }
     };
     const res = await handler({ collectionName: 'C1' }, mockContext);
     const summary = JSON.parse(res.content[0].text);

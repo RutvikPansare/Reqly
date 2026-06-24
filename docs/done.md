@@ -7,6 +7,11 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-24
+- [x] **T-049** Fix and update Anthropic API key in settings
+- [x] **T-043** Request history panel + backend (M4 UI)
+- [x] **T-042** Collection manager UI - full CRUD from sidebar (M4 UI)
+- [x] **T-041** Environment editor - full CRUD in UI (M4 UI)
+- [x] **T-040** Left icon navigation rail (M4 UI)
 - [x] **T-034** Add graceful shutdown handlers for Express and proxy servers
 
 ## 2026-06-23

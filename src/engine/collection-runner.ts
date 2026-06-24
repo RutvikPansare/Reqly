@@ -59,6 +59,7 @@ export class CollectionRunner {
 
         response = await this.context.executeRequest(config, options.environment, auth);
         this.context.responseStore.set(request.name, response);
+        this.context.historyStore.append(request, response, { collectionName: collectionName });
 
         if (request.assertions && request.assertions.length > 0) {
           assertionResults = runAssertions(response, request.assertions);

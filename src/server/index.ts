@@ -6,6 +6,7 @@ import { EnvironmentManager } from '../engine/environment-manager.js';
 import { AuthManager } from '../engine/auth-manager.js';
 import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
+import { HistoryStore } from '../engine/history-store.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { startServer } from '../mcp/server.js';
 import { EngineContext } from '../mcp/tools/types.js';
@@ -26,6 +27,7 @@ async function main() {
   const authManager = new AuthManager(globalConfigPath);
   const proxyServer = new ProxyServer(collectionManager);
   const responseStore = new ResponseStore();
+  const historyStore = new HistoryStore();
 
   const context: EngineContext = {
     collectionManager,
@@ -33,6 +35,7 @@ async function main() {
     authManager,
     proxyServer,
     responseStore,
+    historyStore,
     executeRequest
   };
 

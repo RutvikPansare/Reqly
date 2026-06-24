@@ -22,9 +22,12 @@ Reqly is an execution engine, not an AI product. The AI always lives outside Req
 ## What's Built
 - **Core Engine:** HTTP execution, Collection Management (YAML), Environment substitution, Auth profiles.
 - **MCP Server:** Tools to create, list, run requests/collections, and manage proxy.
-- **Local UI:** Sidebar for collections/environments, Request Editor with params/headers/body/auth/assertions, Response Viewer with syntax highlighting and assertions results, Settings panel, Prompt bar, Multiple Tabs support for parallel editing.
+- **Local UI:** Left icon navigation rail (Collections / Environments / History / Capture / Settings) driving switchable sidebar panels, Request Editor with params/headers/body/auth/assertions, Response Viewer with syntax highlighting and assertions results, Settings panel, Prompt bar, Multiple Tabs support for parallel editing.
 - **Differentiators:** 
   - **Auto-Capture Proxy:** Captures live traffic and saves requests.
   - **Test Assertions:** Verify response status, latency, and JSON body paths.
   - **Collection Runner:** Sequentially run all requests in a collection with pass/fail tracking.
   - **Request Chaining:** Downstream requests can access previous response data via `{{requestName.response.path}}`.
+- **Environment Editor:** Full CRUD for environments and variables from the UI nav rail - create, rename-by-recreate, edit variables inline, delete with confirmation. Backed by `POST/PUT/DELETE /api/environments`.
+- **Collection Manager UI:** Full CRUD from sidebar - right-click context menus on collections (Add Request, Rename, Delete) and requests (Rename, Duplicate, Delete), inline rename via Enter/Escape, +New collection input. Backed by existing `/api/collections` CRUD endpoints.
+- **Request History:** In-memory log (last 200) of every fired request - timestamp, method, URL, status, latency. History panel in nav rail lists newest first, click to load request into editor, Clear button. Backed by `GET/DELETE /api/history`. Appended on adhoc runs, MCP `run_request`, and collection runs.

@@ -18,7 +18,7 @@ describe('CollectionRunner', () => {
       executeRequest: vi.fn()
         .mockResolvedValueOnce({ status: 200, latency: 10, headers: {}, body: null })
         .mockResolvedValueOnce({ status: 500, latency: 10, headers: {}, body: null }),
-      responseStore: { set: () => {}, get: () => undefined }
+      responseStore: { set: () => {}, get: () => undefined }, historyStore: { append: () => {} }
     };
 
     const runner = new CollectionRunner(mockContext);

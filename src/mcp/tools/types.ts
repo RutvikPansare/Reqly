@@ -3,6 +3,7 @@ import { EnvironmentManager } from '../../engine/environment-manager.js';
 import { AuthManager } from '../../engine/auth-manager.js';
 import { ProxyServer } from '../../engine/proxy.js';
 import { ResponseStore } from '../../engine/response-store.js';
+import { HistoryStore } from '../../engine/history-store.js';
 import { HttpResponse, CollectionRequest, Environment, AuthProfile } from '../../types/index.js';
 
 export interface EngineContext {
@@ -11,6 +12,7 @@ export interface EngineContext {
   authManager: AuthManager;
   proxyServer: ProxyServer;
   responseStore: ResponseStore;
+  historyStore: HistoryStore;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile) => Promise<HttpResponse>;
 }
 

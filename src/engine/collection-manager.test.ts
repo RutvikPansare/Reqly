@@ -83,4 +83,50 @@ describe('CollectionManager', () => {
     const retrievedReq = await manager.getRequest('TestCol', 'UpdateMe');
     expect(retrievedReq.url).toBe('http://new.com');
   });
+
+  it('should delete a collection and its requests', async () => {
+    await manager.createCollection('TestCol');
+    await manager.addRequest('TestCol', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+    await manager.createCollection('Other');
+
+    await manager.deleteCollection('TestCol');
+
+    const cols = await manager.listCollections();
+    expect(cols.map(c => c.name)).toEqual(['Other']);
+    await expect(manager.getCollection('TestCol')).rejects.toThrow(CollectionNotFoundError);
+  });
+
+  it('should throw when deleting a missing collection', async () => {
+    await expect(manager.deleteCollection('Missing')).rejects.toThrow(CollectionNotFoundError);
+  });
+
+  it('should rename a collection, preserving its requests', async () => {
+    await manager.createCollection('OldName');
+    await manager.addRequest('OldName', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+
+    await manager.renameCollection('OldName', 'NewName');
+
+    const renamed = await manager.getCollection('NewName');
+    expect(renamed.name).toBe('NewName');
+    expect(renamed.requests).toHaveLength(1);
+    expect(renamed.requests[0].name).toBe('GetUser');
+    await expect(manager.getCollection('OldName')).rejects.toThrow(CollectionNotFoundError);
+  });
+
+  it('should throw when renaming a missing collection', async () => {
+    await expect(manager.renameCollection('Missing', 'NewName')).rejects.toThrow(CollectionNotFoundError);
+  });
+
+  it('should duplicate a request under a new name', async () => {
+    await manager.createCollection('TestCol');
+    await manager.addRequest('TestCol', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+
+    await manager.duplicateRequest('TestCol', 'GetUser', 'GetUser Copy');
+
+    const col = await manager.getCollection('TestCol');
+    expect(col.requests.map(r => r.name).sort()).toEqual(['GetUser', 'GetUser Copy']);
+    const copy = await manager.getRequest('TestCol', 'GetUser Copy');
+    expect(copy.url).toBe('http://x.com');
+    expect(copy.method).toBe('GET');
+  });
 });

@@ -104,8 +104,23 @@ export class EnvironmentManager {
     if (!env) {
       throw new EnvironmentNotFoundError(`Environment ${name} not found`);
     }
-    
+
     env.variables = variables;
+    await this.saveStore(store);
+  }
+
+  async deleteEnvironment(name: string): Promise<void> {
+    const store = await this.loadStore();
+    const exists = store.environments.some(e => e.name === name);
+    if (!exists) {
+      throw new EnvironmentNotFoundError(`Environment ${name} not found`);
+    }
+
+    store.environments = store.environments.filter(e => e.name !== name);
+    // Clear the active pointer if it referenced the deleted environment.
+    if (store.active === name) {
+      delete store.active;
+    }
     await this.saveStore(store);
   }
 }

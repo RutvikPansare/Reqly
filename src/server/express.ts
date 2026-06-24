@@ -68,6 +68,37 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.put('/api/collections/:name', async (req, res) => {
+    try {
+      await context.collectionManager.renameCollection(req.params.name, req.body.name);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/collections/:name', async (req, res) => {
+    try {
+      await context.collectionManager.deleteCollection(req.params.name);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/collections/:name/duplicate', async (req, res) => {
+    try {
+      await context.collectionManager.duplicateRequest(
+        req.params.name,
+        req.body.requestName,
+        req.body.newName
+      );
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/collections/:name/requests', async (req, res) => {
     try {
       await context.collectionManager.addRequest(req.params.name, req.body);
@@ -163,6 +194,24 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.delete('/api/environments/:name', async (req, res) => {
+    try {
+      await context.environmentManager.deleteEnvironment(req.params.name);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/history', (req, res) => {
+    res.json(context.historyStore.list());
+  });
+
+  app.delete('/api/history', (req, res) => {
+    context.historyStore.clear();
+    res.json({ success: true });
+  });
+
   const globalConfigPath = path.join(os.homedir(), '.reqly', 'config.json');
 
   app.post('/api/run/collection', async (req, res) => {
@@ -210,6 +259,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
       const response = await context.executeRequest(config, env, auth);
       context.responseStore.set(req.body.request.name, response);
+      context.historyStore.append(req.body.request, response);
       
       const { runAssertions } = await import('../engine/assertion-runner.js');
       let assertions: any[] = [];
