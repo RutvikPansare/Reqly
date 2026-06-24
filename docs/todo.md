@@ -59,7 +59,7 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
   - No backend needed - search runs over the in-memory collection list from `GET /api/collections`
   - Reference: `example/hoppscotch/packages/hoppscotch-common/src/components/app/SpotlightSearch.vue` for the overlay layout, input styling, and grouped results pattern. Implement in React, same visual concept.
 
-- [ ] **T-045** Request tabs - polish and closeable (M4 UI)
+- [x] **T-045** Request tabs - polish and closeable (M4 UI)
   - Each open request tab should have an X close button (appears on hover)
   - Unsaved changes indicator: small dot on the tab label if the request has been modified but not saved
   - Unsaved state tracking: keep the last-saved snapshot per tab so we can diff for a dirty flag

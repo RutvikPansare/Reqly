@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { updateRequest } from './api';
 import { NavRail } from './components/NavRail';
 import type { NavPanel } from './components/NavRail';
@@ -17,9 +17,28 @@ import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 interface TabData {
   id: string;
   request: any;
+  savedRequest: any;
   response: any;
   isSending: boolean;
 }
+
+const isDirty = (tab: TabData): boolean => {
+  if (!tab.savedRequest) return false;
+  const a = { ...tab.request };
+  const b = { ...tab.savedRequest };
+  // _collection is UI-only metadata, ignore in comparison.
+  delete a._collection; delete b._collection;
+  delete a.response; delete b.response;
+  return JSON.stringify(a) !== JSON.stringify(b);
+};
+
+const makeTab = (request: any): TabData => ({
+  id: '',
+  request,
+  savedRequest: JSON.parse(JSON.stringify(request)),
+  response: null,
+  isSending: false
+});
 
 function App() {
   const [showSettings, setShowSettings] = useState(false);
@@ -37,16 +56,20 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const [tabs, setTabs] = useState<TabData[]>([
-    {
-      id: 'default',
-      request: { name: 'New Request', method: 'GET', url: 'https://jsonplaceholder.typicode.com/todos/1' },
-      response: null,
-      isSending: false
-    }
-  ]);
+  const [tabs, setTabs] = useState<TabData[]>(() => {
+    const t = makeTab({ name: 'New Request', method: 'GET', url: 'https://jsonplaceholder.typicode.com/todos/1' });
+    t.id = 'default';
+    return [t];
+  });
   const [activeTabId, setActiveTabId] = useState<string>('default');
   const [runningCollection, setRunningCollection] = useState<string | null>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+
+  const scrollTabs = (dir: 'left' | 'right') => {
+    const el = tabBarRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
+  };
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
 
@@ -58,13 +81,11 @@ function App() {
     e.stopPropagation();
     if (tabs.length === 1) {
       // Don't close the last tab, just reset it
-      setTabs([{
-        id: 'default-' + Date.now(),
-        request: { name: 'New Request', method: 'GET', url: '' },
-        response: null,
-        isSending: false
-      }]);
-      setActiveTabId('default-' + Date.now());
+      const id = 'default-' + Date.now();
+      const t = makeTab({ name: 'New Request', method: 'GET', url: '' });
+      t.id = id;
+      setTabs([t]);
+      setActiveTabId(id);
       return;
     }
     
@@ -103,31 +124,27 @@ function App() {
     if (existing) {
       setActiveTabId(tabId);
     } else {
-      setTabs([...tabs, { id: tabId, request: { ...req, _collection: col }, response: null, isSending: false }]);
+      const t = makeTab({ ...req, _collection: col });
+      t.id = tabId;
+      setTabs([...tabs, t]);
       setActiveTabId(tabId);
     }
   };
 
   const createNewTab = () => {
     const newId = 'req-' + Date.now();
-    setTabs([...tabs, {
-      id: newId,
-      request: { name: 'New Request', method: 'GET', url: '' },
-      response: null,
-      isSending: false
-    }]);
+    const t = makeTab({ name: 'New Request', method: 'GET', url: '' });
+    t.id = newId;
+    setTabs([...tabs, t]);
     setActiveTabId(newId);
   };
 
   const onSelectCaptured = (req: any) => {
     // Open a captured request in a new tab and surface the editor.
     const tabId = `captured-${Date.now()}`;
-    setTabs(prev => [...prev, {
-      id: tabId,
-      request: { ...req, _collection: 'captured' },
-      response: null,
-      isSending: false
-    }]);
+    const t = makeTab({ ...req, _collection: 'captured' });
+    t.id = tabId;
+    setTabs(prev => [...prev, t]);
     setActiveTabId(tabId);
   };
 
@@ -189,33 +206,59 @@ function App() {
         </aside>
 
         <main className="flex-1 bg-gray-950 overflow-hidden flex flex-col min-h-0 relative">
-          <div className="flex bg-gray-900 border-b border-gray-800 shrink-0 overflow-x-auto">
-            {tabs.map(tab => (
-              <div 
-                key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
-                className={`flex items-center gap-2 px-3 py-2 border-r border-gray-800 cursor-pointer min-w-32 max-w-48 group ${activeTabId === tab.id ? 'bg-gray-800' : 'hover:bg-gray-800/50'}`}
-              >
-                <span className={`text-xs font-bold ${tab.request.method === 'GET' ? 'text-green-400' : tab.request.method === 'POST' ? 'text-yellow-400' : tab.request.method === 'DELETE' ? 'text-red-400' : 'text-blue-400'}`}>
-                  {tab.request.method}
-                </span>
-                <span className="text-sm text-gray-300 truncate flex-1">
-                  {tab.request.name || 'Untitled'}
-                </span>
-                <button 
-                  onClick={(e) => closeTab(e, tab.id)}
-                  className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              </div>
-            ))}
-            <button 
-              onClick={createNewTab}
-              className="px-3 hover:bg-gray-800 text-gray-400 hover:text-white border-r border-gray-800"
-              title="New Tab"
+          <div className="flex items-center bg-gray-900 border-b border-gray-800 shrink-0">
+            <button
+              onClick={() => scrollTabs('left')}
+              className="px-1.5 py-2 text-gray-500 hover:text-white hover:bg-gray-800 shrink-0"
+              title="Scroll left"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div ref={tabBarRef} className="flex overflow-x-auto flex-1" style={{ scrollbarWidth: 'none' }}>
+              {tabs.map(tab => {
+                const isActive = activeTabId === tab.id;
+                const dirty = isDirty(tab);
+                return (
+                  <div
+                    key={tab.id}
+                    onClick={() => setActiveTabId(tab.id)}
+                    className={`relative flex items-center gap-2 px-3 py-2 border-r border-gray-800 cursor-pointer min-w-32 max-w-48 group ${isActive ? 'bg-gray-800' : 'hover:bg-gray-800/50'}`}
+                  >
+                    {isActive && (
+                      <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500" aria-hidden="true" />
+                    )}
+                    <span className={`text-xs font-bold ${tab.request.method === 'GET' ? 'text-green-400' : tab.request.method === 'POST' ? 'text-yellow-400' : tab.request.method === 'DELETE' ? 'text-red-400' : 'text-blue-400'}`}>
+                      {tab.request.method}
+                    </span>
+                    <span className="text-sm text-gray-300 truncate flex-1">
+                      {tab.request.name || 'Untitled'}
+                    </span>
+                    {dirty && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 group-hover:hidden" title="Unsaved changes" />
+                    )}
+                    <button
+                      onClick={(e) => closeTab(e, tab.id)}
+                      className={`text-gray-500 hover:text-red-400 p-0.5 rounded shrink-0 ${dirty ? 'hidden group-hover:block' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                );
+              })}
+              <button
+                onClick={createNewTab}
+                className="px-3 hover:bg-gray-800 text-gray-400 hover:text-white border-r border-gray-800 shrink-0"
+                title="New Tab"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            </div>
+            <button
+              onClick={() => scrollTabs('right')}
+              className="px-1.5 py-2 text-gray-500 hover:text-white hover:bg-gray-800 shrink-0"
+              title="Scroll right"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
           </div>
 
@@ -227,14 +270,16 @@ function App() {
                 style={{ display: activeTabId === tab.id ? 'flex' : 'none' }}
               >
                 <div className="flex-1 min-h-0 flex flex-col">
-                  <RequestEditor 
-                    request={tab.request} 
-                    onFire={(req) => handleFire(req, tab.id)} 
+                  <RequestEditor
+                    request={tab.request}
+                    onFire={(req) => handleFire(req, tab.id)}
+                    onChange={(req) => updateTab(tab.id, { request: { ...req, _collection: tab.request._collection } })}
                     onSave={async (req) => {
                       if (tab.request._collection) {
                         try {
                           await updateRequest(tab.request._collection, tab.request.name, req);
-                          updateTab(tab.id, { request: { ...req, _collection: tab.request._collection } });
+                          const saved = { ...req, _collection: tab.request._collection };
+                          updateTab(tab.id, { request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) });
                           window.dispatchEvent(new Event('reqly-reload'));
                         } catch (e) {
                           console.error("Failed to save request", e);
@@ -243,7 +288,7 @@ function App() {
                       } else {
                         alert("This request doesn't belong to a collection yet. Support for saving new requests coming soon.");
                       }
-                    }} 
+                    }}
                   />
                 </div>
                 <div className="flex-1 min-h-0 flex flex-col">

@@ -7,9 +7,10 @@ interface RequestEditorProps {
   request: any;
   onFire: (req: any) => void;
   onSave: (req: any) => void;
+  onChange?: (req: any) => void;
 }
 
-export function RequestEditor({ request, onFire, onSave }: RequestEditorProps) {
+export function RequestEditor({ request, onFire, onSave, onChange }: RequestEditorProps) {
   const tabs = ['params', 'headers', 'body', 'auth', 'assertions'];
   
   if (!request) {
@@ -144,6 +145,15 @@ export function RequestEditor({ request, onFire, onSave }: RequestEditorProps) {
       else { delete req.authProfileId; delete req.auth; }
       onSave(req);
     };
+
+    // Report live edits so the parent can track dirty state.
+    useEffect(() => {
+      if (!onChange) return;
+      const req = { ...request, method, url, assertions, headers: getHeadersRecord(), body: getParsedBody() };
+      if (authProfileId) req.authProfileId = authProfileId;
+      else if (authType !== 'none') req.auth = { type: authType, credentials: authCreds };
+      onChange(req);
+    }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds]);
 
   return (
     <div className="flex flex-col h-full bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
