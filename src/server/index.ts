@@ -18,6 +18,8 @@ import { handleRunCommand } from './run-command.js';
 import { handleSetupCommand } from './setup-command.js';
 import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
+import { handleStopCommand } from './stop-command.js';
+import { readLock, writeLock, clearLock, isProcessAlive } from './lock.js';
 
 async function main() {
   const parsed = parseArgs(process.argv);
@@ -38,6 +40,11 @@ async function main() {
 
   if (parsed.command === 'status') {
     const exitCode = await handleStatusCommand(parsed, authManager);
+    process.exit(exitCode);
+  }
+
+  if (parsed.command === 'stop') {
+    const exitCode = await handleStopCommand();
     process.exit(exitCode);
   }
 
@@ -79,7 +86,33 @@ async function main() {
     }
   };
 
-  const expressServer = startExpressServer(context);
+  const port = 4242;
+  let mcpOnly = false;
+
+  const lock = await readLock();
+  if (lock && isProcessAlive(lock.pid)) {
+    try {
+      const res = await fetch(`http://localhost:${lock.port}/api/switch-project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectDir: cwd })
+      });
+      if (res.ok) {
+        console.error(`Switched active project to ${cwd}`);
+        mcpOnly = true;
+      }
+    } catch (e) {
+      // existing instance unreachable - fall through to a normal start
+    }
+  } else if (lock) {
+    // stale lock left behind by a dead process
+    await clearLock();
+  }
+
+  const expressServer = mcpOnly ? null : startExpressServer(context, port);
+  if (!mcpOnly) {
+    await writeLock(cwd, port);
+  }
   await startServer(context);
 
   const shutdown = async () => {
@@ -89,11 +122,19 @@ async function main() {
     } catch (e) {
       // ignore
     }
-    
-    expressServer.close(() => {
-      console.error('Express server closed.');
+
+    if (!mcpOnly) {
+      await clearLock();
+    }
+
+    if (expressServer) {
+      expressServer.close(() => {
+        console.error('Express server closed.');
+        process.exit(0);
+      });
+    } else {
       process.exit(0);
-    });
+    }
 
     // Fallback to force exit if connections are hanging
     setTimeout(() => {

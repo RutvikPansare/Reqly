@@ -8,6 +8,14 @@ npm install -g reqly
 reqly setup
 ```
 
+## The fastest way to start
+
+Don't wait for traffic capture - if the agent can read the project's source, tell it directly:
+```
+"Read my Express routes and build a Reqly collection for every endpoint"
+```
+The agent should call `create_collection` then `create_request` for each route it finds in the code. No proxy or traffic capture needed.
+
 ## MCP Tools
 
 Reqly exposes the following MCP tools for AI agents:
@@ -17,7 +25,12 @@ Reqly exposes the following MCP tools for AI agents:
 - `run_request`: Fire a saved request by name.
 - `run_collection`: Fire all requests in a collection sequentially.
 - `get_response`: Retrieve last response for a request.
+- `get_response_full`: Retrieve the last untruncated response for a request.
 - `set_environment`: Switch active environment.
+- `create_environment`: Create a new named environment with variables.
+- `set_variable`: Set a variable on an environment.
+- `get_variables`: List variables for an environment.
+- `delete_variable`: Remove a variable from an environment.
 - `start_proxy`: Start the auto-capture proxy server.
 - `stop_proxy`: Stop the auto-capture proxy server.
 

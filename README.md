@@ -11,6 +11,16 @@ npm install -g @rutvikpansare123/reqly
 reqly setup
 ```
 
+## The fastest way to start
+
+Don't capture traffic, don't write YAML by hand - just tell your agent to read your code:
+
+```
+"Read my Express routes and build a Reqly collection for every endpoint"
+```
+
+The agent reads your codebase and calls `create_collection` + `create_request` for each route it finds. No traffic capture needed - it already knows your API from the code.
+
 ## What Reqly does
 
 Reqly is not an AI—it's an engine for your AI. When connected, your AI coding agent can securely query your local APIs, introspect GraphQL endpoints, and verify behavior without you needing to tab out to a browser. All collections are stored in `.reqly/` in your project so they are committed to Git alongside your code. Reqly also serves a local developer UI for you at `http://localhost:4242`.
@@ -28,6 +38,11 @@ Reqly exposes these tools directly to your AI agent:
 | `run_collection` | Fires all requests sequentially in a collection | `collectionName` |
 | `get_response` | Retrieves the last stored response data for a request | `collectionName`, `requestName` |
 | `set_environment` | Changes active env for variable resolution (`{{var}}`) | `environmentName` |
+| `create_environment` | Creates a new named environment with variables | `name`, `variables` |
+| `set_variable` | Sets a variable on an environment | `environmentName`, `key`, `value` |
+| `get_variables` | Lists variables for an environment | `environmentName` |
+| `delete_variable` | Removes a variable from an environment | `environmentName`, `key` |
+| `get_response_full` | Retrieves the last untruncated response for a request | `collectionName`, `requestName` |
 | `start_proxy` | Auto-captures local outbound traffic into a collection | `port`, `collectionName` |
 | `stop_proxy` | Stops traffic interception | (None) |
 

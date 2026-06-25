@@ -5,6 +5,9 @@ import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import { EngineContext } from '../mcp/tools/types.js';
+import { CollectionManager } from '../engine/collection-manager.js';
+import { EnvironmentManager } from '../engine/environment-manager.js';
+import { writeLock, readLock } from './lock.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -202,6 +205,33 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  app.post('/api/switch-project', async (req, res) => {
+    try {
+      const projectDir: string = req.body.projectDir;
+      if (!projectDir) {
+        res.status(400).json({ error: 'projectDir is required' });
+        return;
+      }
+      const collectionsDir = path.join(projectDir, '.reqly');
+      const environmentsPath = path.join(collectionsDir, 'environments.yaml');
+
+      context.collectionManager = new CollectionManager(collectionsDir);
+      context.environmentManager = new EnvironmentManager(environmentsPath);
+
+      const lock = await readLock();
+      await writeLock(projectDir, lock?.port || port);
+
+      res.json({ ok: true, projectDir });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/shutdown', async (req, res) => {
+    res.json({ ok: true });
+    setTimeout(() => process.kill(process.pid, 'SIGTERM'), 50);
   });
 
   app.get('/api/history', (req, res) => {

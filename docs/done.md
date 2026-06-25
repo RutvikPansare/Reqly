@@ -7,6 +7,8 @@ Newest date first. Don't edit history - only append.
 -->
 
 ## 2026-06-24
+- [x] **T-068 (part 1)** README.md and llms.txt now headline the AI-writes-collection workflow ("Read my Express routes and build a Reqly collection for every endpoint") right after Quick Setup/Install, ahead of the proxy/capture flow. Also synced both docs' MCP tool tables with `create_environment`, `set_variable`, `get_variables`, `delete_variable`, `get_response_full` (previously undocumented). Middleware SDK section remains queued in todo.md, blocked on M5.
+- [x] **T-066** Single-instance enforcement with live project switching - `src/server/lock.ts` (lock file at `~/.reqly/running.json`: pid/projectDir/port/startedAt), `POST /api/switch-project` hot-swaps `context.collectionManager`/`environmentManager` on the running instance, `POST /api/shutdown` for graceful remote stop, startup detect-and-delegate logic in `src/server/index.ts` (switches the running instance then starts its own MCP-only stdio server instead of exiting or fighting for port 4242), stale-lock cleanup via `isProcessAlive`, new `reqly stop` CLI command (`src/server/stop-command.ts`)
 - [x] **T-065** `reqly use <path>` + `reqly status` commands - `activeProject` field in `~/.reqly/config.json` as final fallback in the project-dir resolution chain (flag > env var > config > cwd), for hosts like Claude Desktop with no per-project launch context
 - [x] **T-064** Add `REQLY_PROJECT_DIR` env var fallback for project root resolution (fixes ENOENT when MCP host launches reqly with wrong cwd)
 - [x] **T-062** Response truncation for large payloads (MCP + engine)

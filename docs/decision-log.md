@@ -8,6 +8,9 @@ Newest entries at the top.
 
 ## 2026-06-24
 
+**Decision:** Single-instance enforcement (T-066) - one process binds port 4242 and serves Express/UI at any time, tracked via `~/.reqly/running.json`. When a second `reqly start --project-dir X` is launched, it switches the running instance's project (`POST /api/switch-project`, hot-swaps `collectionManager`/`environmentManager` on the shared context) and then runs its own MCP stdio server in "mcp-only" mode (no Express, no port bind) rather than exiting.
+**Why:** Two AI tools (e.g. Cursor on one project, Claude Code on another) each spawning their own `reqly start` previously raced for port 4242 - the loser crashed, or worse, both MCP stdio sessions silently shared the first instance's `collectionManager`, writing collections to the wrong project's `.reqly/` folder. Switching the existing instance's context (instead of running N independent engines) keeps exactly one Express/UI process alive while still giving every AI tool's stdio session its own correctly-scoped MCP server. `reqly stop` was added so a user can cleanly shut the lone Express instance down without hunting for its pid.
+
 **Decision:** Added `reqly use <path>` and `reqly status` CLI commands, plus an `activeProject` field in `~/.reqly/config.json` as the final fallback in the project-dir resolution chain (priority: `--project-dir` flag > `REQLY_PROJECT_DIR` env var > `activeProject` config field > `process.cwd()`).
 **Why:** Claude Desktop spawns one global `reqly` MCP server process shared across every project, with no `${workspaceFolder}` equivalent and no way to inject per-project launch args or env vars per chat. T-064's env var fallback still required hand-editing `claude_desktop_config.json` per project switch. `reqly use` lets the user (or an agent) point the server at a project with a single command and no JSON editing; `reqly status` reports which source won, for debugging "why is it looking in the wrong folder".
 

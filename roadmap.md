@@ -61,6 +61,20 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
+## M5 - Later: Inbound Capture
+
+**Goal:** Capture calls coming INTO the user's own app (not outbound). The current proxy captures what the app sends to external APIs. This milestone captures what clients (browsers, mobile, other servers) send to the user's own endpoints.
+
+**Important context:** for AI-native developers (the primary Reqly user), the preferred workflow is NOT traffic capture at all - it's having the AI agent read the codebase and write the collection directly via `create_collection` and `create_request` MCP tools. The agent already knows every route, request shape, and auth requirement from the code. Inbound capture is for cases where the codebase is too complex, undocumented, or the developer prefers to capture real traffic instead.
+
+- [ ] **Middleware SDK** _(priority)_ - Tiny npm package (`reqly-middleware`) added once to Express/Fastify/Next.js. Captures every inbound request server-side, forwards a copy to the local Reqly instance. Works for all traffic: browser, mobile, webhooks, server-to-server. One line: `app.use(reqlyMiddleware())`. Works for local dev only (middleware phones home to `localhost:4242` - production capture requires the webhook tunnel from M4). Once shipped, update `README.md` and `llms.txt` to document this as a capture option alongside the AI-writes-collection workflow.
+
+- [ ] **Chrome Extension** _(lower priority, after middleware)_ - Intercepts XHR/fetch via `chrome.webRequest` API, sends copies to `localhost:4242/capture`. Zero code change. Works for any hosted app the developer browses. Limitation: browser traffic only - no mobile, webhooks, or server-to-server.
+
+**Note on the current proxy:** the existing auto-capture proxy (M3) captures OUTBOUND calls - what the user's app sends to external APIs (Stripe, Shopify, etc.). M5 is the complement: what comes IN.
+
+---
+
 ## Later: Team Secrets Layer
 
 **Why not M4:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). A secrets layer syncs those across teammates' machines. This is a harder product (encryption at rest, access controls, SOC 2 territory) and a real paid tier - but only worth building once the core tool has users. Not "cloud sync of collections" - that's redundant with git.
