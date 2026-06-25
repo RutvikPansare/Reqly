@@ -4,6 +4,7 @@ import { fetchAuthProfiles, createAuthProfile, fetchEnvironments } from '../api'
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
+import { ScriptEditor } from './ScriptEditor';
 
 interface RequestEditorProps {
   request: any;
@@ -468,12 +469,10 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
             <p className="text-xs text-gray-500">
               Runs before the request fires. <code className="bg-gray-800 px-1 rounded">env</code> (read/write) and <code className="bg-gray-800 px-1 rounded">request</code> (read-only) are available. Mutations to <code className="bg-gray-800 px-1 rounded">env</code> are applied for this request and downstream requests in a collection run.
             </p>
-            <textarea
-              className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none"
-              placeholder={`// Example: set a dynamic header from env\n// env.timestamp = String(Date.now());\n// env.authToken = "Bearer " + env.rawToken;`}
+            <ScriptEditor
               value={preScript}
-              onChange={e => setPreScript(e.target.value)}
-              spellCheck={false}
+              onChange={setPreScript}
+              placeholder={`// Example: set a dynamic header from env\n// env.timestamp = String(Date.now());\n// env.authToken = "Bearer " + env.rawToken;`}
             />
           </div>
         ) : activeTab === 'post-script' ? (
@@ -481,12 +480,10 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
             <p className="text-xs text-gray-500">
               Runs after the response is received. <code className="bg-gray-800 px-1 rounded">env</code> (read/write), <code className="bg-gray-800 px-1 rounded">request</code>, and <code className="bg-gray-800 px-1 rounded">response</code> are available. Use it to extract tokens from responses and store them in <code className="bg-gray-800 px-1 rounded">env</code> for subsequent requests.
             </p>
-            <textarea
-              className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none"
-              placeholder={`// Example: extract a token from the response body\n// if (response.status === 200) {\n//   env.authToken = response.body.token;\n// }`}
+            <ScriptEditor
               value={postScript}
-              onChange={e => setPostScript(e.target.value)}
-              spellCheck={false}
+              onChange={setPostScript}
+              placeholder={`// Example: extract a token from the response body\n// if (response.status === 200) {\n//   env.authToken = response.body.token;\n// }`}
             />
           </div>
         ) : (
