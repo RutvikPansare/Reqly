@@ -13,6 +13,17 @@ interface RequestEditorProps {
   onChange?: (req: any) => void;
 }
 
+function methodColor(method: string): string {
+  switch ((method || '').toUpperCase()) {
+    case 'GET':    return '#22c55e';
+    case 'POST':   return '#eab308';
+    case 'PUT':    return '#3b82f6';
+    case 'PATCH':  return '#f97316';
+    case 'DELETE': return '#ef4444';
+    default:       return '#a1a1aa';
+  }
+}
+
 export function RequestEditor({ request, onFire, onSave, onChange }: RequestEditorProps) {
   const tabs = ['params', 'headers', 'body', 'auth', 'assertions', 'variables', 'pre-script', 'post-script'];
 
@@ -183,8 +194,8 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
       {/* URL bar */}
       <div className="flex p-2 gap-2" style={{ background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
         <select
-          className="rounded-lg px-2 py-1 text-sm font-semibold focus:outline-none"
-          style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-primary)' }}
+          className="rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
+          style={{ background: 'var(--surface-3)', border: `1px solid ${methodColor(method)}40`, color: methodColor(method) }}
           value={method}
           onChange={e => setMethod(e.target.value as any)}
         >
