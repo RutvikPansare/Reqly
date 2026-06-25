@@ -45,11 +45,11 @@ export function HistoryPanel({ onSelectRequest }: HistoryPanelProps) {
   return (
     <div className="p-3 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between shrink-0">
-        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">History</h2>
+        <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>History</h2>
         {entries.length > 0 && (
           <button
             onClick={handleClear}
-            className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
+            className="text-xs text-red-400 hover:text-red-300 px-2 py-0.5 rounded transition-colors"
             title="Clear history"
           >
             Clear
@@ -59,27 +59,30 @@ export function HistoryPanel({ onSelectRequest }: HistoryPanelProps) {
 
       <div className="space-y-0.5 overflow-y-auto flex-1">
         {entries.length === 0 && (
-          <p className="text-xs text-gray-600 italic px-1">No requests fired yet</p>
+          <p className="text-xs italic px-1" style={{ color: 'var(--text-muted)' }}>No requests fired yet</p>
         )}
         {entries.map(entry => (
           <div
             key={entry.id}
             onClick={() => handleClick(entry)}
-            className="px-2 py-1.5 rounded cursor-pointer hover:bg-gray-800/50 flex items-center gap-2 group"
+            className="px-2 py-1.5 rounded-lg cursor-pointer flex items-center gap-2 group transition-colors"
+            style={{ background: 'transparent' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(entry.method)} shrink-0`}>
               {entry.method}
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-300 truncate">{entry.url}</div>
-              <div className="text-[10px] text-gray-600 flex items-center gap-2">
+              <div className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{entry.url}</div>
+              <div className="text-[10px] flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                 <span>{formatTime(entry.timestamp)}</span>
                 {entry.requestName && <span className="truncate">{entry.requestName}</span>}
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
               <span className={`text-xs font-bold ${statusColor(entry.status)}`}>{entry.status}</span>
-              <span className="text-[10px] text-gray-600">{entry.latency}ms</span>
+              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{entry.latency}ms</span>
             </div>
           </div>
         ))}

@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function NavRail({ active, onSelect }: NavRailProps) {
   return (
-    <nav className="w-12 shrink-0 border-r border-gray-800 bg-gray-950 flex flex-col items-center py-2 gap-1">
+    <nav className="w-12 shrink-0 flex flex-col items-center py-2 gap-1" style={{ background: 'var(--surface-0)', borderRight: '1px solid var(--border)' }}>
       {NAV_ITEMS.map(item => {
         const isActive = active === item.id;
         return (
@@ -38,16 +38,17 @@ export function NavRail({ active, onSelect }: NavRailProps) {
             aria-current={isActive ? 'page' : undefined}
             className="relative w-12 h-10 flex items-center justify-center transition-colors"
           >
-            {/* Active accent bar on the left edge, Hoppscotch `after:left-0 after:w-0.5` */}
             {isActive && (
               <span className="absolute left-0 inset-y-2 w-0.5 bg-blue-500 rounded-full" aria-hidden="true" />
             )}
             <span
-              className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${
-                isActive
-                  ? 'text-blue-400 bg-blue-500/10'
-                  : 'text-gray-500 hover:text-gray-200 hover:bg-gray-900'
-              }`}
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              style={{
+                color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                background: isActive ? 'rgba(59,130,246,0.1)' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLSpanElement).style.background = 'var(--surface-3)'; }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLSpanElement).style.background = 'transparent'; }}
             >
               {item.icon}
             </span>

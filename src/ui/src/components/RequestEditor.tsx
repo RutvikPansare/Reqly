@@ -179,10 +179,12 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
   const availableVariables = Object.keys(activeEnvVars);
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
-      <div className="flex p-2 gap-2 border-b border-gray-800 bg-gray-950">
+    <div className="flex flex-col h-full rounded-xl overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      {/* URL bar */}
+      <div className="flex p-2 gap-2" style={{ background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
         <select
-          className="bg-gray-800 text-gray-200 border border-gray-700 rounded px-2 py-1 text-sm font-semibold focus:outline-none"
+          className="rounded-lg px-2 py-1 text-sm font-semibold focus:outline-none"
+          style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-primary)' }}
           value={method}
           onChange={e => setMethod(e.target.value as any)}
         >
@@ -194,40 +196,33 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
         </select>
         <VariableInput 
           variables={availableVariables}
-          className="flex-1 bg-gray-800 text-gray-200 border border-gray-700 rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
+          className="input flex-1"
           value={url}
           onChange={val => handleUrlChange(val)}
           placeholder="https://api.example.com/v1/users"
         />
-        <button
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5"
-          onClick={handleFireWithAuth}
-        >
-          <SendIcon size={14} />
-          Send
+        <button className="btn btn-primary rounded-lg gap-1.5" onClick={handleFireWithAuth}>
+          <SendIcon size={13} />Send
         </button>
-        <button
-          className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5"
-          onClick={handleSaveWithAuth}
-        >
-          <SaveIcon size={14} />
-          Save
+        <button className="btn btn-secondary rounded-lg gap-1.5" onClick={handleSaveWithAuth}>
+          <SaveIcon size={13} />Save
         </button>
       </div>
 
-      <div className="flex border-b border-gray-800 px-2 bg-gray-950 overflow-x-auto">
+      {/* Tab bar */}
+      <div className="tab-bar overflow-x-auto">
         {tabs.map(tab => (
-          <button 
+          <button
             key={tab}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+            className={`tab-btn capitalize ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {tab === 'pre-script' ? 'Pre-Script' : tab === 'post-script' ? 'Post-Script' : tab}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-4" style={{ background: 'var(--surface-2)' }}>
         {activeTab === 'params' ? (
           <div className="py-2">
             <KeyValueEditor pairs={paramsList} onChange={handleParamsChange} variables={availableVariables} />

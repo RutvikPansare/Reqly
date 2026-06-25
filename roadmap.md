@@ -59,6 +59,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 - [x] **Webhook Testing** - Expose a temporary public URL that captures incoming webhook payloads. Essential for testing Stripe, Shopify, and other inbound webhooks locally.
 - [x] **Pre-run and Post-run Scripts** - Similar to Hoppscotch and Postman. Save pre/post execution scripts per request within a collection. Requires adding text editors in the UI for these scripts. Scripts should have programmatic access to read and initialize/update environment variable keys with values.
 - [ ] teaching agents how to use the app and create collections using response chaining, also using varibales whenever possible for base urls, client ids etc, can we also give example collection with full env varibale usage in the package that wil act like a guide for agents?
+- [ ] need to give per collection varibales as well along with thecurrent env variabes, i think collectio varibale should hol precedecne if there iare matching variables in both places
 
 ---
 

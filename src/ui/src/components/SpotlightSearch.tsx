@@ -94,16 +94,19 @@ export function SpotlightSearch({ onSelectRequest, onClose }: SpotlightSearchPro
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/60"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
+      style={{ background: 'rgba(0,0,0,0.65)' }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl bg-gray-900 border border-gray-700 rounded-lg overflow-hidden"
+        className="w-full max-w-xl rounded-xl overflow-hidden"
+        style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)' }}
         onClick={e => e.stopPropagation()}
       >
         <input
           ref={inputRef}
-          className="w-full bg-transparent px-4 py-3 text-sm text-white outline-none border-b border-gray-800"
+          className="w-full bg-transparent px-4 py-3.5 text-sm outline-none"
+          style={{ color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
           placeholder="Search collections, requests, URLs..."
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -111,29 +114,28 @@ export function SpotlightSearch({ onSelectRequest, onClose }: SpotlightSearchPro
         />
         <div className="max-h-80 overflow-y-auto">
           {results.length === 0 && (
-            <p className="text-xs text-gray-600 italic px-4 py-3">No results</p>
+            <p className="text-xs italic px-4 py-3" style={{ color: 'var(--text-muted)' }}>No results</p>
           )}
           {results.map((item, i) => (
             <div
               key={`${item.type}-${item.collectionName}-${item.label}-${i}`}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => choose(item)}
-              className={`flex items-center gap-3 px-4 py-2 cursor-pointer ${
-                i === activeIndex ? 'bg-gray-800' : 'hover:bg-gray-800/50'
-              }`}
+              className="flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors"
+              style={{ background: i === activeIndex ? 'var(--surface-3)' : 'transparent' }}
             >
               {item.method ? (
                 <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(item.method)} shrink-0`}>
                   {item.method}
                 </span>
               ) : (
-                <span className="text-[10px] text-gray-500 w-12 shrink-0">COL</span>
+                <span className="text-[10px] w-12 shrink-0" style={{ color: 'var(--text-muted)' }}>COL</span>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-gray-200 truncate">{item.label}</div>
-                <div className="text-[10px] text-gray-600 truncate">{item.sublabel}</div>
+                <div className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{item.label}</div>
+                <div className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{item.sublabel}</div>
               </div>
-              <span className="text-[10px] text-gray-600 shrink-0">{item.collectionName}</span>
+              <span className="text-[10px] shrink-0" style={{ color: 'var(--text-muted)' }}>{item.collectionName}</span>
             </div>
           ))}
         </div>

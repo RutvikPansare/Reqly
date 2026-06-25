@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { fetchEnvironments, setActiveEnvironment } from '../api';
+import { Modal, ModalFooter } from './ui/Modal';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 export function EnvironmentSwitcher() {
   const [environments, setEnvironments] = useState<any[]>([]);
@@ -86,7 +89,8 @@ export function EnvironmentSwitcher() {
     <div className="relative" ref={popoverRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+        className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+        style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
       >
         <span className={`w-2 h-2 rounded-full shrink-0 ${active ? 'bg-green-500' : 'bg-gray-600'}`}></span>
         <span className="flex-1 text-left truncate">{active || 'No env'}</span>
@@ -94,7 +98,7 @@ export function EnvironmentSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 bottom-full mb-1 w-56 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 z-50">
+        <div className="absolute left-0 bottom-full mb-1 w-56 rounded-xl py-1 z-50" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
           <div className="max-h-64 overflow-y-auto">
             {environments.map(env => (
               <button 
@@ -122,71 +126,48 @@ export function EnvironmentSwitcher() {
       )}
 
       {showNewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-          <div className="bg-gray-900 border border-gray-700 rounded p-6 w-[500px] shadow-2xl">
-            <h2 className="text-lg font-semibold text-white mb-4">New Environment</h2>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-1">Environment Name</label>
-              <input 
-                autoFocus
-                className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                value={newEnvName}
-                onChange={e => setNewEnvName(e.target.value)}
-                placeholder="e.g. Production"
-              />
-            </div>
-            
-            <div className="mb-6">
-              <label className="block text-sm text-gray-400 mb-1">Variables</label>
-              <div className="space-y-2">
-                {variables.map((v, i) => (
-                  <div key={i} className="flex gap-2">
-                    <input 
-                      className="flex-1 bg-gray-950 border border-gray-700 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 outline-none font-mono"
-                      placeholder="Key (e.g. baseUrl)"
-                      value={v.key}
-                      onChange={e => {
-                        const newVars = [...variables];
-                        newVars[i].key = e.target.value;
-                        setVariables(newVars);
-                      }}
-                    />
-                    <input 
-                      className="flex-1 bg-gray-950 border border-gray-700 rounded px-2 py-1.5 text-sm text-white focus:border-blue-500 outline-none font-mono"
-                      placeholder="Value"
-                      value={v.value}
-                      onChange={e => {
-                        const newVars = [...variables];
-                        newVars[i].value = e.target.value;
-                        setVariables(newVars);
-                      }}
-                    />
-                    <button 
-                      onClick={() => setVariables(variables.filter((_, idx) => idx !== i))}
-                      className="text-gray-500 hover:text-red-400 px-2"
-                    >×</button>
-                  </div>
-                ))}
-                <button 
-                  onClick={() => setVariables([...variables, { key: '', value: '' }])}
-                  className="text-xs text-blue-400 hover:text-blue-300 mt-2"
-                >+ Add Variable</button>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-gray-800 pt-4">
-              <button 
-                onClick={() => setShowNewModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
-              >Cancel</button>
-              <button 
-                onClick={handleCreateEnv}
-                disabled={!newEnvName.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white text-sm font-medium rounded transition-colors"
-              >Save</button>
+        <Modal title="New Environment" onClose={() => setShowNewModal(false)} width="w-[500px]">
+          <div className="mb-4">
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Environment Name</label>
+            <Input
+              autoFocus
+              value={newEnvName}
+              onChange={e => setNewEnvName(e.target.value)}
+              placeholder="e.g. Production"
+              onKeyDown={e => e.key === 'Enter' && handleCreateEnv()}
+            />
+          </div>
+          <div className="mb-2">
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Variables</label>
+            <div className="space-y-2">
+              {variables.map((v, i) => (
+                <div key={i} className="flex gap-2">
+                  <Input
+                    className="font-mono text-xs"
+                    placeholder="Key (e.g. baseUrl)"
+                    value={v.key}
+                    onChange={e => { const n = [...variables]; n[i].key = e.target.value; setVariables(n); }}
+                  />
+                  <Input
+                    className="font-mono text-xs"
+                    placeholder="Value"
+                    value={v.value}
+                    onChange={e => { const n = [...variables]; n[i].value = e.target.value; setVariables(n); }}
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => setVariables(variables.filter((_, idx) => idx !== i))}>×</Button>
+                </div>
+              ))}
+              <button
+                onClick={() => setVariables([...variables, { key: '', value: '' }])}
+                className="text-xs text-blue-400 hover:text-blue-300 mt-1"
+              >+ Add Variable</button>
             </div>
           </div>
-        </div>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => setShowNewModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreateEnv} disabled={!newEnvName.trim()}>Save</Button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

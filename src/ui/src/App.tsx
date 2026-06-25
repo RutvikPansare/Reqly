@@ -198,26 +198,26 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden">
-      <header className="h-14 border-b border-gray-800 bg-gray-950 flex items-center px-4 shrink-0 gap-4">
-        <h1 className="font-semibold tracking-wide shrink-0">Reqly</h1>
+    <div className="h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--surface-1)' }}>
+      <header className="h-13 border-b flex items-center px-4 shrink-0 gap-4" style={{ background: 'var(--surface-0)', borderColor: 'var(--border)' }}>
+        <h1 className="font-bold tracking-tight text-sm shrink-0" style={{ color: 'var(--text-primary)' }}>Reqly</h1>
         <button
           onClick={() => setShowSearch(true)}
-          className="bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 flex items-center gap-2 text-sm text-zinc-400 w-72 cursor-pointer hover:border-zinc-500 transition-colors"
+          className="flex items-center gap-2 text-sm w-64 cursor-pointer transition-colors px-3 py-1.5 rounded-lg"
+          style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
           title="Search (Cmd+K)"
         >
-          <Search size={16} />
+          <Search size={14} />
           <span className="flex-1 text-left">Search</span>
-          <span className="text-[10px] text-zinc-600">⌘K</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>⌘K</span>
         </button>
-        <div className="flex items-center gap-4 ml-auto">
-          <EnvironmentSwitcher />
+        <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={() => setShowSettings(true)}
-            className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-800 transition-colors"
+            className="btn btn-ghost w-8 h-8 p-0 flex items-center justify-center rounded-lg"
             title="Settings"
           >
-            <Settings size={18} />
+            <Settings size={16} />
           </button>
         </div>
       </header>
@@ -233,7 +233,7 @@ function App() {
           }}
         />
         {activePanel !== 'graphql' && (
-          <aside className="w-64 border-r border-gray-800 bg-gray-900 flex flex-col overflow-hidden min-h-0">
+          <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-2)', borderRight: '1px solid var(--border)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
                 <CollectionsPanel
@@ -250,25 +250,24 @@ function App() {
                 <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
               )}
             </div>
-            {/* Environment switcher pinned at the bottom of the sidebar */}
-            <div className="border-t border-gray-800 px-3 py-2 shrink-0">
+            <div className="px-3 py-2 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
               <EnvironmentSwitcher />
             </div>
           </aside>
         )}
 
-        <main className="flex-1 bg-gray-950 overflow-hidden flex flex-col min-h-0 relative">
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 relative" style={{ background: 'var(--surface-1)' }}>
           {activePanel === 'graphql' ? (
             <GraphQLWorkspace />
           ) : (
             <>
-              <div className="flex items-center bg-gray-900 border-b border-gray-800 shrink-0">
+              <div className="flex items-center shrink-0" style={{ background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
                 <button
                   onClick={() => scrollTabs('left')}
-                  className="px-1.5 py-2 text-gray-500 hover:text-white hover:bg-gray-800 shrink-0"
+                  className="px-1.5 py-2 shrink-0 btn btn-ghost rounded-none"
                   title="Scroll left"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={14} />
                 </button>
                 <div ref={tabBarRef} className="flex overflow-x-auto flex-1" style={{ scrollbarWidth: 'none' }}>
                   {tabs.map(tab => {
@@ -278,15 +277,19 @@ function App() {
                       <div
                         key={tab.id}
                         onClick={() => setActiveTabId(tab.id)}
-                        className={`relative flex items-center gap-2 px-3 py-2 border-r border-gray-800 cursor-pointer min-w-32 max-w-48 group ${isActive ? 'bg-gray-800' : 'hover:bg-gray-800/50'}`}
+                        className={`relative flex items-center gap-2 px-3 py-2 cursor-pointer min-w-32 max-w-48 group transition-colors`}
+                        style={{
+                          borderRight: '1px solid var(--border)',
+                          background: isActive ? 'var(--surface-3)' : 'transparent',
+                        }}
                       >
                         {isActive && (
-                          <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500" aria-hidden="true" />
+                          <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500 rounded-full" aria-hidden="true" />
                         )}
                         <span className={`text-xs font-bold ${methodColorClass(tab.request.method)}`}>
                           {tab.request.method}
                         </span>
-                        <span className="text-sm text-gray-300 truncate flex-1">
+                        <span className="text-sm truncate flex-1" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                           {tab.request.name || 'Untitled'}
                         </span>
                         <div className="w-5 h-5 flex items-center justify-center shrink-0 relative">
@@ -295,9 +298,10 @@ function App() {
                           )}
                           <button
                             onClick={(e) => closeTab(e, tab.id)}
-                            className={`text-gray-500 hover:text-red-400 p-0.5 rounded ${dirty ? 'hidden group-hover:block' : 'opacity-0 group-hover:opacity-100'} transition-opacity absolute inset-0`}
+                            className={`p-0.5 rounded ${dirty ? 'hidden group-hover:block' : 'opacity-0 group-hover:opacity-100'} transition-opacity absolute inset-0 flex items-center justify-center`}
+                            style={{ color: 'var(--text-muted)' }}
                           >
-                            <X size={16} />
+                            <X size={14} />
                           </button>
                         </div>
                       </div>
@@ -305,18 +309,19 @@ function App() {
                   })}
                   <button
                     onClick={createNewTab}
-                    className="px-3 hover:bg-gray-800 text-gray-400 hover:text-white border-r border-gray-800 shrink-0"
+                    className="px-3 shrink-0 btn btn-ghost rounded-none"
+                    style={{ borderRight: '1px solid var(--border)' }}
                     title="New Tab"
                   >
-                    <Plus size={16} />
+                    <Plus size={14} />
                   </button>
                 </div>
                 <button
                   onClick={() => scrollTabs('right')}
-                  className="px-1.5 py-2 text-gray-500 hover:text-white hover:bg-gray-800 shrink-0"
+                  className="px-1.5 py-2 shrink-0 btn btn-ghost rounded-none"
                   title="Scroll right"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
 
@@ -324,7 +329,7 @@ function App() {
                 {tabs.map(tab => (
                   <div
                     key={tab.id}
-                    className="absolute inset-0 p-4 overflow-hidden"
+                    className="absolute inset-0 p-3 overflow-hidden"
                     style={{ display: activeTabId === tab.id ? 'flex' : 'none', flexDirection: 'column' }}
                   >
                     <SplitPane

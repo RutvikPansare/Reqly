@@ -144,10 +144,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       {/* Import button - prominent, top of panel */}
       <button
         onClick={() => fileInputRef.current?.click()}
-        className="flex items-center gap-2 w-full px-3 py-2 rounded border border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-gray-600 text-gray-300 hover:text-white text-sm font-medium transition-colors shrink-0"
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors shrink-0"
+        style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
         title="Import from Postman (.json) or Bruno (.bru)"
       >
-        <FolderInput size={16} className="text-blue-400 shrink-0" />
+        <FolderInput size={15} className="text-blue-400 shrink-0" />
         Import Collection
       </button>
 
@@ -156,10 +157,10 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       )}
 
       <div className="flex items-center justify-between shrink-0">
-        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Collections</h2>
+        <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Collections</h2>
         <button
           onClick={() => setCreatingCol(true)}
-          className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
+          className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded transition-colors"
           title="New collection"
         >
           + New
@@ -178,7 +179,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         {creatingCol && (
           <input
             autoFocus
-            className="w-full bg-gray-950 border border-gray-700 rounded px-2 py-1 text-sm text-white mb-2 outline-none focus:border-blue-500"
+            className="input w-full mb-2 text-sm"
             placeholder="Collection name..."
             value={newColName}
             onChange={e => setNewColName(e.target.value)}
@@ -191,7 +192,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         )}
 
         {collections.length === 0 && !creatingCol && (
-          <p className="text-xs text-gray-600 italic px-1">No collections yet</p>
+          <p className="text-xs italic px-1" style={{ color: 'var(--text-muted)' }}>No collections yet</p>
         )}
 
         {collections.map(col => {
@@ -199,7 +200,10 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           return (
             <div key={col.name} className="select-none">
               <div
-                className="flex items-center justify-between group hover:bg-gray-800/50 rounded px-1 py-1 cursor-pointer"
+                className="flex items-center justify-between group rounded-lg px-1.5 py-1 cursor-pointer transition-colors"
+                style={{ background: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setContextMenu({ x: e.pageX, y: e.pageY, type: 'col', col: col.name });
@@ -209,11 +213,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   className="flex items-center gap-1 flex-1 overflow-hidden"
                   onClick={() => setExpandedCols(prev => ({ ...prev, [col.name]: !isExpanded }))}
                 >
-                  <span className={`text-gray-500 flex items-center transition-transform ${isExpanded ? 'rotate-90' : ''}`}><ChevronRight size={14} /></span>
+                  <span className="flex items-center transition-transform" style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(90deg)' : 'none' }}><ChevronRight size={14} /></span>
                   {renamingCol === col.name ? (
                     <input
                       autoFocus
-                      className="flex-1 bg-gray-950 border border-blue-500 rounded px-1 py-0 text-sm text-white outline-none"
+                      className="input flex-1 text-sm py-0"
                       value={colRenameValue}
                       onChange={e => setColRenameValue(e.target.value)}
                       onKeyDown={e => {
@@ -224,12 +228,13 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                       onClick={e => e.stopPropagation()}
                     />
                   ) : (
-                    <span className="text-sm font-semibold text-gray-300 truncate">{col.name}</span>
+                    <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-secondary)' }}>{col.name}</span>
                   )}
                 </div>
                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    className="text-gray-400 hover:text-white px-1.5 flex items-center"
+                    className="px-1.5 flex items-center transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
                     title="Add Request"
                     onClick={(e) => { e.stopPropagation(); setAddingReqTo(col.name); setExpandedCols(p => ({ ...p, [col.name]: true })); }}
                   >
@@ -246,12 +251,12 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
               </div>
 
               {isExpanded && (
-                <ul className="pl-4 border-l border-gray-800 ml-1.5 space-y-0.5 mt-0.5 mb-1">
+                <ul className="pl-4 ml-1.5 space-y-0.5 mt-0.5 mb-1" style={{ borderLeft: '1px solid var(--border)' }}>
                   {addingReqTo === col.name && (
                     <li className="py-1 pl-2">
                       <input
                         autoFocus
-                        className="w-full bg-gray-950 border border-gray-700 rounded px-2 py-0.5 text-sm text-white outline-none focus:border-blue-500"
+                        className="input w-full text-sm py-0.5"
                         placeholder="Request name..."
                         value={newReqName}
                         onChange={e => setNewReqName(e.target.value)}
@@ -270,7 +275,10 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     return (
                       <li
                         key={req.name}
-                        className={`text-sm cursor-pointer py-1 pl-2 pr-1 rounded flex items-center gap-2 group ${isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/30'}`}
+                        className="text-sm cursor-pointer py-1 pl-2 pr-1 rounded-lg flex items-center gap-2 group transition-colors"
+                        style={{ background: isActive ? 'var(--surface-3)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                         onClick={() => !isRenaming && onSelectRequest(req, col.name)}
                         onContextMenu={(e) => {
                           e.preventDefault();
@@ -281,7 +289,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                         {isRenaming ? (
                           <input
                             autoFocus
-                            className="flex-1 bg-gray-950 border border-blue-500 rounded px-1 py-0 text-sm text-white outline-none"
+                            className="input flex-1 text-sm py-0"
                             value={renameValue}
                             onChange={e => setRenameValue(e.target.value)}
                             onKeyDown={e => {
@@ -307,26 +315,34 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
       {contextMenu && (
         <div
-          className="fixed bg-gray-900 border border-gray-700 rounded shadow-xl py-1 z-50 text-sm min-w-[120px]"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed rounded-xl py-1 z-50 text-sm min-w-[130px]"
+          style={{ top: contextMenu.y, left: contextMenu.x, background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
           onClick={e => e.stopPropagation()}
         >
           {contextMenu.type === 'col' ? (
             <>
               <button
-                className="w-full text-left px-4 py-1.5 text-gray-300 hover:bg-gray-800 hover:text-white"
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { setAddingReqTo(contextMenu.col); setExpandedCols(p => ({ ...p, [contextMenu.col]: true })); setContextMenu(null); }}
               >
                 Add Request
               </button>
               <button
-                className="w-full text-left px-4 py-1.5 text-gray-300 hover:bg-gray-800 hover:text-white"
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { startRenameCol(contextMenu.col); setContextMenu(null); }}
               >
                 Rename
               </button>
               <button
-                className="w-full text-left px-4 py-1.5 text-red-400 hover:bg-gray-800 hover:text-red-300"
+                className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { handleDeleteCol(contextMenu.col); setContextMenu(null); }}
               >
                 Delete
@@ -335,19 +351,27 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           ) : (
             <>
               <button
-                className="w-full text-left px-4 py-1.5 text-gray-300 hover:bg-gray-800 hover:text-white"
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { startRename(contextMenu.col, contextMenu.req); setContextMenu(null); }}
               >
                 Rename
               </button>
               <button
-                className="w-full text-left px-4 py-1.5 text-gray-300 hover:bg-gray-800 hover:text-white"
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { handleDuplicateReq(contextMenu.col, contextMenu.req); setContextMenu(null); }}
               >
                 Duplicate
               </button>
               <button
-                className="w-full text-left px-4 py-1.5 text-red-400 hover:bg-gray-800 hover:text-red-300"
+                className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { handleDeleteReq(contextMenu.col, contextMenu.req); setContextMenu(null); }}
               >
                 Delete

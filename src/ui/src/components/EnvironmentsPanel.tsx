@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { fetchEnvironments, createEnvironment, updateEnvironment, deleteEnvironment, setActiveEnvironment } from '../api';
+import { Modal, ModalFooter } from './ui/Modal';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface EnvVar { key: string; value: string }
 
@@ -128,10 +131,10 @@ export function EnvironmentsPanel() {
   return (
     <div className="p-3 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between shrink-0">
-        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Environments</h2>
+        <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Environments</h2>
         <button
           onClick={() => setCreating(true)}
-          className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
+          className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded transition-colors"
           title="New environment"
         >
           + New
@@ -141,9 +144,8 @@ export function EnvironmentsPanel() {
       <div className="overflow-y-auto flex-1">
         {creating && (
           <div className="mb-3 flex gap-2">
-            <input
+            <Input
               autoFocus
-              className="flex-1 bg-gray-950 border border-gray-700 rounded px-2 py-1 text-sm text-white outline-none focus:border-blue-500"
               placeholder="Environment name (e.g. Production)"
               value={newName}
               onChange={e => setNewName(e.target.value)}
@@ -153,18 +155,12 @@ export function EnvironmentsPanel() {
               }}
               onBlur={() => { if (!newName.trim()) setCreating(false); }}
             />
-            <button
-              onClick={handleCreate}
-              disabled={!newName.trim()}
-              className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded transition-colors"
-            >
-              Add
-            </button>
+            <Button variant="primary" size="sm" onClick={handleCreate} disabled={!newName.trim()}>Add</Button>
           </div>
         )}
 
         {environments.length === 0 && !creating && (
-          <p className="text-xs text-gray-600 italic px-1">No environments yet. Click + New.</p>
+          <p className="text-xs italic px-1" style={{ color: 'var(--text-muted)' }}>No environments yet. Click + New.</p>
         )}
 
         <ul className="space-y-1">
@@ -173,14 +169,18 @@ export function EnvironmentsPanel() {
             const isOpen = expanded[env.name];
             const rows = drafts[env.name] || toVars(env);
             return (
-              <li key={env.name} className="rounded">
+              <li key={env.name} className="rounded-lg overflow-hidden">
                 <div
-                  className={`p-1.5 rounded group flex items-center justify-between ${isActive ? 'bg-gray-800' : 'hover:bg-gray-800/50'}`}
+                  className="p-1.5 rounded-lg group flex items-center justify-between transition-colors"
+                  style={{ background: isActive ? 'var(--surface-3)' : 'transparent' }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-3)'; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                 >
                   <div className="flex items-center flex-1 overflow-hidden">
                     <button
                       onClick={() => toggleExpand(env.name)}
-                      className={`text-gray-500 mr-1 flex items-center transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                      className="mr-1 flex items-center transition-transform"
+                      style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(90deg)' : 'none' }}
                       title={isOpen ? 'Collapse' : 'Expand'}
                     >
                       <ChevronRight size={14} />
@@ -190,21 +190,23 @@ export function EnvironmentsPanel() {
                       onClick={() => handleSelect(env.name)}
                       title={isActive ? 'Active' : 'Set active'}
                     >
-                      <span className={`inline-block w-2 h-2 rounded-full mr-2 shrink-0 ${isActive ? 'bg-green-500' : 'bg-gray-600'}`}></span>
-                      <span className={`truncate ${isActive ? 'text-white' : 'text-gray-300'}`}>{env.name}</span>
+                      <span className={`inline-block w-2 h-2 rounded-full mr-2 shrink-0 ${isActive ? 'bg-green-400' : 'bg-gray-600'}`}></span>
+                      <span className="truncate text-sm" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{env.name}</span>
                     </span>
                   </div>
                   <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => toggleExpand(env.name)}
-                      className="px-1 text-gray-500 hover:text-blue-400"
+                      className="px-1 hover:text-blue-400 transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
                       title="Edit variables"
                     >
                       <Pencil size={14} />
                     </button>
                     <button
                       onClick={() => setConfirmDelete(env.name)}
-                      className="px-1 text-gray-500 hover:text-red-400"
+                      className="px-1 hover:text-red-400 transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
                       title="Delete environment"
                     >
                       <Trash2 size={14} />
@@ -213,36 +215,37 @@ export function EnvironmentsPanel() {
                 </div>
 
                 {isOpen && (
-                  <div className="mt-1 ml-4 pl-2 border-l border-gray-800">
+                  <div className="mt-1 ml-4 pl-2" style={{ borderLeft: '1px solid var(--border)' }}>
                     <div className="flex items-center gap-2 py-1">
-                      <span className="text-[10px] font-bold text-gray-600 w-1/2">KEY</span>
-                      <span className="text-[10px] font-bold text-gray-600 w-1/2">VALUE</span>
+                      <span className="text-[10px] font-bold w-1/2" style={{ color: 'var(--text-muted)' }}>KEY</span>
+                      <span className="text-[10px] font-bold w-1/2" style={{ color: 'var(--text-muted)' }}>VALUE</span>
                       <span className="w-5"></span>
                     </div>
                     {rows.map((v, i) => (
-                      <div key={i} className="flex items-center gap-2 group">
+                      <div key={i} className="flex items-center gap-2 group mb-1.5">
                         <input
-                          className="w-1/2 bg-gray-950 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 font-mono focus:outline-none focus:border-blue-500"
+                          className="input w-1/2 text-xs font-mono py-1"
                           placeholder="key"
                           value={v.key}
                           onChange={e => updateDraft(env.name, i, 'key', e.target.value)}
                         />
                         <input
-                          className="w-1/2 bg-gray-950 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 font-mono focus:outline-none focus:border-blue-500"
+                          className="input w-1/2 text-xs font-mono py-1"
                           placeholder="value"
                           value={v.value}
                           onChange={e => updateDraft(env.name, i, 'value', e.target.value)}
                         />
                         <button
                           onClick={() => removeRow(env.name, i)}
-                          className="w-5 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="w-5 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-sm"
+                          style={{ color: 'var(--text-muted)' }}
                           title="Remove row"
                         >
                           &times;
                         </button>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-2 pb-2">
                       <button
                         onClick={() => addRow(env.name)}
                         className="text-xs text-blue-400 hover:text-blue-300"
@@ -252,7 +255,7 @@ export function EnvironmentsPanel() {
                       <button
                         onClick={() => handleSave(env.name)}
                         disabled={saving === env.name}
-                        className={`w-20 py-1 text-xs disabled:opacity-50 text-white rounded transition-colors text-center flex justify-center items-center ${saved === env.name ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
+                        className={`px-3 py-1 text-xs disabled:opacity-50 text-white rounded-lg transition-colors ${saved === env.name ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
                       >
                         {saving === env.name ? 'Saving...' : saved === env.name ? 'Saved!' : 'Save'}
                       </button>
@@ -267,28 +270,15 @@ export function EnvironmentsPanel() {
 
       {/* Delete confirmation dialog */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-          <div className="bg-gray-900 border border-gray-700 rounded p-5 w-[360px]">
-            <h3 className="text-sm font-semibold text-white mb-2">Delete environment?</h3>
-            <p className="text-xs text-gray-400 mb-4">
-              This permanently removes <span className="text-gray-200 font-medium">{confirmDelete}</span> and its variables.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDelete)}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-500 rounded transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <Modal title="Delete environment?" onClose={() => setConfirmDelete(null)} width="w-[360px]">
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            This permanently removes <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{confirmDelete}</span> and its variables.
+          </p>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => handleDelete(confirmDelete)}>Delete</Button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

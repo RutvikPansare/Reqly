@@ -19,11 +19,11 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
 
   if (!response && !isSending) {
     return (
-      <div className="flex-1 flex flex-col bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
-        <div className="flex justify-between items-center px-4 py-2 bg-gray-950 border-b border-gray-800">
-          <span className="text-sm font-semibold text-gray-300">Response</span>
+      <div className="flex-1 flex flex-col rounded-xl overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+        <div className="panel-header">
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         </div>
-        <div className="flex-1 flex items-center justify-center text-gray-600">
+        <div className="flex-1 flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
           Send a request to see the response
         </div>
       </div>
@@ -68,24 +68,21 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
   };
 
   return (
-    <div className="flex flex-col flex-1 bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
-      <div className="flex justify-between items-center px-4 py-2 bg-gray-950 border-b border-gray-800">
-        <span className="text-sm font-semibold text-gray-300">Response</span>
+    <div className="flex flex-col flex-1 rounded-xl overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div className="panel-header">
+        <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         {isSending ? (
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Loader2 size={16} className="animate-spin text-blue-500" />
+          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <Loader2 size={14} className="animate-spin text-blue-500" />
             Sending...
           </div>
         ) : (
-          <div className="flex gap-4 text-sm font-mono items-center">
-            <span className={`px-2 py-0.5 rounded text-xs font-bold ${statusBadgeClass(status)}`}>
+          <div className="flex gap-3 text-sm font-mono items-center">
+            <span className={`status-badge ${statusBadgeClass(status)}`}>
               {status} {isError ? 'Error' : 'OK'}
             </span>
-            <span className="text-gray-400">{latency || 0} ms</span>
-            <button 
-              onClick={handleCopy}
-              className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded transition-colors ml-2"
-            >
+            <span style={{ color: 'var(--text-muted)' }}>{latency || 0} ms</span>
+            <button onClick={handleCopy} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.125rem 0.625rem' }}>
               Copy
             </button>
           </div>
@@ -108,12 +105,12 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
         </div>
       )}
 
-      <div className="flex border-b border-gray-800 px-2 bg-gray-950">
+      <div className="tab-bar">
         {['body', 'headers', 'raw'].map(tab => (
           <button 
             key={tab}
             disabled={isSending}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-200'} disabled:opacity-50`}
+            className={`tab-btn capitalize ${activeTab === tab ? 'active' : ''} disabled:opacity-40`}
             onClick={() => setActiveTab(tab)}
           >
             {tab}
@@ -122,7 +119,8 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
         {hasDiff && (
           <button
             disabled={isSending}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'diff' ? 'border-yellow-500 text-yellow-400' : 'border-transparent text-gray-400 hover:text-gray-200'} disabled:opacity-50`}
+            className={`tab-btn disabled:opacity-40 ${activeTab === 'diff' ? 'active' : ''}`}
+            style={activeTab === 'diff' ? { color: '#fbbf24', borderBottomColor: '#f59e0b' } : {}}
             onClick={() => setActiveTab('diff')}
           >
             Diff
@@ -130,7 +128,7 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-gray-900 font-mono text-sm relative">
+      <div className="flex-1 overflow-y-auto font-mono text-sm relative" style={{ background: 'var(--surface-3)' }}>
         {isSending && (
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-10" />
         )}
