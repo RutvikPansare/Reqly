@@ -9,6 +9,7 @@ import { AuthManager } from '../engine/auth-manager.js';
 import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
+import { TunnelManager } from '../engine/tunnel-manager.js';
 import { LOCK_PATH } from './lock.js';
 
 const PROJECT_DIR = '/tmp/reqly-test-capture-inbound';
@@ -20,6 +21,7 @@ function buildContext(): EngineContext {
     environmentManager: new EnvironmentManager(`${PROJECT_DIR}/environments.yaml`),
     authManager: new AuthManager(`${PROJECT_DIR}/config.json`),
     proxyServer: new ProxyServer(collectionManager),
+    tunnelManager: new TunnelManager(),
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),

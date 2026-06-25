@@ -9,6 +9,7 @@ import { AuthManager } from '../engine/auth-manager.js';
 import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
+import { TunnelManager } from '../engine/tunnel-manager.js';
 import { LOCK_PATH, writeLock, readLock, clearLock } from './lock.js';
 
 function buildContext(projectDir: string): EngineContext {
@@ -18,6 +19,7 @@ function buildContext(projectDir: string): EngineContext {
     environmentManager: new EnvironmentManager(`${projectDir}/environments.yaml`),
     authManager: new AuthManager(`${projectDir}/config.json`),
     proxyServer: new ProxyServer(collectionManager),
+    tunnelManager: new TunnelManager(),
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),

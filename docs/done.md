@@ -1,12 +1,13 @@
 # Reqly - Done
 
-<!--
-This is the WORK layer: an append-only archive of completed tasks.
-When a task on docs/todo.md is finished, cut its line here under today's date.
-Newest date first. Don't edit history - only append.
--->
+## 2026-06-25
+
+- [x] **T-074** Import from Postman/Bruno (M4) - `src/engine/importer.ts` with `parsePostman`, `parseBruno` (brace-depth parser handles nested JSON in `body:json` blocks), `importFromFile` (CLI/MCP - file path), and `importFromContent` (UI - raw string). `import_collection` MCP tool (`src/mcp/tools/import-collection.ts`) registered in `src/mcp/server.ts`. `reqly import <file>` CLI sub-command (`src/server/import-command.ts`) auto-detects format from extension. `POST /api/import` Express route. UI `CollectionsPanel` gains an Upload icon button that opens a file picker (`<input type="file" accept=".json,.bru">`), reads the file with `FileReader`, posts to `/api/import`, and reloads the sidebar on success. 30 new tests across engine and MCP tool - all 166 tests pass.
 
 ## 2026-06-24
+
+- [x] **T-073** Webhook Testing (M4) - `localtunnel` integration with `TunnelManager` tracking the active proxy. Added endpoints `POST /api/tunnel/start` and `/stop` to expose `localhost:4242` publicly (`xxxx.loca.lt`). `ALL /webhooks/*` catcher endpoint intercepts incoming external requests (like Stripe webhooks) and automatically saves them as timestamped entries in the "Webhooks" collection. `CapturePanel` UI updated to feature a tabbed interface ("Outbound" and "Webhooks") offering immediate copy-paste public webhook URLs for external service configs.
+- [x] **T-072** Variable Autocomplete in UI inputs - A generic `<VariableInput>` component replaces text inputs and textareas in `RequestEditor` and `KeyValueEditor`, providing a `{{` triggered autocomplete dropdown that filters available environment variables.
 - [x] **T-071** Fix "Save" for new requests - "Save to collection" picker replaced the alert with a small modal, handles default request names, and updates tab.id seamlessly upon saving to avoid duplicates on sidebar clicks.
 - [x] **T-070** Middleware SDK shipped in three parts. (1) `packages/reqly-middleware/` - new npm package exporting `reqlyMiddleware()` (Express), `reqlyMiddlewareHook()` (Fastify), and `reqlyNextMiddleware()` (Next.js, `reqly-middleware/next`); fires non-blocking `POST {endpoint}/inbound` with `{method, url, headers, body, collection, timestamp}`, swallows all fetch errors, filters `ignoreRoutes`. Backend: `POST /capture/inbound` added to `src/server/express.ts`, dedupes by method+url and saves into the named collection via `CollectionManager` (same shape as proxy captures). Root `package.json` gained `"workspaces": ["packages/*"]`; root `vitest.config.ts` include extended to `packages/**/*.test.ts`. (2) `install_middleware` MCP tool (`src/mcp/tools/install-middleware.ts`) - reads the project's `package.json` deps (via new `CollectionManager.getBaseDir()`), detects Next/Fastify/Express, returns `{framework, installCommand, snippet, file, note}`; registered in `src/mcp/server.ts`. (3) MCP server top-level `description` (read by every agent at connect, before any tool call) now lists all Reqly capabilities and proactive-suggestion rules; `reqly://workflow` resource rewritten to combine a REQLY FEATURES list with PRIMARY/SECONDARY/TERTIARY workflows and proactive-suggestion triggers; README and llms.txt updated with the inbound-middleware install steps and tool tables.
 - [x] **T-069** Rewrote `description` on every MCP tool definition (`src/mcp/tools/*.ts`) to state what the tool does, a "When to use" line, and a "Preferred pattern" line where relevant - so agents read the correct workflow at connect time instead of guessing (most default to traffic capture first). Added a new `reqly://workflow` resource (`src/mcp/server.ts`) returning a plain-text guide ranking codebase-read as PRIMARY and proxy capture as SECONDARY. New test `src/mcp/server.test.ts` asserts the resource is registered and returns the guide text.
@@ -43,6 +44,7 @@ Newest date first. Don't edit history - only append.
 - [x] **T-034** Add graceful shutdown handlers for Express and proxy servers
 
 ## 2026-06-23
+
 - [x] **T-033** Add multiple tabs feature to the UI
 - [x] **T-032** Fix server hang by cleaning up dangling Node processes on port 4242
 - [x] **T-031** Fix CLI collection path and UI static asset resolution
@@ -74,6 +76,7 @@ Newest date first. Don't edit history - only append.
 - [x] **T-000** Initial project setup and roadmap definition.
 
 ### 2026-06-23
+
 - [x] **T-026** Sidebar - functional collection tree
 - [x] **T-027** Top bar - environment switcher + settings icon
 - [x] **T-028** Auth tab - complete editor

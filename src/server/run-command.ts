@@ -98,11 +98,14 @@ export async function handleRunCommand(
       const responseStore = new ResponseStore();
       const historyStore = new HistoryStore();
       const proxyServer = new ProxyServer(collectionManager);
+      const { TunnelManager } = await import('../engine/tunnel-manager.js');
+      const tunnelManager = new TunnelManager();
       const context: EngineContext = {
         collectionManager,
         environmentManager,
         authManager,
         proxyServer,
+        tunnelManager,
         responseStore,
         historyStore,
         executeRequest

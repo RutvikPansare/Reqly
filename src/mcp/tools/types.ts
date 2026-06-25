@@ -4,6 +4,7 @@ import { AuthManager } from '../../engine/auth-manager.js';
 import { ProxyServer } from '../../engine/proxy.js';
 import { ResponseStore } from '../../engine/response-store.js';
 import { HistoryStore } from '../../engine/history-store.js';
+import { TunnelManager } from '../../engine/tunnel-manager.js';
 import { HttpResponse, CollectionRequest, Environment, AuthProfile } from '../../types/index.js';
 
 export interface EngineContext {
@@ -11,6 +12,7 @@ export interface EngineContext {
   environmentManager: EnvironmentManager;
   authManager: AuthManager;
   proxyServer: ProxyServer;
+  tunnelManager: TunnelManager;
   responseStore: ResponseStore;
   historyStore: HistoryStore;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number) => Promise<HttpResponse>;

@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
+import { VariableInput } from './VariableInput';
 
 export interface KeyValuePair {
   key: string;
@@ -9,9 +10,10 @@ export interface KeyValuePair {
 interface KeyValueEditorProps {
   pairs: KeyValuePair[];
   onChange: (pairs: KeyValuePair[]) => void;
+  variables?: string[];
 }
 
-export function KeyValueEditor({ pairs, onChange }: KeyValueEditorProps) {
+export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEditorProps) {
   // Ensure there's always an empty row at the bottom
   const items = [...pairs];
   if (items.length === 0 || (items[items.length - 1].key !== '' || items[items.length - 1].value !== '')) {
@@ -58,17 +60,19 @@ export function KeyValueEditor({ pairs, onChange }: KeyValueEditorProps) {
                 <div className="w-4 h-4"></div>
               )}
             </button>
-            <input 
+            <VariableInput 
+              variables={variables}
               className={`flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
               placeholder="Key"
               value={pair.key}
-              onChange={e => handleChange(i, 'key', e.target.value)}
+              onChange={val => handleChange(i, 'key', val)}
             />
-            <input 
+            <VariableInput 
+              variables={variables}
               className={`flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
               placeholder="Value"
               value={pair.value}
-              onChange={e => handleChange(i, 'value', e.target.value)}
+              onChange={val => handleChange(i, 'value', val)}
             />
             <button 
               onClick={() => handleRemove(i)} 

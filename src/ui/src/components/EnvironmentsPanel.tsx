@@ -16,6 +16,7 @@ export function EnvironmentsPanel() {
   // Per-environment variable drafts (local edits before Save)
   const [drafts, setDrafts] = useState<Record<string, EnvVar[]>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
 
   // Delete confirmation
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -95,9 +96,14 @@ export function EnvironmentsPanel() {
     rows.forEach(v => { if (v.key.trim()) varsObj[v.key.trim()] = v.value; });
 
     setSaving(name);
+    setSaved(null);
     try {
       await updateEnvironment(name, varsObj);
       loadData();
+      setSaved(name);
+      setTimeout(() => {
+        setSaved(prev => (prev === name ? null : prev));
+      }, 2000);
     } catch (e) {
       console.error(e);
       alert('Failed to save environment');
@@ -246,9 +252,9 @@ export function EnvironmentsPanel() {
                       <button
                         onClick={() => handleSave(env.name)}
                         disabled={saving === env.name}
-                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded transition-colors"
+                        className={`w-20 py-1 text-xs disabled:opacity-50 text-white rounded transition-colors text-center flex justify-center items-center ${saved === env.name ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
                       >
-                        {saving === env.name ? 'Saving...' : 'Save'}
+                        {saving === env.name ? 'Saving...' : saved === env.name ? 'Saved!' : 'Save'}
                       </button>
                     </div>
                   </div>

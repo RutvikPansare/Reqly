@@ -3,6 +3,7 @@ import { Send as SendIcon, Save as SaveIcon } from 'lucide-react';
 import { fetchAuthProfiles, createAuthProfile, fetchEnvironments } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
+import { VariableInput } from './VariableInput';
 
 interface RequestEditorProps {
   request: any;
@@ -166,6 +167,8 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
       onChange(buildRequest());
     }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds]);
 
+  const availableVariables = Object.keys(activeEnvVars);
+
   return (
     <div className="flex flex-col h-full bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
       <div className="flex p-2 gap-2 border-b border-gray-800 bg-gray-950">
@@ -180,11 +183,11 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
           <option>PATCH</option>
           <option>DELETE</option>
         </select>
-        <input 
-          type="text" 
+        <VariableInput 
+          variables={availableVariables}
           className="flex-1 bg-gray-800 text-gray-200 border border-gray-700 rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
           value={url}
-          onChange={e => handleUrlChange(e.target.value)}
+          onChange={val => handleUrlChange(val)}
           placeholder="https://api.example.com/v1/users"
         />
         <button
@@ -218,11 +221,11 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
       <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
         {activeTab === 'params' ? (
           <div className="py-2">
-            <KeyValueEditor pairs={paramsList} onChange={handleParamsChange} />
+            <KeyValueEditor pairs={paramsList} onChange={handleParamsChange} variables={availableVariables} />
           </div>
         ) : activeTab === 'headers' ? (
           <div className="py-2">
-            <KeyValueEditor pairs={headersList} onChange={setHeadersList} />
+            <KeyValueEditor pairs={headersList} onChange={setHeadersList} variables={availableVariables} />
           </div>
         ) : activeTab === 'body' ? (
           <div className="flex flex-col h-full gap-2">
@@ -241,11 +244,13 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
                 Format JSON
               </button>
             </div>
-            <textarea
+            <VariableInput
+              multiline
+              variables={availableVariables}
               className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
               placeholder="Enter JSON, XML, or raw text here..."
               value={bodyText}
-              onChange={e => setBodyText(e.target.value)}
+              onChange={val => setBodyText(val)}
               spellCheck={false}
             />
           </div>
@@ -339,13 +344,13 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
               {authType === 'bearer' && (
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Token</label>
-                  <input 
-                    type="text" 
+                  <VariableInput 
+                    variables={availableVariables}
                     disabled={!!authProfileId}
                     className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                     placeholder="e.g. {{login.response.body.token}}"
                     value={authCreds.token || ''}
-                    onChange={e => setAuthCreds({ ...authCreds, token: e.target.value })}
+                    onChange={val => setAuthCreds({ ...authCreds, token: val })}
                   />
                 </div>
               )}
@@ -379,12 +384,12 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Value</label>
-                    <input 
-                      type="text" 
+                    <VariableInput 
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       value={authCreds.value || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, value: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, value: val })}
                     />
                   </div>
                 </>
@@ -394,22 +399,23 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="block text-sm text-gray-400 mb-1">Username</label>
-                    <input 
-                      type="text" 
+                    <VariableInput 
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       value={authCreds.username || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, username: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, username: val })}
                     />
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm text-gray-400 mb-1">Password</label>
-                    <input 
+                    <VariableInput 
                       type="password" 
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       value={authCreds.password || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, password: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, password: val })}
                     />
                   </div>
                 </div>

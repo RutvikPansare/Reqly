@@ -8,6 +8,7 @@ import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
+import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
 import { EngineContext } from '../mcp/tools/types.js';
 
@@ -20,6 +21,7 @@ import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
 import { handleStopCommand } from './stop-command.js';
 import { handleExecCommand } from './exec-command.js';
+import { handleImportCommand } from './import-command.js';
 import { readLock, writeLock, clearLock, isProcessAlive } from './lock.js';
 
 async function main() {
@@ -68,6 +70,11 @@ async function main() {
     process.exit(exitCode);
   }
 
+  if (parsed.command === 'import') {
+    const exitCode = await handleImportCommand(parsed, collectionManager);
+    process.exit(exitCode);
+  }
+
   if (parsed.command === 'exec') {
     const execProxyServer = new ProxyServer(collectionManager);
     const exitCode = await handleExecCommand(parsed, execProxyServer);
@@ -76,6 +83,7 @@ async function main() {
 
   // start command (default)
   const proxyServer = new ProxyServer(collectionManager);
+  const tunnelManager = new TunnelManager();
   const responseStore = new ResponseStore();
   const historyStore = new HistoryStore();
 
@@ -84,6 +92,7 @@ async function main() {
     environmentManager,
     authManager,
     proxyServer,
+    tunnelManager,
     responseStore,
     historyStore,
     executeRequest: async (req, env, auth, truncate) => {
@@ -126,6 +135,7 @@ async function main() {
     console.error('Shutting down Reqly gracefully...');
     try {
       await context.proxyServer.stop();
+      context.tunnelManager.stop();
     } catch (e) {
       // ignore
     }

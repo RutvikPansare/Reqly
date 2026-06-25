@@ -284,15 +284,17 @@ function App() {
                         <span className="text-sm text-gray-300 truncate flex-1">
                           {tab.request.name || 'Untitled'}
                         </span>
-                        {dirty && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 group-hover:hidden" title="Unsaved changes" />
-                        )}
-                        <button
-                          onClick={(e) => closeTab(e, tab.id)}
-                          className={`text-gray-500 hover:text-red-400 p-0.5 rounded shrink-0 ${dirty ? 'hidden group-hover:block' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
-                        >
-                          <X size={16} />
-                        </button>
+                        <div className="w-5 h-5 flex items-center justify-center shrink-0 relative">
+                          {dirty && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:hidden" title="Unsaved changes" />
+                          )}
+                          <button
+                            onClick={(e) => closeTab(e, tab.id)}
+                            className={`text-gray-500 hover:text-red-400 p-0.5 rounded ${dirty ? 'hidden group-hover:block' : 'opacity-0 group-hover:opacity-100'} transition-opacity absolute inset-0`}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

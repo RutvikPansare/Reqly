@@ -141,6 +141,19 @@ export interface HistoryEntry {
   collectionName?: string;
 }
 
+export async function importCollection(content: string, format: 'postman' | 'bruno', collectionName?: string) {
+  const res = await fetch('/api/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, format, collectionName })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Import failed' }));
+    throw new Error(err.error || 'Import failed');
+  }
+  return res.json();
+}
+
 export async function fetchHistory(): Promise<HistoryEntry[]> {
   const res = await fetch('/api/history');
   if (!res.ok) throw new Error('Failed to fetch history');

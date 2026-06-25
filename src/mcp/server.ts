@@ -21,6 +21,7 @@ import * as deleteVariable from './tools/delete-variable.js';
 import * as getResponseFull from './tools/get-response-full.js';
 import * as execWithProxy from './tools/exec-with-proxy.js';
 import * as installMiddleware from './tools/install-middleware.js';
+import * as importCollection from './tools/import-collection.js';
 
 const tools = [
   runRequest,
@@ -38,7 +39,8 @@ const tools = [
   deleteVariable,
   getResponseFull,
   execWithProxy,
-  installMiddleware
+  installMiddleware,
+  importCollection
 ];
 
 import { z } from 'zod';

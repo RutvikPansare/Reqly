@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { ChevronRight, Play, Plus } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronRight, Play, Plus, Upload } from 'lucide-react';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 
 interface CollectionsPanelProps {
@@ -25,6 +25,9 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const [renamingCol, setRenamingCol] = useState<string | null>(null);
   const [colRenameValue, setColRenameValue] = useState('');
 
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [contextMenu, setContextMenu] = useState<
     | { x: number; y: number; type: 'col'; col: string }
     | { x: number; y: number; type: 'req'; col: string; req: string }
@@ -45,6 +48,23 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       window.removeEventListener('reqly-reload', loadData);
     };
   }, []);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+    const format: 'postman' | 'bruno' = file.name.endsWith('.json') ? 'postman' : 'bruno';
+    try {
+      const content = await file.text();
+      await importCollection(content, format);
+      loadData();
+    } catch (err: any) {
+      setImportError(err.message || 'Import failed');
+    } finally {
+      // reset so the same file can be re-selected
+      e.target.value = '';
+    }
+  };
 
   const handleCreateCol = async () => {
     if (newColName.trim()) {
@@ -122,14 +142,35 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     <div className="p-3 flex flex-col gap-3 relative h-full">
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Collections</h2>
-        <button
-          onClick={() => setCreatingCol(true)}
-          className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
-          title="New collection"
-        >
-          + New
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs text-gray-400 hover:text-gray-200 px-1.5 py-0.5 rounded hover:bg-gray-800 transition-colors"
+            title="Import from Postman (.json) or Bruno (.bru)"
+          >
+            <Upload size={12} />
+          </button>
+          <button
+            onClick={() => setCreatingCol(true)}
+            className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
+            title="New collection"
+          >
+            + New
+          </button>
+        </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,.bru"
+        className="hidden"
+        onChange={handleImportFile}
+      />
+
+      {importError && (
+        <p className="text-xs text-red-400 px-1 break-words">{importError}</p>
+      )}
 
       <div className="space-y-1 overflow-y-auto flex-1">
         {creatingCol && (
@@ -227,7 +268,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     return (
                       <li
                         key={req.name}
-                        className={`text-sm cursor-pointer py-1 pl-2 pr-1 rounded flex items-center group ${isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/30'}`}
+                        className={`text-sm cursor-pointer py-1 pl-2 pr-1 rounded flex items-center gap-2 group ${isActive ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/30'}`}
                         onClick={() => !isRenaming && onSelectRequest(req, col.name)}
                         onContextMenu={(e) => {
                           e.preventDefault();

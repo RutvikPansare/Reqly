@@ -54,6 +54,51 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     res.json({ success: true });
   });
 
+  app.post('/api/tunnel/start', async (req, res) => {
+    try {
+      const url = await context.tunnelManager.start(port);
+      res.json({ success: true, url });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/tunnel/stop', (req, res) => {
+    context.tunnelManager.stop();
+    res.json({ success: true });
+  });
+
+  app.get('/api/tunnel/status', (req, res) => {
+    res.json(context.tunnelManager.getStatus());
+  });
+
+  app.use('/webhooks', async (req, res) => {
+    try {
+      const collectionName = 'Webhooks';
+      try {
+        await context.collectionManager.getCollection(collectionName);
+      } catch {
+        await context.collectionManager.createCollection(collectionName);
+      }
+
+      // Add /webhooks to the saved path since it's stripped by app.use mount
+      const fullPath = '/webhooks' + req.url;
+      const name = `${req.method} ${fullPath}`.replace(/[^a-zA-Z0-9- /]/g, '').trim().substring(0, 30);
+      await context.collectionManager.addRequest(collectionName, {
+        id: Date.now().toString(),
+        name: `${name} ${Date.now()}`,
+        method: req.method as any,
+        url: fullPath,
+        headers: req.headers as Record<string, string>,
+        body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? '')
+      });
+
+      res.json({ ok: true, message: "Webhook captured by Reqly" });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/capture/inbound', async (req, res) => {
     try {
       const { method, url, headers, body, collection } = req.body;
@@ -92,6 +137,25 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     try {
       const cols = await context.collectionManager.listCollections();
       res.json(cols);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/import', async (req, res) => {
+    try {
+      const { content, format, collectionName } = req.body as {
+        content: string;
+        format: 'postman' | 'bruno';
+        collectionName?: string;
+      };
+      if (!content) return res.status(400).json({ error: 'content is required' });
+      if (format !== 'postman' && format !== 'bruno') {
+        return res.status(400).json({ error: 'format must be "postman" or "bruno"' });
+      }
+      const { importFromContent } = await import('../engine/importer.js');
+      const result = await importFromContent(content, format, context.collectionManager, collectionName);
+      res.json(result);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
