@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, Upload } from 'lucide-react';
+import { ChevronRight, Play, Plus, FolderInput } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 
@@ -140,24 +140,30 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   return (
     <div className="p-3 flex flex-col gap-3 relative h-full">
+
+      {/* Import button - prominent, top of panel */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="flex items-center gap-2 w-full px-3 py-2 rounded border border-gray-700 bg-gray-800/60 hover:bg-gray-800 hover:border-gray-600 text-gray-300 hover:text-white text-sm font-medium transition-colors shrink-0"
+        title="Import from Postman (.json) or Bruno (.bru)"
+      >
+        <FolderInput size={16} className="text-blue-400 shrink-0" />
+        Import Collection
+      </button>
+
+      {importError && (
+        <p className="text-xs text-red-400 px-1 break-words shrink-0">{importError}</p>
+      )}
+
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Collections</h2>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="text-xs text-gray-400 hover:text-gray-200 px-1.5 py-0.5 rounded hover:bg-gray-800 transition-colors"
-            title="Import from Postman (.json) or Bruno (.bru)"
-          >
-            <Upload size={12} />
-          </button>
-          <button
-            onClick={() => setCreatingCol(true)}
-            className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
-            title="New collection"
-          >
-            + New
-          </button>
-        </div>
+        <button
+          onClick={() => setCreatingCol(true)}
+          className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded hover:bg-gray-800 transition-colors"
+          title="New collection"
+        >
+          + New
+        </button>
       </div>
 
       <input
@@ -167,10 +173,6 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         className="hidden"
         onChange={handleImportFile}
       />
-
-      {importError && (
-        <p className="text-xs text-red-400 px-1 break-words">{importError}</p>
-      )}
 
       <div className="space-y-1 overflow-y-auto flex-1">
         {creatingCol && (
