@@ -12,6 +12,7 @@ import { CapturePanel } from './components/CapturePanel';
 import { SpotlightSearch } from './components/SpotlightSearch';
 import { RequestEditor } from './components/RequestEditor';
 import { ResponseViewer } from './components/ResponseViewer';
+import { ReqlyLogo } from './components/ReqlyLogo';
 import { SidebarEnvSection } from './components/SidebarEnvSection';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
@@ -235,7 +236,7 @@ function App() {
   return (
     <div className="h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--surface-1)' }}>
       <header className="flex items-center px-4 shrink-0 gap-3" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
-        <h1 className="font-bold tracking-tight text-sm shrink-0 mr-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Reqly</h1>
+        <ReqlyLogo />
         <button
           onClick={() => setShowSearch(true)}
           className="flex items-center gap-2 text-sm cursor-pointer transition-colors px-3 rounded-lg shrink-0"
