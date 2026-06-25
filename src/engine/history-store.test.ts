@@ -73,4 +73,80 @@ describe('HistoryStore', () => {
     expect(store.get(id)?.requestName).toBe('A');
     expect(store.get('nope')).toBeUndefined();
   });
+
+  it('stores the response body (serialized)', () => {
+    const store = new HistoryStore();
+    store.append(
+      { name: 'GetUser', method: 'GET', url: 'http://x/u' } as any,
+      { status: 200, latency: 10, body: '{"id":1}', headers: {} } as any
+    );
+    expect(store.list()[0].body).toBe('{"id":1}');
+  });
+
+  it('serializes object bodies to JSON strings', () => {
+    const store = new HistoryStore();
+    store.append(
+      { name: 'R', method: 'GET', url: 'http://x' } as any,
+      { status: 200, latency: 5, body: { count: 42 }, headers: {} } as any
+    );
+    expect(store.list()[0].body).toBe('{"count":42}');
+  });
+
+  it('truncates body to 10 KB', () => {
+    const store = new HistoryStore();
+    const huge = 'x'.repeat(20 * 1024);
+    store.append(
+      { name: 'Big', method: 'GET', url: 'http://x' } as any,
+      { status: 200, latency: 5, body: huge, headers: {} } as any
+    );
+    expect(store.list()[0].body!.length).toBe(10 * 1024);
+  });
+
+  describe('getLastTwo', () => {
+    it('returns an empty array when there are no entries for the request', () => {
+      const store = new HistoryStore();
+      expect(store.getLastTwo('Nope')).toHaveLength(0);
+    });
+
+    it('returns one entry when only one run exists', () => {
+      const store = new HistoryStore();
+      store.append(
+        { name: 'GetUsers', method: 'GET', url: 'http://x/users' } as any,
+        { status: 200, latency: 30, body: '[]', headers: {} } as any
+      );
+      expect(store.getLastTwo('GetUsers')).toHaveLength(1);
+    });
+
+    it('returns two entries newest-first when two runs exist', () => {
+      const store = new HistoryStore();
+      store.append(
+        { name: 'GetUsers', method: 'GET', url: 'http://x/users' } as any,
+        { status: 200, latency: 30, body: '[{"id":1}]', headers: {} } as any
+      );
+      store.append(
+        { name: 'GetUsers', method: 'GET', url: 'http://x/users' } as any,
+        { status: 200, latency: 45, body: '[{"id":1},{"id":2}]', headers: {} } as any
+      );
+      const two = store.getLastTwo('GetUsers');
+      expect(two).toHaveLength(2);
+      // newest is first
+      expect(two[0].body).toBe('[{"id":1},{"id":2}]');
+      expect(two[1].body).toBe('[{"id":1}]');
+    });
+
+    it('ignores entries from other requests', () => {
+      const store = new HistoryStore();
+      store.append(
+        { name: 'GetUsers', method: 'GET', url: 'http://x/users' } as any,
+        { status: 200, latency: 10, body: '[]', headers: {} } as any
+      );
+      store.append(
+        { name: 'GetPosts', method: 'GET', url: 'http://x/posts' } as any,
+        { status: 200, latency: 10, body: '[]', headers: {} } as any
+      );
+      const two = store.getLastTwo('GetUsers');
+      expect(two).toHaveLength(1);
+      expect(two[0].requestName).toBe('GetUsers');
+    });
+  });
 });

@@ -33,15 +33,24 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
       assertionsResult = runAssertions(res, req.assertions);
     }
 
-    // Store in cache
+    // Store in cache and history
     context.responseStore.set(req.name, res);
     context.historyStore.append(req, res, { collectionName: args.collectionName });
+
+    // Compute diff against the previous run (the entry we just appended is [0],
+    // the prior run is [1] if it exists)
+    let diff = undefined;
+    const lastTwo = context.historyStore.getLastTwo(req.name);
+    if (lastTwo.length === 2) {
+      const { diffResponses } = await import('../../engine/response-differ.js');
+      diff = diffResponses(lastTwo[1], lastTwo[0]);
+    }
 
     // Strip fullBody so we don't blow up the agent's context window
     const agentResponse = { ...res };
     delete agentResponse.fullBody;
 
-    return { content: [{ type: 'text', text: JSON.stringify({ response: agentResponse, assertions: assertionsResult }) }] };
+    return { content: [{ type: 'text', text: JSON.stringify({ response: agentResponse, assertions: assertionsResult, diff }) }] };
   } catch (e: any) {
     return { content: [{ type: 'text', text: e.message }], isError: true };
   }

@@ -30,7 +30,8 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
     );
   }
 
-  const { status, latency, body, headers } = response || {};
+  const { status, latency, body, headers, diff } = response || {};
+  const hasDiff = diff && (diff.statusChanged || diff.latencyDelta !== 0 || diff.bodyChanges?.length > 0);
   const isError = status >= 400;
   
   const syntaxHighlight = (jsonStr: string) => {
@@ -118,6 +119,15 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
             {tab}
           </button>
         ))}
+        {hasDiff && (
+          <button
+            disabled={isSending}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'diff' ? 'border-yellow-500 text-yellow-400' : 'border-transparent text-gray-400 hover:text-gray-200'} disabled:opacity-50`}
+            onClick={() => setActiveTab('diff')}
+          >
+            Diff
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto bg-gray-900 font-mono text-sm relative">
@@ -147,6 +157,36 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
             {'\n\n'}
             {typeof body === 'object' ? JSON.stringify(body, null, 2) : body}
           </pre>
+        )}
+
+        {activeTab === 'diff' && hasDiff && (
+          <div className="p-4 font-mono text-sm space-y-1">
+            {diff.statusChanged && (
+              <div className="text-yellow-400">
+                ~ status: {diff.prevStatus} -&gt; {diff.currStatus}
+              </div>
+            )}
+            {diff.latencyDelta !== 0 && (
+              <div className={diff.latencyDelta > 0 ? 'text-red-400' : 'text-green-400'}>
+                ~ latency: {diff.latencyDelta > 0 ? '+' : ''}{diff.latencyDelta} ms
+              </div>
+            )}
+            {diff.bodyChanges?.length === 0 && !diff.statusChanged && diff.latencyDelta === 0 && (
+              <div className="text-gray-500">No changes detected.</div>
+            )}
+            {diff.bodyChanges?.map((line: string, i: number) => (
+              <div
+                key={i}
+                className={
+                  line.startsWith('+') ? 'text-green-400' :
+                  line.startsWith('-') ? 'text-red-400' :
+                  'text-yellow-400'
+                }
+              >
+                {line}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -389,6 +389,14 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       const response = await context.executeRequest(config, env, auth);
       context.responseStore.set(req.body.request.name, response);
       context.historyStore.append(req.body.request, response);
+
+      // Compute diff against previous run
+      let diff = undefined;
+      const lastTwo = context.historyStore.getLastTwo(req.body.request.name);
+      if (lastTwo.length === 2) {
+        const { diffResponses } = await import('../engine/response-differ.js');
+        diff = diffResponses(lastTwo[1], lastTwo[0]);
+      }
       
       const { runAssertions } = await import('../engine/assertion-runner.js');
       let assertions: any[] = [];
@@ -396,7 +404,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         assertions = runAssertions(response, req.body.request.assertions);
       }
 
-      res.json({ response, assertions });
+      res.json({ response, assertions, diff });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

@@ -1,5 +1,7 @@
 import { HttpResponse, CollectionRequest } from '../types/index.js';
 
+const BODY_DIFF_LIMIT = 10 * 1024; // 10 KB - enough for meaningful diffs
+
 export interface HistoryEntry {
   id: string;
   timestamp: number;
@@ -7,6 +9,7 @@ export interface HistoryEntry {
   url: string;
   status: number;
   latency: number;
+  body?: string;
   requestName?: string;
   collectionName?: string;
 }
@@ -22,6 +25,12 @@ export class HistoryStore {
   private counter = 0;
 
   public append(req: CollectionRequest, res: HttpResponse, meta: AppendMeta = {}): HistoryEntry {
+    let body: string | undefined;
+    if (res.body !== null && res.body !== undefined) {
+      const raw = typeof res.body === 'object' ? JSON.stringify(res.body) : String(res.body);
+      body = raw.length > BODY_DIFF_LIMIT ? raw.slice(0, BODY_DIFF_LIMIT) : raw;
+    }
+
     const entry: HistoryEntry = {
       id: `h-${Date.now()}-${this.counter++}`,
       timestamp: Date.now(),
@@ -29,6 +38,7 @@ export class HistoryStore {
       url: req.url,
       status: res.status,
       latency: res.latency,
+      body,
       requestName: req.name,
       collectionName: meta.collectionName
     };
@@ -38,6 +48,11 @@ export class HistoryStore {
       this.entries = this.entries.slice(0, MAX_ENTRIES);
     }
     return entry;
+  }
+
+  /** Returns the two most recent entries for a given request name (newest first). */
+  public getLastTwo(requestName: string): HistoryEntry[] {
+    return this.entries.filter(e => e.requestName === requestName).slice(0, 2);
   }
 
   public list(): HistoryEntry[] {

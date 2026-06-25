@@ -9,14 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-075** Response Diffing (M4)
-  - After each `run_request` or `run_collection`, compare the new response against the most recent prior run stored in `HistoryStore`
-  - Diff: status code change, latency delta (ms), body diff (added/removed/changed JSON keys at top level, or line diff for non-JSON)
-  - `HistoryStore` already appends entries - add a `getLastTwo(requestName)` helper to retrieve the two most recent for a given request
-  - `run_request` MCP tool response gains an optional `diff` field when a prior run exists: `{ statusChanged, latencyDelta, bodyChanges: string[] }`
-  - UI response viewer: show a "Diff" tab alongside "Body" / "Headers" when a previous run exists; highlight added lines green, removed lines red
-  - New `src/engine/response-differ.ts` with TDD; no new MCP tool needed (diff is inlined into existing `run_request` / `run_collection` responses)
-
 - [ ] **T-076** GraphQL - persist to YAML + run_request support (M4)
   - The UI already has a GraphQL workspace (T-053). This task makes GraphQL requests first-class in the engine
   - Extend `RequestConfig` type with optional `graphql?: { query: string; variables?: Record<string, unknown> }` and a `type?: 'rest' | 'graphql'` discriminator

@@ -154,7 +154,7 @@ function App() {
       });
       const data = await res.json();
       if (data.response) {
-        updateTab(tabId, { response: { ...data.response, assertions: data.assertions, previousResponse: data.previousResponse } });
+        updateTab(tabId, { response: { ...data.response, assertions: data.assertions, diff: data.diff } });
       } else {
         updateTab(tabId, { response: { status: 500, latency: 0, body: data.error, headers: {} } });
       }
