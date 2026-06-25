@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Settings, ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
-import { updateRequest, fetchCollections, addRequest } from './api';
+import { Search, Settings, ChevronLeft, ChevronRight, X, Plus, ChevronDown } from 'lucide-react';
+import { updateRequest, fetchCollections, addRequest, fetchEnvironments, setActiveEnvironment } from './api';
 import { methodColorClass } from './lib/colors';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { NavRail } from './components/NavRail';
@@ -12,7 +12,7 @@ import { CapturePanel } from './components/CapturePanel';
 import { SpotlightSearch } from './components/SpotlightSearch';
 import { RequestEditor } from './components/RequestEditor';
 import { ResponseViewer } from './components/ResponseViewer';
-import { EnvironmentSwitcher } from './components/EnvironmentSwitcher';
+import { SidebarEnvSection } from './components/SidebarEnvSection';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
@@ -99,6 +99,41 @@ function App() {
   const [runningCollection, setRunningCollection] = useState<string | null>(null);
   const [saveModal, setSaveModal] = useState<{ tabId: string; request: any } | null>(null);
   const tabBarRef = useRef<HTMLDivElement>(null);
+
+  // Compact header env selector state
+  const [headerEnvs, setHeaderEnvs] = useState<any[]>([]);
+  const [headerActiveEnv, setHeaderActiveEnv] = useState<string | null>(null);
+  const [headerEnvOpen, setHeaderEnvOpen] = useState(false);
+  const headerEnvRef = useRef<HTMLDivElement>(null);
+
+  const loadHeaderEnvs = () => {
+    fetchEnvironments().then(data => {
+      setHeaderEnvs(data.environments || []);
+      setHeaderActiveEnv(data.active || null);
+    }).catch(console.error);
+  };
+
+  useEffect(() => {
+    loadHeaderEnvs();
+    window.addEventListener('reqly-reload', loadHeaderEnvs);
+    const onClickOutside = (e: MouseEvent) => {
+      if (headerEnvRef.current && !headerEnvRef.current.contains(e.target as Node)) {
+        setHeaderEnvOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => {
+      window.removeEventListener('reqly-reload', loadHeaderEnvs);
+      document.removeEventListener('mousedown', onClickOutside);
+    };
+  }, []);
+
+  const handleHeaderEnvSelect = async (name: string) => {
+    await setActiveEnvironment(name).catch(console.error);
+    setHeaderActiveEnv(name);
+    setHeaderEnvOpen(false);
+    window.dispatchEvent(new Event('reqly-reload'));
+  };
 
   // Persist sanitized tabs (debounced).
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,6 +247,48 @@ function App() {
           <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>⌘K</span>
         </button>
         <div className="flex items-center gap-2 ml-auto">
+          {/* Compact env selector */}
+          <div className="relative" ref={headerEnvRef}>
+            <button
+              onClick={() => setHeaderEnvOpen(o => !o)}
+              className="flex items-center gap-2 rounded-lg px-3 transition-colors shrink-0"
+              style={{ height: '32px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
+              title="Switch environment"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: headerActiveEnv ? '#4ade80' : 'var(--border-strong)' }}
+              />
+              <span className="max-w-28 truncate">{headerActiveEnv || 'No env'}</span>
+              <ChevronDown size={12} style={{ transform: headerEnvOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+            </button>
+            {headerEnvOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 rounded-xl py-1 z-50 min-w-40"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
+              >
+                {headerEnvs.map(env => (
+                  <button
+                    key={env.name}
+                    onClick={() => handleHeaderEnvSelect(env.name)}
+                    className="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--text-secondary)', background: 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: headerActiveEnv === env.name ? '#4ade80' : 'transparent', border: headerActiveEnv === env.name ? 'none' : '1px solid var(--border-strong)' }}
+                    />
+                    {env.name}
+                  </button>
+                ))}
+                {headerEnvs.length === 0 && (
+                  <div className="px-3 py-2 text-xs italic" style={{ color: 'var(--text-muted)' }}>No environments</div>
+                )}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setShowSettings(true)}
             className="flex items-center justify-center rounded-lg transition-colors"
@@ -239,11 +316,16 @@ function App() {
           <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-2)', borderRight: '1px solid var(--border)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
-                <CollectionsPanel
-                  activeRequest={activeTab?.request}
-                  onSelectRequest={handleSelectRequestFromSidebar}
-                  onRunCollection={setRunningCollection}
-                />
+                <>
+                  <CollectionsPanel
+                    activeRequest={activeTab?.request}
+                    onSelectRequest={handleSelectRequestFromSidebar}
+                    onRunCollection={setRunningCollection}
+                  />
+                  <div style={{ borderTop: '1px solid var(--border)' }}>
+                    <SidebarEnvSection />
+                  </div>
+                </>
               )}
               {activePanel === 'environments' && <EnvironmentsPanel />}
               {activePanel === 'history' && (
@@ -252,9 +334,6 @@ function App() {
               {activePanel === 'capture' && (
                 <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
               )}
-            </div>
-            <div className="px-3 py-2 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-              <EnvironmentSwitcher />
             </div>
           </aside>
         )}
