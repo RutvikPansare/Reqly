@@ -54,6 +54,40 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     res.json({ success: true });
   });
 
+  app.post('/capture/inbound', async (req, res) => {
+    try {
+      const { method, url, headers, body, collection } = req.body;
+      const collectionName = collection || 'Captured';
+
+      try {
+        await context.collectionManager.getCollection(collectionName);
+      } catch {
+        await context.collectionManager.createCollection(collectionName);
+      }
+
+      const existingCollection = await context.collectionManager.getCollection(collectionName);
+      const alreadyCaptured = existingCollection.requests.some(
+        (r) => r.method === method && r.url === url
+      );
+
+      if (!alreadyCaptured) {
+        const name = `${method} ${url}`.replace(/[^a-zA-Z0-9- ]/g, '').trim().substring(0, 30);
+        await context.collectionManager.addRequest(collectionName, {
+          id: Date.now().toString(),
+          name: `${name} ${Date.now()}`,
+          method,
+          url,
+          headers,
+          body: typeof body === 'string' ? body : JSON.stringify(body ?? '')
+        });
+      }
+
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/collections', async (req, res) => {
     try {
       const cols = await context.collectionManager.listCollections();

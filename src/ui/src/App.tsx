@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Settings, ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
-import { updateRequest } from './api';
+import { updateRequest, fetchCollections, addRequest } from './api';
 import { methodColorClass } from './lib/colors';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { NavRail } from './components/NavRail';
@@ -16,6 +16,7 @@ import { EnvironmentSwitcher } from './components/EnvironmentSwitcher';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
+import { SaveToCollectionModal } from './components/SaveToCollectionModal';
 
 interface TabData {
   id: string;
@@ -95,6 +96,7 @@ function App() {
   });
   const [activeTabId, setActiveTabId] = useLocalStorage<string>(ACTIVE_TAB_KEY, tabs[0]?.id || 'default');
   const [runningCollection, setRunningCollection] = useState<string | null>(null);
+  const [saveModal, setSaveModal] = useState<{ tabId: string; request: any } | null>(null);
   const tabBarRef = useRef<HTMLDivElement>(null);
 
   // Persist sanitized tabs (debounced).
@@ -335,7 +337,25 @@ function App() {
                               alert("Failed to save request.");
                             }
                           } else {
-                            alert("This request doesn't belong to a collection yet. Support for saving new requests coming soon.");
+                            const cols = await fetchCollections();
+                            const hasCustomName = req.name && req.name !== 'New Request';
+                            if (cols.length === 1 && hasCustomName) {
+                              try {
+                                const requestToSave = { ...req };
+                                if (!requestToSave.id) requestToSave.id = Date.now().toString();
+                                await addRequest(cols[0].name, requestToSave);
+                                const saved = { ...requestToSave, _collection: cols[0].name };
+                                const newTabId = `${cols[0].name}-${requestToSave.name}`;
+                                setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, id: newTabId, request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) } : t));
+                                if (activeTabId === tab.id) setActiveTabId(newTabId);
+                                window.dispatchEvent(new Event('reqly-reload'));
+                              } catch (e) {
+                                console.error('Failed to save request', e);
+                                alert('Failed to save request.');
+                              }
+                            } else {
+                              setSaveModal({ tabId: tab.id, request: req });
+                            }
                           }
                         }}
                       />
@@ -359,6 +379,21 @@ function App() {
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {runningCollection && (
         <CollectionRunnerPanel collectionName={runningCollection} onClose={() => setRunningCollection(null)} />
+      )}
+      {saveModal && (
+        <SaveToCollectionModal
+          request={saveModal.request}
+          defaultName={saveModal.request.name || 'New Request'}
+          onClose={() => setSaveModal(null)}
+          onSaved={(collectionName, requestName, requestId) => {
+            const saved = { ...saveModal.request, _collection: collectionName, name: requestName };
+            if (requestId) saved.id = requestId;
+            const newTabId = `${collectionName}-${requestName}`;
+            setTabs(prev => prev.map(t => t.id === saveModal.tabId ? { ...t, id: newTabId, request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) } : t));
+            if (activeTabId === saveModal.tabId) setActiveTabId(newTabId);
+            setSaveModal(null);
+          }}
+        />
       )}
     </div>
   );

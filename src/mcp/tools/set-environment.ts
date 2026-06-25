@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'set_environment',
-  description: 'Switch active environment.',
+  description: 'Switches the active environment, so subsequent run_request and run_collection calls resolve {{variables}} from it. When to use: before running requests against a different environment (e.g. switching from "development" to "staging").',
   inputSchema: {
     type: 'object',
     properties: {

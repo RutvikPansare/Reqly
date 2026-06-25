@@ -3,7 +3,7 @@ import { CollectionRunner } from '../../engine/collection-runner.js';
 
 export const definition: ToolDefinition = {
   name: 'run_collection',
-  description: 'Fire all requests in a collection sequentially.',
+  description: 'Runs all requests in a collection sequentially and returns pass/fail per request. When to use: after building a collection with create_request, to verify every endpoint actually works end to end.',
   inputSchema: {
     type: 'object',
     properties: {

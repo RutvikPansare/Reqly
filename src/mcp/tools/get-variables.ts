@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'get_variables',
-  description: 'List all variables in a named environment (or the active environment if no name given).',
+  description: 'Lists all variables in a named environment, or the active environment if no name is given. When to use: to check what baseUrl/tokens already exist before calling set_variable, or to debug why a {{variable}} in a request is not resolving.',
   inputSchema: {
     type: 'object',
     properties: {

@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'create_request',
-  description: 'Create a new request in a collection.',
+  description: "Adds a request to an existing collection. When to use: for each endpoint found while reading route handler source - infer method, URL, headers, and body shape from the handler, TypeScript types, Zod schemas, and validation middleware are the most reliable sources. Preferred pattern: call create_collection first if the collection doesn't exist yet, then one create_request call per endpoint. Use {{variableName}} for any value that varies by environment (baseUrl, tokens) rather than hardcoding it.",
   inputSchema: {
     type: 'object',
     properties: {

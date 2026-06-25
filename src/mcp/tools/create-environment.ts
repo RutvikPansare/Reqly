@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'create_environment',
-  description: 'Create a named environment.',
+  description: 'Creates a new named environment (e.g. "development", "staging") for holding variables like baseUrl and auth tokens. When to use: at the start of building a collection, before set_variable. Preferred pattern: create_environment, then set_variable for baseUrl and tokens, then create_collection and create_request.',
   inputSchema: {
     type: 'object',
     properties: {

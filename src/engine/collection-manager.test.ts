@@ -18,6 +18,10 @@ describe('CollectionManager', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  it('exposes the base directory it was constructed with', () => {
+    expect(manager.getBaseDir()).toBe(tmpDir);
+  });
+
   it('should create and get a collection', async () => {
     const col = await manager.createCollection('TestCol');
     expect(col.name).toBe('TestCol');

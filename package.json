@@ -7,6 +7,9 @@
     "reqly": "dist/server/index.js"
   },
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "directories": {
     "doc": "docs"
   },

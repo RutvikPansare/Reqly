@@ -14,6 +14,7 @@ export interface EngineContext {
   responseStore: ResponseStore;
   historyStore: HistoryStore;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number) => Promise<HttpResponse>;
+  execChildPid?: number;
 }
 
 export interface ToolDefinition {

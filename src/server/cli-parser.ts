@@ -6,12 +6,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export interface ParsedArgs {
-  command: 'start' | 'run' | 'setup' | 'use' | 'status' | 'stop';
+  command: 'start' | 'run' | 'setup' | 'use' | 'status' | 'stop' | 'exec';
   args: string[];
   flags: {
     env?: string;
     reporter?: string;
     projectDir?: string;
+    port?: string;
+    collection?: string;
   };
 }
 
@@ -35,20 +37,33 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
   const args = argv.slice(2); // skip node and script
   let i = 0;
-  
+
   // check if first non-flag argument is a command
-  const validCommands = ['start', 'run', 'setup', 'use', 'status', 'stop'];
+  const validCommands = ['start', 'run', 'setup', 'use', 'status', 'stop', 'exec'];
   let commandFound = false;
+  // once `exec`'s child command starts, everything after it (including its own
+  // dashed flags) is passed through verbatim rather than parsed as reqly flags
+  let inPassthrough = false;
 
   while (i < args.length) {
     const arg = args[i];
-    
+
+    if (inPassthrough) {
+      result.args.push(arg);
+      i++;
+      continue;
+    }
+
     if (arg === '--env') {
       result.flags.env = args[++i];
     } else if (arg === '--reporter') {
       result.flags.reporter = args[++i];
     } else if (arg === '--project-dir') {
       result.flags.projectDir = args[++i];
+    } else if (arg === '--port') {
+      result.flags.port = args[++i];
+    } else if (arg === '--collection') {
+      result.flags.collection = args[++i];
     } else if (arg === '--version' || arg === '-v') {
       try {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
@@ -59,10 +74,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       if (!commandFound && validCommands.includes(arg)) {
-        result.command = arg as 'start' | 'run' | 'setup' | 'use' | 'status' | 'stop';
+        result.command = arg as 'start' | 'run' | 'setup' | 'use' | 'status' | 'stop' | 'exec';
         commandFound = true;
       } else {
         result.args.push(arg);
+        if (commandFound && result.command === 'exec') {
+          inPassthrough = true;
+        }
       }
     }
     i++;

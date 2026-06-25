@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'get_response_full',
-  description: 'Retrieve the complete untruncated last response for a named request from the ResponseStore. Agents call this when they need the full payload after seeing the truncated version.',
+  description: 'Retrieves the complete untruncated last response for a named request. When to use: only after get_response or run_request showed a truncated body and you need the full payload - e.g. to inspect a field that got cut off.',
   inputSchema: {
     type: 'object',
     properties: {

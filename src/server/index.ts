@@ -19,6 +19,7 @@ import { handleSetupCommand } from './setup-command.js';
 import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
 import { handleStopCommand } from './stop-command.js';
+import { handleExecCommand } from './exec-command.js';
 import { readLock, writeLock, clearLock, isProcessAlive } from './lock.js';
 
 async function main() {
@@ -67,6 +68,12 @@ async function main() {
     process.exit(exitCode);
   }
 
+  if (parsed.command === 'exec') {
+    const execProxyServer = new ProxyServer(collectionManager);
+    const exitCode = await handleExecCommand(parsed, execProxyServer);
+    process.exit(exitCode);
+  }
+
   // start command (default)
   const proxyServer = new ProxyServer(collectionManager);
   const responseStore = new ResponseStore();
@@ -86,7 +93,7 @@ async function main() {
     }
   };
 
-  const port = 4242;
+  const port = Number(process.env.REQLY_TEST_PORT) || 4242;
   let mcpOnly = false;
 
   const lock = await readLock();

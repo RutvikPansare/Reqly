@@ -3,7 +3,7 @@ import { EnvironmentNotFoundError } from '../../engine/environment-manager.js';
 
 export const definition: ToolDefinition = {
   name: 'set_variable',
-  description: 'Set a key-value pair in a named environment. Creates the environment if it does not exist.',
+  description: 'Sets a key-value pair (e.g. baseUrl, an auth token) in a named environment, creating the environment if it does not exist. When to use: before running any request, to set baseUrl and any auth tokens those requests need. Preferred pattern: prefer {{baseUrl}} and {{variableName}} over hardcoded URLs and secrets in every request you create.',
   inputSchema: {
     type: 'object',
     properties: {

@@ -45,6 +45,32 @@ Reqly exposes these tools directly to your AI agent:
 | `get_response_full` | Retrieves the last untruncated response for a request | `collectionName`, `requestName` |
 | `start_proxy` | Auto-captures local outbound traffic into a collection | `port`, `collectionName` |
 | `stop_proxy` | Stops traffic interception | (None) |
+| `exec_with_proxy` | Starts the proxy and runs a dev command with it injected | `command`, `collection`, `port` |
+| `install_middleware` | Detects your framework and returns the inbound-capture middleware snippet | (None) |
+
+## Capture Inbound Requests (Middleware)
+
+If your codebase is too complex or undocumented for the AI-writes-collection workflow, install `reqly-middleware` to capture every request coming **into** your app automatically:
+
+```bash
+npm install reqly-middleware
+```
+
+```ts
+// Express
+import { reqlyMiddleware } from 'reqly-middleware'
+app.use(reqlyMiddleware())
+
+// Next.js (middleware.ts at project root)
+import { reqlyNextMiddleware } from 'reqly-middleware/next'
+export default reqlyNextMiddleware()
+
+// Fastify
+import { reqlyMiddlewareHook } from 'reqly-middleware'
+fastify.addHook('onRequest', reqlyMiddlewareHook())
+```
+
+Restart your dev server and Reqly starts capturing inbound requests into the `Captured` collection. Local development only - it phones home to `localhost:4242` and has no effect in production. Ask your agent to call `install_middleware` to get the exact snippet for your framework.
 
 ## How collections work
 

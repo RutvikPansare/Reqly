@@ -1,0 +1,12 @@
+{
+  "name": "reqly-middleware",
+  "version": "0.1.0",
+  "description": "Inbound request capture middleware for Reqly - Express, Fastify, and Next.js.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./next": "./src/next.ts"
+  },
+  "license": "ISC"
+}

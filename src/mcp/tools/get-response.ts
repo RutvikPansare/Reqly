@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'get_response',
-  description: 'Retrieve last response for a request.',
+  description: 'Retrieves the last cached response for a named request (truncated if it was large). When to use: right after run_request, to inspect the result without re-firing the request. Call get_response_full instead if you need the untruncated body.',
   inputSchema: {
     type: 'object',
     properties: {

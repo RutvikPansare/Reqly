@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'start_proxy',
-  description: 'Start the auto-capture proxy server',
+  description: 'Starts the outbound capture proxy server. When to use: to capture HTTP calls your app makes TO external APIs (Stripe, Shopify, third-party services) - not for documenting your own endpoints. This does NOT capture inbound calls to your own routes; for those, read the route files and use create_request instead. Preferred pattern: start_proxy, exercise the app, stop_proxy, then list_collections to see what was captured.',
   inputSchema: {
     type: 'object',
     properties: {

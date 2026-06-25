@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'delete_variable',
-  description: 'Remove a variable from an environment.',
+  description: 'Removes a variable from an environment. When to use: cleaning up a stale or wrong baseUrl/token before setting a new one with set_variable.',
   inputSchema: {
     type: 'object',
     properties: {

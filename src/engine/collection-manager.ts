@@ -21,6 +21,10 @@ export class RequestNotFoundError extends Error {
 export class CollectionManager {
   constructor(private baseDir: string) {}
 
+  getBaseDir(): string {
+    return this.baseDir;
+  }
+
   private async ensureBaseDir() {
     if (!existsSync(this.baseDir)) {
       await fs.mkdir(this.baseDir, { recursive: true });

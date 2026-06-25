@@ -33,6 +33,27 @@ describe('cli-parser', () => {
     expect(parsed.args).toEqual([]);
   });
 
+  it('parses exec command with a simple child command', () => {
+    const parsed = parseArgs(['node', 'script.js', 'exec', 'npm', 'run', 'dev']);
+    expect(parsed.command).toBe('exec');
+    expect(parsed.args).toEqual(['npm', 'run', 'dev']);
+  });
+
+  it('parses exec flags before the child command, leaving the child command untouched', () => {
+    const parsed = parseArgs(['node', 'script.js', 'exec', '--collection', 'Dabbr API', '--port', '8888', 'npm', 'run', 'dev']);
+    expect(parsed.command).toBe('exec');
+    expect(parsed.flags.collection).toBe('Dabbr API');
+    expect(parsed.flags.port).toBe('8888');
+    expect(parsed.args).toEqual(['npm', 'run', 'dev']);
+  });
+
+  it('passes the child command through verbatim, including dashed flags meant for it', () => {
+    const parsed = parseArgs(['node', 'script.js', 'exec', 'python', 'manage.py', 'runserver', '--port', '8000']);
+    expect(parsed.command).toBe('exec');
+    expect(parsed.args).toEqual(['python', 'manage.py', 'runserver', '--port', '8000']);
+    expect(parsed.flags.port).toBeUndefined();
+  });
+
   it('parses flags before and after command', () => {
     const parsed = parseArgs(['node', 'script.js', '--env', 'production', 'run', 'myCol', '--reporter', 'json', '--project-dir', '/tmp']);
     expect(parsed.command).toBe('run');
