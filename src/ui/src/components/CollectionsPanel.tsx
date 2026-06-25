@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Play, Plus, FolderInput } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
+import { SidebarEnvSection } from './SidebarEnvSection';
 
 interface CollectionsPanelProps {
   activeRequest: any;
@@ -155,6 +156,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       {importError && (
         <p className="text-xs text-red-400 px-1 break-words shrink-0">{importError}</p>
       )}
+
+      {/* Environments section - below import button, above collections */}
+      <div className="-mx-3 -mt-1" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+        <SidebarEnvSection />
+      </div>
 
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Collections</h2>
