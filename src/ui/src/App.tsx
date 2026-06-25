@@ -234,7 +234,7 @@ function App() {
         />
         {activePanel !== 'graphql' && (
           <aside className="w-64 border-r border-gray-800 bg-gray-900 flex flex-col overflow-hidden min-h-0">
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
                 <CollectionsPanel
                   activeRequest={activeTab?.request}
@@ -249,6 +249,10 @@ function App() {
               {activePanel === 'capture' && (
                 <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
               )}
+            </div>
+            {/* Environment switcher pinned at the bottom of the sidebar */}
+            <div className="border-t border-gray-800 px-3 py-2 shrink-0">
+              <EnvironmentSwitcher />
             </div>
           </aside>
         )}

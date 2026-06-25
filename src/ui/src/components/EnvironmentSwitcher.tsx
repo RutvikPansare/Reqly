@@ -86,15 +86,15 @@ export function EnvironmentSwitcher() {
     <div className="relative" ref={popoverRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+        className="w-full flex items-center gap-2 bg-gray-900 border border-gray-700 hover:border-gray-500 text-gray-300 px-3 py-1.5 rounded text-sm font-medium transition-colors"
       >
-        <span className={`w-2 h-2 rounded-full ${active ? 'bg-green-500' : 'bg-gray-600'}`}></span>
-        {active || 'No env'}
-        <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className={`w-2 h-2 rounded-full shrink-0 ${active ? 'bg-green-500' : 'bg-gray-600'}`}></span>
+        <span className="flex-1 text-left truncate">{active || 'No env'}</span>
+        <ChevronDown size={14} className={`transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 z-50">
+        <div className="absolute left-0 bottom-full mb-1 w-56 bg-gray-900 border border-gray-700 rounded shadow-xl py-1 z-50">
           <div className="max-h-64 overflow-y-auto">
             {environments.map(env => (
               <button 
