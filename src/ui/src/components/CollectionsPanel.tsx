@@ -3,6 +3,7 @@ import { ChevronRight, Play, Plus, FolderInput } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
+import { SuccessToast } from './ui/SuccessToast';
 
 interface CollectionsPanelProps {
   activeRequest: any;
@@ -27,6 +28,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const [colRenameValue, setColRenameValue] = useState('');
 
   const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [contextMenu, setContextMenu] = useState<
@@ -59,10 +61,12 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       const content = await file.text();
       await importCollection(content, format);
       loadData();
+      // Show the collection name without extension as the success label
+      const collectionName = file.name.replace(/\.(json|bru)$/i, '');
+      setImportSuccess(collectionName);
     } catch (err: any) {
       setImportError(err.message || 'Import failed');
     } finally {
-      // reset so the same file can be re-selected
       e.target.value = '';
     }
   };
@@ -385,6 +389,14 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
             </>
           )}
         </div>
+      )}
+
+      {importSuccess && (
+        <SuccessToast
+          message="Collection imported!"
+          sub={importSuccess}
+          onDone={() => setImportSuccess(null)}
+        />
       )}
     </div>
   );
