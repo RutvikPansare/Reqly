@@ -12,7 +12,6 @@ import { CapturePanel } from './components/CapturePanel';
 import { SpotlightSearch } from './components/SpotlightSearch';
 import { RequestEditor } from './components/RequestEditor';
 import { ResponseViewer } from './components/ResponseViewer';
-import { ReqlyLogo } from './components/ReqlyLogo';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
@@ -235,15 +234,20 @@ function App() {
   return (
     <div className="h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--surface-1)' }}>
       <header className="flex items-center px-4 shrink-0 gap-3" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
-        <ReqlyLogo />
+        <h1
+          className="shrink-0 font-bold"
+          style={{ fontSize: '1.125rem', letterSpacing: '-0.03em', color: 'var(--text-primary)', lineHeight: 1 }}
+        >
+          Req<span style={{ color: '#3b82f6' }}>ly</span>
+        </h1>
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 text-sm cursor-pointer transition-colors px-3 rounded-lg shrink-0"
-          style={{ height: '32px', width: '220px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
+          className="flex items-center gap-2 cursor-pointer transition-colors px-3 rounded-lg shrink-0"
+          style={{ height: '32px', width: '200px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}
           title="Search (Cmd+K)"
         >
           <Search size={13} />
-          <span className="flex-1 text-left text-xs">Search</span>
+          <span className="flex-1 text-left">Search</span>
           <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>⌘K</span>
         </button>
         <div className="flex items-center gap-2 ml-auto">
