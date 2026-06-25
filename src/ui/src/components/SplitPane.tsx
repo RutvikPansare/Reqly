@@ -41,12 +41,25 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
         {top}
       </div>
 
-      {/* Drag handle */}
+      {/* Drag handle - full-width divider with centered pill */}
       <div
         onMouseDown={handleMouseDown}
-        className="shrink-0 h-2 flex items-center justify-center cursor-row-resize group my-1"
+        className="shrink-0 flex items-center justify-center cursor-row-resize group relative"
+        style={{ height: '12px' }}
       >
-        <div className="w-12 h-1 rounded-full bg-gray-700 group-hover:bg-blue-500 transition-colors" />
+        {/* Full-width line */}
+        <div
+          className="absolute inset-x-0 top-1/2 -translate-y-1/2 transition-colors"
+          style={{ height: '1px', background: 'var(--border-strong)' }}
+        />
+        {/* Center handle indicator */}
+        <div
+          className="relative z-10 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full transition-colors group-hover:bg-blue-500"
+          style={{ background: 'var(--surface-4)', border: '1px solid var(--border-strong)' }}
+        >
+          <div className="w-3 h-0.5 rounded-full" style={{ background: 'var(--text-muted)' }} />
+          <div className="w-3 h-0.5 rounded-full" style={{ background: 'var(--text-muted)' }} />
+        </div>
       </div>
 
       {/* Bottom pane */}

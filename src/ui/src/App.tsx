@@ -199,22 +199,25 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--surface-1)' }}>
-      <header className="h-13 border-b flex items-center px-4 shrink-0 gap-4" style={{ background: 'var(--surface-0)', borderColor: 'var(--border)' }}>
-        <h1 className="font-bold tracking-tight text-sm shrink-0" style={{ color: 'var(--text-primary)' }}>Reqly</h1>
+      <header className="flex items-center px-4 shrink-0 gap-3" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
+        <h1 className="font-bold tracking-tight text-sm shrink-0 mr-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Reqly</h1>
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 text-sm w-64 cursor-pointer transition-colors px-3 py-1.5 rounded-lg"
-          style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
+          className="flex items-center gap-2 text-sm cursor-pointer transition-colors px-3 rounded-lg shrink-0"
+          style={{ height: '32px', width: '220px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
           title="Search (Cmd+K)"
         >
-          <Search size={14} />
-          <span className="flex-1 text-left">Search</span>
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>⌘K</span>
+          <Search size={13} />
+          <span className="flex-1 text-left text-xs">Search</span>
+          <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>⌘K</span>
         </button>
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={() => setShowSettings(true)}
-            className="btn btn-ghost w-8 h-8 p-0 flex items-center justify-center rounded-lg"
+            className="flex items-center justify-center rounded-lg transition-colors"
+            style={{ width: '32px', height: '32px', color: 'var(--text-muted)', background: 'transparent', border: 'none' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
             title="Settings"
           >
             <Settings size={16} />
@@ -261,15 +264,16 @@ function App() {
             <GraphQLWorkspace />
           ) : (
             <>
-              <div className="flex items-center shrink-0" style={{ background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
+              <div className="flex items-center shrink-0" style={{ height: '40px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
                 <button
                   onClick={() => scrollTabs('left')}
-                  className="px-1.5 py-2 shrink-0 btn btn-ghost rounded-none"
+                  className="flex items-center justify-center shrink-0 transition-colors"
+                  style={{ width: '28px', height: '40px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRight: '1px solid var(--border)' }}
                   title="Scroll left"
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={13} />
                 </button>
-                <div ref={tabBarRef} className="flex overflow-x-auto flex-1" style={{ scrollbarWidth: 'none' }}>
+                <div ref={tabBarRef} className="flex overflow-x-auto flex-1 h-full" style={{ scrollbarWidth: 'none' }}>
                   {tabs.map(tab => {
                     const isActive = activeTabId === tab.id;
                     const dirty = isDirty(tab);
@@ -277,31 +281,31 @@ function App() {
                       <div
                         key={tab.id}
                         onClick={() => setActiveTabId(tab.id)}
-                        className={`relative flex items-center gap-2 px-3 py-2 cursor-pointer min-w-32 max-w-48 group transition-colors`}
+                        className="relative flex items-center gap-2 px-3 cursor-pointer min-w-32 max-w-44 group transition-colors h-full"
                         style={{
                           borderRight: '1px solid var(--border)',
-                          background: isActive ? 'var(--surface-3)' : 'transparent',
+                          background: isActive ? 'var(--surface-2)' : 'transparent',
                         }}
                       >
                         {isActive && (
-                          <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500 rounded-full" aria-hidden="true" />
+                          <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500" aria-hidden="true" />
                         )}
-                        <span className={`text-xs font-bold ${methodColorClass(tab.request.method)}`}>
+                        <span className={`text-[10px] font-bold shrink-0 ${methodColorClass(tab.request.method)}`}>
                           {tab.request.method}
                         </span>
-                        <span className="text-sm truncate flex-1" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                        <span className="text-xs truncate flex-1" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                           {tab.request.name || 'Untitled'}
                         </span>
-                        <div className="w-5 h-5 flex items-center justify-center shrink-0 relative">
+                        <div className="w-4 h-4 flex items-center justify-center shrink-0 relative">
                           {dirty && (
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:hidden" title="Unsaved changes" />
                           )}
                           <button
                             onClick={(e) => closeTab(e, tab.id)}
-                            className={`p-0.5 rounded ${dirty ? 'hidden group-hover:block' : 'opacity-0 group-hover:opacity-100'} transition-opacity absolute inset-0 flex items-center justify-center`}
+                            className={`rounded ${dirty ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'} transition-opacity absolute inset-0 flex items-center justify-center`}
                             style={{ color: 'var(--text-muted)' }}
                           >
-                            <X size={14} />
+                            <X size={12} />
                           </button>
                         </div>
                       </div>
@@ -309,19 +313,20 @@ function App() {
                   })}
                   <button
                     onClick={createNewTab}
-                    className="px-3 shrink-0 btn btn-ghost rounded-none"
-                    style={{ borderRight: '1px solid var(--border)' }}
+                    className="flex items-center justify-center shrink-0 transition-colors h-full"
+                    style={{ padding: '0 10px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRight: '1px solid var(--border)' }}
                     title="New Tab"
                   >
-                    <Plus size={14} />
+                    <Plus size={13} />
                   </button>
                 </div>
                 <button
                   onClick={() => scrollTabs('right')}
-                  className="px-1.5 py-2 shrink-0 btn btn-ghost rounded-none"
+                  className="flex items-center justify-center shrink-0 transition-colors"
+                  style={{ width: '28px', height: '40px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderLeft: '1px solid var(--border)' }}
                   title="Scroll right"
                 >
-                  <ChevronRight size={14} />
+                  <ChevronRight size={13} />
                 </button>
               </div>
 
@@ -329,7 +334,7 @@ function App() {
                 {tabs.map(tab => (
                   <div
                     key={tab.id}
-                    className="absolute inset-0 p-3 overflow-hidden"
+                    className="absolute inset-0 p-4 gap-0 overflow-hidden"
                     style={{ display: activeTabId === tab.id ? 'flex' : 'none', flexDirection: 'column' }}
                   >
                     <SplitPane
