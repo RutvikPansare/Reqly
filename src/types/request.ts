@@ -3,6 +3,11 @@ import { Assertion } from './assertion.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+export interface GraphQLConfig {
+  query: string;
+  variables?: Record<string, unknown>;
+}
+
 export interface RequestConfig {
   method: HttpMethod;
   url: string;
@@ -12,4 +17,6 @@ export interface RequestConfig {
   authProfileId?: string;
   environmentId?: string;
   assertions?: Assertion[];
+  type?: 'rest' | 'graphql';
+  graphql?: GraphQLConfig;
 }

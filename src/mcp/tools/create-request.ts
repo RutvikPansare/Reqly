@@ -18,7 +18,16 @@ export const definition: ToolDefinition = {
           body: { type: 'string' },
           params: { type: 'object' },
           authProfileId: { type: 'string' },
-          environmentId: { type: 'string' }
+          environmentId: { type: 'string' },
+          type: { type: 'string', enum: ['rest', 'graphql'] },
+          graphql: {
+            type: 'object',
+            properties: {
+              query: { type: 'string' },
+              variables: { type: 'object' }
+            },
+            required: ['query']
+          }
         },
         required: ['id', 'name', 'method', 'url']
       }

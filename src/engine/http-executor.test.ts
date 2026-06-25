@@ -125,4 +125,74 @@ describe('http-executor', () => {
     expect((result.body as string).length).toBe(60 * 1024);
     expect((result.body as string)).not.toContain('[Response truncated');
   });
+
+  describe('graphql type', () => {
+    const mockOkResponse = () => {
+      const mockResponse = {
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('{"data":{"users":[]}}').buffer),
+      };
+      vi.mocked(fetch).mockResolvedValue(mockResponse as any);
+    };
+
+    it('should build graphql body from config.graphql with variables', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: { query: 'query { users { id } }', variables: { limit: 10 } },
+      };
+      await execute(config);
+      expect(fetch).toHaveBeenCalledWith(
+        'https://api.example.com/graphql',
+        expect.objectContaining({
+          body: JSON.stringify({ query: 'query { users { id } }', variables: { limit: 10 } }),
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        })
+      );
+    });
+
+    it('should build graphql body without variables key when variables is not provided', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: { query: 'query { health }' },
+      };
+      await execute(config);
+      const calledBody = JSON.parse((vi.mocked(fetch).mock.lastCall![1] as any).body);
+      expect(calledBody).toEqual({ query: 'query { health }' });
+      expect(calledBody.variables).toBeUndefined();
+    });
+
+    it('should set Content-Type application/json automatically for graphql requests', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: { query: 'mutation { noop }' },
+      };
+      await execute(config);
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['Content-Type']).toBe('application/json');
+    });
+
+    it('should not override an explicitly provided Content-Type for graphql', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        headers: { 'Content-Type': 'application/graphql' },
+        graphql: { query: 'query { users { id } }' },
+      };
+      await execute(config);
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['Content-Type']).toBe('application/graphql');
+    });
+  });
 });

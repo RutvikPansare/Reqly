@@ -133,4 +133,43 @@ describe('CollectionManager', () => {
     expect(copy.url).toBe('http://x.com');
     expect(copy.method).toBe('GET');
   });
+
+  it('should round-trip a graphql type request through YAML', async () => {
+    await manager.createCollection('GQL');
+    const gqlReq: CollectionRequest = {
+      id: 'gql-1',
+      name: 'ListUsers',
+      method: 'POST',
+      url: 'https://api.example.com/graphql',
+      type: 'graphql',
+      graphql: {
+        query: 'query ListUsers { users { id name } }',
+        variables: { limit: 10 },
+      },
+    };
+    await manager.addRequest('GQL', gqlReq);
+
+    const retrieved = await manager.getRequest('GQL', 'ListUsers');
+    expect(retrieved.type).toBe('graphql');
+    expect(retrieved.graphql?.query).toBe('query ListUsers { users { id name } }');
+    expect(retrieved.graphql?.variables).toEqual({ limit: 10 });
+  });
+
+  it('should round-trip a graphql request without variables through YAML', async () => {
+    await manager.createCollection('GQL2');
+    const gqlReq: CollectionRequest = {
+      id: 'gql-2',
+      name: 'HealthCheck',
+      method: 'POST',
+      url: 'https://api.example.com/graphql',
+      type: 'graphql',
+      graphql: { query: 'query { health }' },
+    };
+    await manager.addRequest('GQL2', gqlReq);
+
+    const retrieved = await manager.getRequest('GQL2', 'HealthCheck');
+    expect(retrieved.type).toBe('graphql');
+    expect(retrieved.graphql?.query).toBe('query { health }');
+    expect(retrieved.graphql?.variables).toBeUndefined();
+  });
 });

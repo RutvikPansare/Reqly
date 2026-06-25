@@ -41,7 +41,16 @@ export async function execute(
   }
 
   let body = config.body;
-  if (typeof body === 'string') {
+  if (config.type === 'graphql' && config.graphql) {
+    const gqlBody: Record<string, unknown> = { query: config.graphql.query };
+    if (config.graphql.variables !== undefined) {
+      gqlBody.variables = config.graphql.variables;
+    }
+    body = JSON.stringify(gqlBody);
+    if (!headers['Content-Type'] && !headers['content-type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+  } else if (typeof body === 'string') {
     body = substitute(body, vars);
   } else if (body && typeof body === 'object') {
     body = JSON.stringify(body);
