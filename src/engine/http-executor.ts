@@ -23,7 +23,7 @@ export async function execute(
 
   // Run preScript before substitution so env mutations are picked up
   if (config.preScript) {
-    runScript(config.preScript, { env: vars, request: config as Record<string, unknown> });
+    runScript(config.preScript, { env: vars, request: config as unknown as Record<string, unknown> });
   }
 
   let url = substitute(config.url, vars);
@@ -159,7 +159,7 @@ export async function execute(
   };
 
   if (config.postScript) {
-    runScript(config.postScript, { env: vars, request: config as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+    runScript(config.postScript, { env: vars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
   }
 
   return result;

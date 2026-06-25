@@ -21,7 +21,7 @@ function makeContext(collectionManager: CollectionManager): EngineContext {
     tunnelManager: {} as TunnelManager,
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
-    executeRequest: async () => ({ status: 200, body: '', headers: {}, latency: 0 }),
+    executeRequest: async () => ({ status: 200, body: '', headers: {}, latency: 0, timestamp: new Date().toISOString() }),
   };
 }
 
