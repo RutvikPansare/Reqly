@@ -315,27 +315,33 @@ function App() {
         />
         {activePanel !== 'graphql' && (
           <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-2)', borderRight: '1px solid var(--border)' }}>
-            <div className="flex-1 overflow-y-auto min-h-0">
-              {activePanel === 'collections' && (
-                <>
+            {activePanel === 'collections' && (
+              <>
+                {/* Env section pinned above - always visible */}
+                <div className="shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <SidebarEnvSection />
+                </div>
+                {/* Collections fill remaining space with independent scroll */}
+                <div className="flex-1 overflow-y-auto min-h-0">
                   <CollectionsPanel
                     activeRequest={activeTab?.request}
                     onSelectRequest={handleSelectRequestFromSidebar}
                     onRunCollection={setRunningCollection}
                   />
-                  <div style={{ borderTop: '1px solid var(--border)' }}>
-                    <SidebarEnvSection />
-                  </div>
-                </>
-              )}
-              {activePanel === 'environments' && <EnvironmentsPanel />}
-              {activePanel === 'history' && (
-                <HistoryPanel onSelectRequest={handleSelectRequestFromSidebar} />
-              )}
-              {activePanel === 'capture' && (
-                <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
-              )}
-            </div>
+                </div>
+              </>
+            )}
+            {activePanel !== 'collections' && (
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {activePanel === 'environments' && <EnvironmentsPanel />}
+                {activePanel === 'history' && (
+                  <HistoryPanel onSelectRequest={handleSelectRequestFromSidebar} />
+                )}
+                {activePanel === 'capture' && (
+                  <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
+                )}
+              </div>
+            )}
           </aside>
         )}
 

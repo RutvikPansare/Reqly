@@ -139,7 +139,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   };
 
   return (
-    <div className="p-3 flex flex-col gap-3 relative h-full">
+    <div className="p-3 flex flex-col gap-3 relative min-h-full">
 
       {/* Import button - prominent, top of panel */}
       <button
@@ -175,7 +175,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         onChange={handleImportFile}
       />
 
-      <div className="space-y-1 overflow-y-auto flex-1">
+      <div className="space-y-1">
         {creatingCol && (
           <input
             autoFocus
