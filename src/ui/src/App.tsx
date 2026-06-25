@@ -17,6 +17,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
+import { SplitPane } from './components/SplitPane';
 
 interface TabData {
   id: string;
@@ -319,52 +320,52 @@ function App() {
                 {tabs.map(tab => (
                   <div
                     key={tab.id}
-                    className="absolute inset-0 flex flex-col p-4 gap-4 overflow-hidden"
-                    style={{ display: activeTabId === tab.id ? 'flex' : 'none' }}
+                    className="absolute inset-0 p-4 overflow-hidden"
+                    style={{ display: activeTabId === tab.id ? 'flex' : 'none', flexDirection: 'column' }}
                   >
-                    <div className="flex-1 min-h-0 flex flex-col">
-                      <RequestEditor
-                        request={tab.request}
-                        onFire={(req) => handleFire(req, tab.id)}
-                        onChange={(req) => updateTab(tab.id, { request: { ...req, _collection: tab.request._collection } })}
-                        onSave={async (req) => {
-                          if (tab.request._collection) {
-                            try {
-                              await updateRequest(tab.request._collection, tab.request.name, req);
-                              const saved = { ...req, _collection: tab.request._collection };
-                              updateTab(tab.id, { request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) });
-                              window.dispatchEvent(new Event('reqly-reload'));
-                            } catch (e) {
-                              console.error("Failed to save request", e);
-                              alert("Failed to save request.");
-                            }
-                          } else {
-                            const cols = await fetchCollections();
-                            const hasCustomName = req.name && req.name !== 'New Request';
-                            if (cols.length === 1 && hasCustomName) {
+                    <SplitPane
+                      top={
+                        <RequestEditor
+                          request={tab.request}
+                          onFire={(req) => handleFire(req, tab.id)}
+                          onChange={(req) => updateTab(tab.id, { request: { ...req, _collection: tab.request._collection } })}
+                          onSave={async (req) => {
+                            if (tab.request._collection) {
                               try {
-                                const requestToSave = { ...req };
-                                if (!requestToSave.id) requestToSave.id = Date.now().toString();
-                                await addRequest(cols[0].name, requestToSave);
-                                const saved = { ...requestToSave, _collection: cols[0].name };
-                                const newTabId = `${cols[0].name}-${requestToSave.name}`;
-                                setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, id: newTabId, request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) } : t));
-                                if (activeTabId === tab.id) setActiveTabId(newTabId);
+                                await updateRequest(tab.request._collection, tab.request.name, req);
+                                const saved = { ...req, _collection: tab.request._collection };
+                                updateTab(tab.id, { request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) });
                                 window.dispatchEvent(new Event('reqly-reload'));
                               } catch (e) {
-                                console.error('Failed to save request', e);
-                                alert('Failed to save request.');
+                                console.error("Failed to save request", e);
+                                alert("Failed to save request.");
                               }
                             } else {
-                              setSaveModal({ tabId: tab.id, request: req });
+                              const cols = await fetchCollections();
+                              const hasCustomName = req.name && req.name !== 'New Request';
+                              if (cols.length === 1 && hasCustomName) {
+                                try {
+                                  const requestToSave = { ...req };
+                                  if (!requestToSave.id) requestToSave.id = Date.now().toString();
+                                  await addRequest(cols[0].name, requestToSave);
+                                  const saved = { ...requestToSave, _collection: cols[0].name };
+                                  const newTabId = `${cols[0].name}-${requestToSave.name}`;
+                                  setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, id: newTabId, request: saved, savedRequest: JSON.parse(JSON.stringify(saved)) } : t));
+                                  if (activeTabId === tab.id) setActiveTabId(newTabId);
+                                  window.dispatchEvent(new Event('reqly-reload'));
+                                } catch (e) {
+                                  console.error('Failed to save request', e);
+                                  alert('Failed to save request.');
+                                }
+                              } else {
+                                setSaveModal({ tabId: tab.id, request: req });
+                              }
                             }
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1 min-h-0 flex flex-col">
-                      <ResponseViewer response={tab.response} isSending={tab.isSending} />
-                    </div>
+                          }}
+                        />
+                      }
+                      bottom={<ResponseViewer response={tab.response} isSending={tab.isSending} />}
+                    />
                   </div>
                 ))}
               </div>
