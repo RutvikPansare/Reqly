@@ -27,7 +27,9 @@ export const definition: ToolDefinition = {
               variables: { type: 'object' }
             },
             required: ['query']
-          }
+          },
+          preScript: { type: 'string', description: 'JavaScript executed before the request fires. Has access to env (read/write) and request (read-only).' },
+          postScript: { type: 'string', description: 'JavaScript executed after the response is received. Has access to env (read/write), request, and response (read-only).' }
         },
         required: ['id', 'name', 'method', 'url']
       }

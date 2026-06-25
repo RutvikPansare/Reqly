@@ -13,7 +13,7 @@ interface RequestEditorProps {
 }
 
 export function RequestEditor({ request, onFire, onSave, onChange }: RequestEditorProps) {
-  const tabs = ['params', 'headers', 'body', 'auth', 'assertions', 'variables'];
+  const tabs = ['params', 'headers', 'body', 'auth', 'assertions', 'variables', 'pre-script', 'post-script'];
 
   const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
   const [activeEnvName, setActiveEnvName] = useState<string>('');
@@ -39,6 +39,8 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
   const [headersList, setHeadersList] = useState<KeyValuePair[]>([]);
   const [assertions, setAssertions] = useState<any[]>([]);
   const [bodyText, setBodyText] = useState('');
+  const [preScript, setPreScript] = useState('');
+  const [postScript, setPostScript] = useState('');
 
   const parseParams = (urlStr: string): KeyValuePair[] => {
     const qIndex = urlStr.indexOf('?');
@@ -71,6 +73,8 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
       } else {
         setBodyText('');
       }
+      setPreScript(request.preScript || '');
+      setPostScript(request.postScript || '');
     }
   }, [request?.id, request?.name]);
 
@@ -147,6 +151,10 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
 
     const buildRequest = () => {
       const req: any = { ...request, method, url, assertions, headers: getHeadersRecord(), body: getParsedBody() };
+      if (preScript.trim()) req.preScript = preScript;
+      else delete req.preScript;
+      if (postScript.trim()) req.postScript = postScript;
+      else delete req.postScript;
       if (authProfileId) req.authProfileId = authProfileId;
       else if (authType !== 'none') req.auth = { type: authType, credentials: authCreds };
       else { delete req.authProfileId; delete req.auth; }
@@ -165,7 +173,7 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
     useEffect(() => {
       if (!onChange) return;
       onChange(buildRequest());
-    }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds]);
+    }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds, preScript, postScript]);
 
   const availableVariables = Object.keys(activeEnvVars);
 
@@ -454,6 +462,32 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
                 ))}
               </div>
             )}
+          </div>
+        ) : activeTab === 'pre-script' ? (
+          <div className="flex flex-col h-full gap-2">
+            <p className="text-xs text-gray-500">
+              Runs before the request fires. <code className="bg-gray-800 px-1 rounded">env</code> (read/write) and <code className="bg-gray-800 px-1 rounded">request</code> (read-only) are available. Mutations to <code className="bg-gray-800 px-1 rounded">env</code> are applied for this request and downstream requests in a collection run.
+            </p>
+            <textarea
+              className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none"
+              placeholder={`// Example: set a dynamic header from env\n// env.timestamp = String(Date.now());\n// env.authToken = "Bearer " + env.rawToken;`}
+              value={preScript}
+              onChange={e => setPreScript(e.target.value)}
+              spellCheck={false}
+            />
+          </div>
+        ) : activeTab === 'post-script' ? (
+          <div className="flex flex-col h-full gap-2">
+            <p className="text-xs text-gray-500">
+              Runs after the response is received. <code className="bg-gray-800 px-1 rounded">env</code> (read/write), <code className="bg-gray-800 px-1 rounded">request</code>, and <code className="bg-gray-800 px-1 rounded">response</code> are available. Use it to extract tokens from responses and store them in <code className="bg-gray-800 px-1 rounded">env</code> for subsequent requests.
+            </p>
+            <textarea
+              className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none"
+              placeholder={`// Example: extract a token from the response body\n// if (response.status === 200) {\n//   env.authToken = response.body.token;\n// }`}
+              value={postScript}
+              onChange={e => setPostScript(e.target.value)}
+              spellCheck={false}
+            />
           </div>
         ) : (
           <div className="text-gray-500 text-sm">

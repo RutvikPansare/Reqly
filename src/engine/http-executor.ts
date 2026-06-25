@@ -1,5 +1,6 @@
 import { fetch } from 'undici';
 import { RequestConfig, Environment, AuthProfile, AuthType, HttpResponse } from '../types/index.js';
+import { runScript } from './script-runner.js';
 
 export class RequestError extends Error {
   constructor(message: string) {
@@ -19,6 +20,11 @@ export async function execute(
   maxBodyBytes: number = 50 * 1024
 ): Promise<HttpResponse> {
   const vars = env?.variables || {};
+
+  // Run preScript before substitution so env mutations are picked up
+  if (config.preScript) {
+    runScript(config.preScript, { env: vars, request: config as Record<string, unknown> });
+  }
 
   let url = substitute(config.url, vars);
   
@@ -143,7 +149,7 @@ export async function execute(
     }
   }
 
-  return {
+  const result: HttpResponse = {
     status: response.status,
     body: parsedBody,
     ...(isTruncated ? { fullBody: fullParsedBody } : {}),
@@ -151,4 +157,10 @@ export async function execute(
     latency,
     timestamp: new Date().toISOString(),
   };
+
+  if (config.postScript) {
+    runScript(config.postScript, { env: vars, request: config as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+  }
+
+  return result;
 }

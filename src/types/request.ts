@@ -19,4 +19,6 @@ export interface RequestConfig {
   assertions?: Assertion[];
   type?: 'rest' | 'graphql';
   graphql?: GraphQLConfig;
+  preScript?: string;
+  postScript?: string;
 }

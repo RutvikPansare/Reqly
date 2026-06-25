@@ -57,8 +57,8 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 - [x] **Response Diffing** - Show what changed between the last run and this run. Detect silent API contract breaks. No other tool does this well.
 - [x] **GraphQL Support** - First-class GraphQL alongside REST. Single `POST /graphql` execution through the same HTTP Executor (done). Schema introspection (done). Query editor in the UI with syntax highlighting and autocomplete from the schema (done) - lives in its own nav-rail workspace, not the REST editor (T-053). Variables panel (done). Remaining: persist GraphQL requests to collection YAML typed as `graphql`, and have MCP tool `run_request` handle GraphQL transparently. Targets developers hitting GitHub, Shopify, Linear, and other GraphQL APIs.
 - [x] **Webhook Testing** - Expose a temporary public URL that captures incoming webhook payloads. Essential for testing Stripe, Shopify, and other inbound webhooks locally.
-- [ ] **Pre-run and Post-run Scripts** - Similar to Hoppscotch and Postman. Save pre/post execution scripts per request within a collection. Requires adding text editors in the UI for these scripts. Scripts should have programmatic access to read and initialize/update environment variable keys with values.
-- [ ] teaching agents how to use the app and create collections using response chaining
+- [x] **Pre-run and Post-run Scripts** - Similar to Hoppscotch and Postman. Save pre/post execution scripts per request within a collection. Requires adding text editors in the UI for these scripts. Scripts should have programmatic access to read and initialize/update environment variable keys with values.
+- [ ] teaching agents how to use the app and create collections using response chaining, also using varibales whenever possible for base urls, client ids etc, can we also give example collection with full env varibale usage in the package that wil act like a guide for agents?
 
 ---
 
