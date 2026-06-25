@@ -42,7 +42,7 @@ export function NavRail({ active, onSelect }: NavRailProps) {
               <span className="absolute left-0 inset-y-2 w-0.5 bg-blue-500 rounded-full" aria-hidden="true" />
             )}
             <span
-              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded transition-colors"
               style={{
                 color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                 background: isActive ? 'rgba(59,130,246,0.1)' : 'transparent',

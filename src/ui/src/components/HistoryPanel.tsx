@@ -65,7 +65,7 @@ export function HistoryPanel({ onSelectRequest }: HistoryPanelProps) {
           <div
             key={entry.id}
             onClick={() => handleClick(entry)}
-            className="px-2 py-1.5 rounded-lg cursor-pointer flex items-center gap-2 group transition-colors"
+            className="px-2 py-1.5 rounded cursor-pointer flex items-center gap-2 group transition-colors"
             style={{ background: 'transparent' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

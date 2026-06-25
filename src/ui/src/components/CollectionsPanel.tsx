@@ -145,7 +145,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       {/* Import button - prominent, top of panel */}
       <button
         onClick={() => fileInputRef.current?.click()}
-        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors shrink-0"
+        className="flex items-center gap-2 w-full px-3 py-2 rounded text-sm font-medium transition-colors shrink-0"
         style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
         title="Import from Postman (.json) or Bruno (.bru)"
       >
@@ -206,7 +206,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           return (
             <div key={col.name} className="select-none">
               <div
-                className="flex items-center justify-between group rounded-lg px-1.5 py-1 cursor-pointer transition-colors"
+                className="flex items-center justify-between group rounded px-1.5 py-1 cursor-pointer transition-colors"
                 style={{ background: 'transparent' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -281,7 +281,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     return (
                       <li
                         key={req.name}
-                        className="text-sm cursor-pointer py-1 pl-2 pr-1 rounded-lg flex items-center gap-2 group transition-colors"
+                        className="text-sm cursor-pointer py-1 pl-2 pr-1 rounded flex items-center gap-2 group transition-colors"
                         style={{ background: isActive ? 'var(--surface-3)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
                         onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
                         onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
@@ -321,7 +321,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
       {contextMenu && (
         <div
-          className="fixed rounded-xl py-1 z-50 text-sm min-w-[130px]"
+          className="fixed rounded py-1 z-50 text-sm min-w-[130px]"
           style={{ top: contextMenu.y, left: contextMenu.x, background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
           onClick={e => e.stopPropagation()}
         >

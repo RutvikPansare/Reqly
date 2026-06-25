@@ -169,9 +169,9 @@ export function EnvironmentsPanel() {
             const isOpen = expanded[env.name];
             const rows = drafts[env.name] || toVars(env);
             return (
-              <li key={env.name} className="rounded-lg overflow-hidden">
+              <li key={env.name} className="rounded overflow-hidden">
                 <div
-                  className="p-1.5 rounded-lg group flex items-center justify-between transition-colors"
+                  className="p-1.5 rounded group flex items-center justify-between transition-colors"
                   style={{ background: isActive ? 'var(--surface-3)' : 'transparent' }}
                   onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-3)'; }}
                   onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
@@ -255,7 +255,7 @@ export function EnvironmentsPanel() {
                       <button
                         onClick={() => handleSave(env.name)}
                         disabled={saving === env.name}
-                        className={`px-3 py-1 text-xs disabled:opacity-50 text-white rounded-lg transition-colors ${saved === env.name ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
+                        className={`px-3 py-1 text-xs disabled:opacity-50 text-white rounded transition-colors ${saved === env.name ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
                       >
                         {saving === env.name ? 'Saving...' : saved === env.name ? 'Saved!' : 'Save'}
                       </button>

@@ -59,7 +59,7 @@ export function SidebarEnvSection() {
               <li
                 key={env.name}
                 onClick={() => handleSelect(env.name)}
-                className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer text-sm transition-colors select-none"
+                className="flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-sm transition-colors select-none"
                 style={{ background: isActive ? 'var(--surface-3)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}

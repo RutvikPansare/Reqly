@@ -99,7 +99,7 @@ export function SpotlightSearch({ onSelectRequest, onClose }: SpotlightSearchPro
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-xl overflow-hidden"
+        className="w-full max-w-xl rounded overflow-hidden"
         style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)' }}
         onClick={e => e.stopPropagation()}
       >

@@ -89,7 +89,7 @@ export function EnvironmentSwitcher() {
     <div className="relative" ref={popoverRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+        className="w-full flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium transition-colors"
         style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
       >
         <span className={`w-2 h-2 rounded-full shrink-0 ${active ? 'bg-green-500' : 'bg-gray-600'}`}></span>
@@ -98,7 +98,7 @@ export function EnvironmentSwitcher() {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 bottom-full mb-1 w-56 rounded-xl py-1 z-50" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
+        <div className="absolute left-0 bottom-full mb-1 w-56 rounded py-1 z-50" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
           <div className="max-h-64 overflow-y-auto">
             {environments.map(env => (
               <button 

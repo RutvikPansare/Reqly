@@ -242,7 +242,7 @@ function App() {
         </h1>
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 cursor-pointer transition-colors px-3 rounded-lg shrink-0"
+          className="flex items-center gap-2 cursor-pointer transition-colors px-3 rounded shrink-0"
           style={{ height: '32px', width: '200px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}
           title="Search (Cmd+K)"
         >
@@ -255,7 +255,7 @@ function App() {
           <div className="relative" ref={headerEnvRef}>
             <button
               onClick={() => setHeaderEnvOpen(o => !o)}
-              className="flex items-center gap-2 rounded-lg px-3 transition-colors shrink-0"
+              className="flex items-center gap-2 rounded px-3 transition-colors shrink-0"
               style={{ height: '32px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
               title="Switch environment"
             >
@@ -268,7 +268,7 @@ function App() {
             </button>
             {headerEnvOpen && (
               <div
-                className="absolute right-0 top-full mt-1 rounded-xl py-1 z-50 min-w-40"
+                className="absolute right-0 top-full mt-1 rounded py-1 z-50 min-w-40"
                 style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
               >
                 {headerEnvs.map(env => (
@@ -295,7 +295,7 @@ function App() {
           </div>
           <button
             onClick={() => setShowSettings(true)}
-            className="flex items-center justify-center rounded-lg transition-colors"
+            className="flex items-center justify-center rounded transition-colors"
             style={{ width: '32px', height: '32px', color: 'var(--text-muted)', background: 'transparent', border: 'none' }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}

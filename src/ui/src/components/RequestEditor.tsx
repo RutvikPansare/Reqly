@@ -190,11 +190,11 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
   const availableVariables = Object.keys(activeEnvVars);
 
   return (
-    <div className="flex flex-col h-full rounded-xl overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+    <div className="flex flex-col h-full rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
       {/* URL bar */}
       <div className="flex p-2 gap-2" style={{ background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
         <select
-          className="rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
+          className="rounded px-2 py-1 text-sm font-bold focus:outline-none"
           style={{ background: 'var(--surface-3)', border: `1px solid ${methodColor(method)}40`, color: methodColor(method) }}
           value={method}
           onChange={e => setMethod(e.target.value as any)}
@@ -212,10 +212,10 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
           onChange={val => handleUrlChange(val)}
           placeholder="https://api.example.com/v1/users"
         />
-        <button className="btn btn-primary rounded-lg gap-1.5" onClick={handleFireWithAuth}>
+        <button className="btn btn-primary rounded gap-1.5" onClick={handleFireWithAuth}>
           <SendIcon size={13} />Send
         </button>
-        <button className="btn btn-secondary rounded-lg gap-1.5" onClick={handleSaveWithAuth}>
+        <button className="btn btn-secondary rounded gap-1.5" onClick={handleSaveWithAuth}>
           <SaveIcon size={13} />Save
         </button>
       </div>

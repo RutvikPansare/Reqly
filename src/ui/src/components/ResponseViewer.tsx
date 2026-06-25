@@ -19,7 +19,7 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
 
   if (!response && !isSending) {
     return (
-      <div className="flex-1 flex flex-col rounded-xl overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div className="flex-1 flex flex-col rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
         <div className="panel-header">
           <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         </div>
@@ -68,7 +68,7 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
   };
 
   return (
-    <div className="flex flex-col flex-1 rounded-xl overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+    <div className="flex flex-col flex-1 rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
       <div className="panel-header">
         <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         {isSending ? (

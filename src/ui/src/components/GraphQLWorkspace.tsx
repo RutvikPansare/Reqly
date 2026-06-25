@@ -159,7 +159,7 @@ export function GraphQLWorkspace() {
   return (
     <div className="absolute inset-0 flex flex-col p-4 gap-4 overflow-hidden">
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="flex flex-col h-full bg-gray-900 border border-gray-800 rounded-md overflow-hidden">
+        <div className="flex flex-col h-full bg-gray-900 border border-gray-800 rounded overflow-hidden">
           <div className="flex p-2 gap-2 border-b border-gray-800 bg-gray-950">
             <span className="px-2 py-1 rounded text-xs font-semibold bg-pink-600 text-white border border-pink-500">GQL</span>
             <input
