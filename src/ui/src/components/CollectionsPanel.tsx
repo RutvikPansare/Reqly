@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, FolderInput, Search, Download, BookMarked, Trash2 } from 'lucide-react';
+import { ChevronRight, Play, Plus, FolderInput, Search, Download, BookMarked, Trash2, Settings } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection, exportCollection, deleteExample } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
@@ -49,11 +49,17 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   useEffect(() => {
     loadData();
     const closeMenu = () => setContextMenu(null);
+    const handleExampleSaved = (e: Event) => {
+      const { col, req } = (e as CustomEvent).detail;
+      setExpandedReqs(p => ({ ...p, [`${col}/${req}`]: true }));
+    };
     document.addEventListener('click', closeMenu);
     window.addEventListener('reqly-reload', loadData);
+    window.addEventListener('reqly-example-saved', handleExampleSaved);
     return () => {
       document.removeEventListener('click', closeMenu);
       window.removeEventListener('reqly-reload', loadData);
+      window.removeEventListener('reqly-example-saved', handleExampleSaved);
     };
   }, []);
 
@@ -361,6 +367,16 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     onClick={(e) => { e.stopPropagation(); exportCollection(col.name, 'postman').catch(console.error); }}
                   >
                     <Download size={13} />
+                  </button>
+                  <button
+                    className="px-1.5 flex items-center transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    title="Collection Settings (variables, auth)"
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    onClick={(e) => { e.stopPropagation(); setSettingsFor(col.name); }}
+                  >
+                    <Settings size={13} />
                   </button>
                 </div>
               </div>

@@ -1,15 +1,89 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+export interface VariableItem {
+  name: string;
+  source: string;
+}
+
 interface VariableInputProps {
   value: string;
   onChange: (val: string) => void;
-  variables: string[];
+  variables: VariableItem[];
   multiline?: boolean;
   className?: string;
   placeholder?: string;
   disabled?: boolean;
   type?: string;
   spellCheck?: boolean;
+}
+
+function TokenDisplay({
+  value,
+  placeholder,
+  className,
+  multiline,
+  onClick,
+  disabled,
+}: {
+  value: string;
+  placeholder: string;
+  className: string;
+  multiline: boolean;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  if (!value) {
+    return (
+      <div
+        className={`${className} cursor-text`}
+        style={{ color: 'var(--text-muted)', userSelect: 'none' }}
+        onClick={disabled ? undefined : onClick}
+      >
+        {placeholder}
+      </div>
+    );
+  }
+
+  const parts = value.split(/({{[^}]*}})/g);
+  const rendered = parts.map((part, i) => {
+    const match = part.match(/^{{(.*)}}$/);
+    if (match) {
+      return (
+        <span
+          key={i}
+          className="inline-flex items-center px-1.5 rounded font-mono shrink-0"
+          style={{
+            fontSize: '0.75rem',
+            lineHeight: '1.4',
+            background: 'rgba(96, 165, 250, 0.15)',
+            color: '#60a5fa',
+            border: '1px solid rgba(96, 165, 250, 0.3)',
+            verticalAlign: 'middle',
+            marginTop: '1px',
+            marginBottom: '1px',
+          }}
+        >
+          {match[1] || '…'}
+        </span>
+      );
+    }
+    return part ? (
+      <span key={i} style={{ verticalAlign: 'middle' }}>
+        {part}
+      </span>
+    ) : null;
+  });
+
+  return (
+    <div
+      className={`${className} ${multiline ? 'flex flex-wrap gap-x-0.5 content-start' : 'flex items-center gap-x-0.5 overflow-hidden whitespace-nowrap'} cursor-text`}
+      style={{ userSelect: 'none' }}
+      onClick={disabled ? undefined : onClick}
+      title={value}
+    >
+      {rendered}
+    </div>
+  );
 }
 
 export function VariableInput({
@@ -23,8 +97,9 @@ export function VariableInput({
   type = 'text',
   spellCheck = false,
 }: VariableInputProps) {
+  const [focused, setFocused] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [menuItems, setMenuItems] = useState<string[]>([]);
+  const [menuItems, setMenuItems] = useState<VariableItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [matchStart, setMatchStart] = useState(-1);
   const [cursorPos, setCursorPos] = useState(-1);
@@ -32,7 +107,15 @@ export function VariableInput({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu on outside click
+  useEffect(() => {
+    if (focused && inputRef.current) {
+      inputRef.current.focus();
+      // Place cursor at end
+      const len = (inputRef.current.value || '').length;
+      inputRef.current.setSelectionRange(len, len);
+    }
+  }, [focused]);
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (
@@ -58,7 +141,7 @@ export function VariableInput({
 
     if (match) {
       const query = match[1];
-      const filtered = variables.filter(v => v.toLowerCase().includes(query.toLowerCase()));
+      const filtered = variables.filter(v => v.name.toLowerCase().includes(query.toLowerCase()));
       if (filtered.length > 0) {
         setMenuItems(filtered);
         setActiveIndex(0);
@@ -72,15 +155,14 @@ export function VariableInput({
     }
   };
 
-  const insertVariable = (variableName: string) => {
+  const insertVariable = (item: VariableItem) => {
     const before = value.slice(0, matchStart);
     const after = value.slice(cursorPos);
-    const newValue = before + '{{' + variableName + '}}' + after;
+    const newValue = before + '{{' + item.name + '}}' + after;
     onChange(newValue);
     setShowMenu(false);
-    
-    // Set cursor position after the inserted variable
-    const newCursorPos = matchStart + variableName.length + 4; // 4 for {{ and }}
+
+    const newCursorPos = matchStart + item.name.length + 4;
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
@@ -108,9 +190,7 @@ export function VariableInput({
   };
 
   const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    // Also update cursor position and match on arrow keys to close menu if cursor moves away
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-    
     const pos = e.currentTarget.selectionStart || 0;
     if (pos !== cursorPos) {
       const val = e.currentTarget.value;
@@ -121,16 +201,39 @@ export function VariableInput({
     }
   };
 
+  const handleBlur = () => {
+    // Small delay so menu clicks register before hiding the input
+    setTimeout(() => {
+      if (!showMenu) setFocused(false);
+    }, 150);
+  };
+
+  if (!focused && !disabled) {
+    return (
+      <div className="relative flex-1 flex">
+        <TokenDisplay
+          value={value}
+          placeholder={placeholder}
+          className={className}
+          multiline={multiline}
+          onClick={() => setFocused(true)}
+          disabled={disabled}
+        />
+      </div>
+    );
+  }
+
   const commonProps = {
     ref: inputRef as any,
     value,
     onChange: handleChange,
     onKeyDown: handleKeyDown,
     onKeyUp: handleKeyUp,
+    onBlur: handleBlur,
     className,
     placeholder,
     disabled,
-    spellCheck
+    spellCheck,
   };
 
   return (
@@ -140,27 +243,30 @@ export function VariableInput({
       ) : (
         <input {...commonProps} type={type} className={`${className} w-full`} />
       )}
-      
+
       {showMenu && (
-        <div 
+        <div
           ref={menuRef}
           className="absolute z-50 bg-gray-800 border border-gray-700 rounded shadow-lg max-h-48 overflow-y-auto w-full min-w-[200px]"
-          // Position it below the input. If multiline, it just attaches to the bottom of the textarea wrapper.
           style={{ top: '100%', left: 0, marginTop: '4px' }}
         >
           {menuItems.map((item, index) => (
             <div
-              key={item}
-              className={`px-3 py-1.5 text-sm cursor-pointer ${
+              key={item.name + ':' + item.source}
+              className={`flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer ${
                 index === activeIndex ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'
               }`}
-              onMouseDown={(e) => {
-                // Prevent input blur
-                e.preventDefault();
-              }}
+              onMouseDown={e => e.preventDefault()}
               onClick={() => insertVariable(item)}
             >
-              <span className="font-mono">{`{{${item}}}`}</span>
+              <span className="font-mono">{`{{${item.name}}}`}</span>
+              <span className={`ml-3 text-xs rounded px-1.5 py-0.5 font-medium ${
+                index === activeIndex
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-700 text-gray-400'
+              }`}>
+                {item.source}
+              </span>
             </div>
           ))}
         </div>
@@ -168,3 +274,4 @@ export function VariableInput({
     </div>
   );
 }
+

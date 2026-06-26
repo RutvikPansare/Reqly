@@ -215,49 +215,66 @@ export function EnvironmentsPanel() {
                 </div>
 
                 {isOpen && (
-                  <div className="mt-1 ml-4 pl-2" style={{ borderLeft: '1px solid var(--border)' }}>
-                    <div className="flex items-center gap-2 py-1">
-                      <span className="text-[10px] font-bold w-1/2" style={{ color: 'var(--text-muted)' }}>KEY</span>
-                      <span className="text-[10px] font-bold w-1/2" style={{ color: 'var(--text-muted)' }}>VALUE</span>
-                      <span className="w-5"></span>
+                  <div className="mt-2 rounded overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[1fr_1fr_28px] text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5" style={{ background: 'var(--surface-3)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                      <span>Key</span>
+                      <span>Value</span>
+                      <span />
                     </div>
+
+                    {rows.length === 0 && (
+                      <div className="px-3 py-3 text-xs italic" style={{ color: 'var(--text-muted)' }}>No variables yet.</div>
+                    )}
+
                     {rows.map((v, i) => (
-                      <div key={i} className="flex items-center gap-2 group mb-1.5">
+                      <div
+                        key={i}
+                        className="grid grid-cols-[1fr_1fr_28px] group items-center"
+                        style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : undefined }}
+                      >
                         <input
-                          className="input w-1/2 text-xs font-mono py-1"
+                          className="bg-transparent px-3 py-1.5 text-xs font-mono outline-none w-full"
+                          style={{ color: '#a78bfa', borderRight: '1px solid var(--border)' }}
                           placeholder="key"
                           value={v.key}
                           onChange={e => updateDraft(env.name, i, 'key', e.target.value)}
+                          spellCheck={false}
                         />
                         <input
-                          className="input w-1/2 text-xs font-mono py-1"
+                          className="bg-transparent px-3 py-1.5 text-xs font-mono outline-none w-full"
+                          style={{ color: 'var(--text-secondary)', borderRight: '1px solid var(--border)' }}
                           placeholder="value"
                           value={v.value}
                           onChange={e => updateDraft(env.name, i, 'value', e.target.value)}
+                          spellCheck={false}
                         />
                         <button
                           onClick={() => removeRow(env.name, i)}
-                          className="w-5 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-sm"
+                          className="flex items-center justify-center h-full opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
                           style={{ color: 'var(--text-muted)' }}
-                          title="Remove row"
+                          title="Remove"
                         >
-                          &times;
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between mt-2 pb-2">
+
+                    {/* Footer: add row + save */}
+                    <div className="flex items-center justify-between px-2 py-1.5" style={{ borderTop: rows.length > 0 ? '1px solid var(--border)' : undefined, background: 'var(--surface-3)' }}>
                       <button
                         onClick={() => addRow(env.name)}
-                        className="text-xs text-blue-400 hover:text-blue-300"
+                        className="text-xs transition-colors hover:text-blue-300 flex items-center gap-1"
+                        style={{ color: 'var(--text-muted)' }}
                       >
-                        + Add row
+                        <span style={{ fontSize: 14, lineHeight: 1 }}>+</span> Add variable
                       </button>
                       <button
                         onClick={() => handleSave(env.name)}
                         disabled={saving === env.name}
-                        className={`px-3 py-1 text-xs disabled:opacity-50 text-white rounded transition-colors ${saved === env.name ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
+                        className={`px-2.5 py-1 text-xs font-medium rounded disabled:opacity-50 transition-colors ${saved === env.name ? 'bg-green-600/20 text-green-400' : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'}`}
                       >
-                        {saving === env.name ? 'Saving...' : saved === env.name ? 'Saved!' : 'Save'}
+                        {saving === env.name ? 'Saving…' : saved === env.name ? 'Saved' : 'Save'}
                       </button>
                     </div>
                   </div>

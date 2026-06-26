@@ -94,7 +94,9 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
       });
       setSavedExampleMsg(`Saved "${name}"`);
       setTimeout(() => setSavedExampleMsg(''), 3000);
-      // Refresh examples if tab is already open
+      // Reload sidebar so the example appears, and auto-expand the parent request
+      window.dispatchEvent(new CustomEvent('reqly-example-saved', { detail: { col: collectionName, req: requestName } }));
+      window.dispatchEvent(new Event('reqly-reload'));
       if (activeTab === 'examples') loadExamples();
     } catch (e: any) {
       alert(`Failed to save example: ${e.message}`);

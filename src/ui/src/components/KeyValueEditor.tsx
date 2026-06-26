@@ -1,5 +1,6 @@
 import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
 import { VariableInput } from './VariableInput';
+import type { VariableItem } from './VariableInput';
 
 export interface KeyValuePair {
   key: string;
@@ -10,7 +11,7 @@ export interface KeyValuePair {
 interface KeyValueEditorProps {
   pairs: KeyValuePair[];
   onChange: (pairs: KeyValuePair[]) => void;
-  variables?: string[];
+  variables?: VariableItem[];
 }
 
 export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEditorProps) {

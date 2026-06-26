@@ -4,6 +4,7 @@ import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2T
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
+import type { VariableItem } from './VariableInput';
 import { ScriptEditor } from './ScriptEditor';
 import { CurlImportModal } from './CurlImportModal';
 import { CodeGenModal } from './CodeGenModal';
@@ -240,7 +241,12 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       onChange(buildRequest());
     }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds, preScript, postScript]);
 
-  const availableVariables = Array.from(new Set([...Object.keys(collectionVars), ...Object.keys(activeEnvVars)]));
+  const availableVariables: VariableItem[] = [
+    ...Object.keys(collectionVars).map(k => ({ name: k, source: request?._collection || 'collection' })),
+    ...Object.keys(activeEnvVars)
+      .filter(k => !(k in collectionVars))
+      .map(k => ({ name: k, source: activeEnvName || 'env' })),
+  ];
 
   return (
     <div className="flex flex-col h-full rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
