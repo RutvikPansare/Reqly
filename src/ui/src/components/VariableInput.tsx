@@ -6,6 +6,8 @@ export interface VariableItem {
   sourceType: string;
   /** human-readable source name, e.g. "Tellero Local" */
   sourceName: string;
+  /** resolved value of the variable */
+  value?: string;
 }
 
 interface VariableInputProps {
@@ -27,6 +29,7 @@ function TokenDisplay({
   multiline,
   onClick,
   disabled,
+  variableValues,
 }: {
   value: string;
   placeholder: string;
@@ -34,6 +37,7 @@ function TokenDisplay({
   multiline: boolean;
   onClick: () => void;
   disabled: boolean;
+  variableValues: Record<string, string>;
 }) {
   if (!value) {
     return (
@@ -51,22 +55,47 @@ function TokenDisplay({
   const rendered = parts.map((part, i) => {
     const match = part.match(/^{{(.*)}}$/);
     if (match) {
+      const varName = match[1] || '';
+      const resolvedValue = variableValues[varName];
+      const tooltip = resolvedValue !== undefined
+        ? `${varName} = ${resolvedValue}`
+        : `${varName} (not set)`;
       return (
         <span
           key={i}
-          className="inline-flex items-center px-1.5 rounded font-mono shrink-0"
+          className="relative group inline-flex items-center px-1.5 rounded font-mono shrink-0"
           style={{
             fontSize: '0.75rem',
             lineHeight: '1.4',
-            background: 'rgba(96, 165, 250, 0.15)',
-            color: '#60a5fa',
-            border: '1px solid rgba(96, 165, 250, 0.3)',
+            background: resolvedValue !== undefined ? 'rgba(96, 165, 250, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+            color: resolvedValue !== undefined ? '#60a5fa' : '#f87171',
+            border: `1px solid ${resolvedValue !== undefined ? 'rgba(96, 165, 250, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
             verticalAlign: 'middle',
             marginTop: '1px',
             marginBottom: '1px',
+            cursor: 'default',
           }}
+          title={tooltip}
         >
-          {match[1] || '…'}
+          {varName || '…'}
+          {/* Floating tooltip shown on group-hover */}
+          <span
+            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
+                       opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                       whitespace-nowrap rounded px-2 py-1 text-xs font-sans"
+            style={{
+              background: '#1e1e2e',
+              border: '1px solid rgba(96,165,250,0.4)',
+              color: '#e2e8f0',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}
+          >
+            <span style={{ color: '#a78bfa' }}>{varName}</span>
+            <span style={{ color: '#64748b' }}> = </span>
+            <span style={{ color: resolvedValue !== undefined ? '#86efac' : '#f87171' }}>
+              {resolvedValue !== undefined ? resolvedValue : 'not set'}
+            </span>
+          </span>
         </span>
       );
     }
@@ -82,7 +111,6 @@ function TokenDisplay({
       className={`${className} ${multiline ? 'flex flex-wrap gap-x-0.5 content-start' : 'flex items-center gap-x-0.5 overflow-hidden whitespace-nowrap'} cursor-text`}
       style={{ userSelect: 'none' }}
       onClick={disabled ? undefined : onClick}
-      title={value}
     >
       {rendered}
     </div>
@@ -221,6 +249,7 @@ export function VariableInput({
           multiline={multiline}
           onClick={() => setFocused(true)}
           disabled={disabled}
+          variableValues={Object.fromEntries(variables.map(v => [v.name, v.value ?? '']))}
         />
       </div>
     );
