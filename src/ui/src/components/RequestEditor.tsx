@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, ExternalLink } from 'lucide-react';
-import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables } from '../api';
+import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables, getCollectionAuth } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
@@ -33,6 +33,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
   const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
   const [activeEnvName, setActiveEnvName] = useState<string>('');
   const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
+  const [collectionAuthConfig, setCollectionAuthConfig] = useState<{ type: string; profileId?: string; credentials?: Record<string, string> } | null>(null);
 
   useEffect(() => {
     const loadEnv = () => {
@@ -53,14 +54,16 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     const colName = request?._collection;
     if (!colName) {
       setCollectionVars({});
+      setCollectionAuthConfig(null);
       return;
     }
-    const loadColVars = () => {
+    const loadColData = () => {
       getCollectionVariables(colName).then(setCollectionVars).catch(console.error);
+      getCollectionAuth(colName).then(setCollectionAuthConfig).catch(console.error);
     };
-    loadColVars();
-    window.addEventListener('reqly-reload', loadColVars);
-    return () => window.removeEventListener('reqly-reload', loadColVars);
+    loadColData();
+    window.addEventListener('reqly-reload', loadColData);
+    return () => window.removeEventListener('reqly-reload', loadColData);
   }, [request?._collection]);
 
   if (!request) {
@@ -665,48 +668,78 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             )}
           </div>
         ) : activeTab === 'inherited' ? (() => {
-          // Compute which headers http-executor.ts will inject, mirroring its exact logic.
-          // Resolves from: (1) selected profile, (2) inline auth credentials
-          const effectiveCreds = authProfileId
-            ? profiles.find(p => p.id === authProfileId)?.credentials ?? {}
-            : authCreds;
-          const effectiveType = authProfileId
-            ? profiles.find(p => p.id === authProfileId)?.type ?? authType
-            : authType;
+          // Mirror http-executor.ts auth precedence:
+          //   request-level auth (type:none = opt-out) > collection auth > nothing
+          const requestHasExplicitNone = authType === 'none' && !authProfileId;
+          const requestHasAuth = authProfileId || (authType && authType !== 'none');
+
+          // Resolve effective auth source
+          let effectiveCreds: Record<string, string> = {};
+          let effectiveType = 'none';
+          let authSource = 'none'; // 'profile' | 'inline' | 'collection' | 'none' | 'opted-out'
+
+          if (requestHasExplicitNone) {
+            authSource = 'opted-out';
+          } else if (requestHasAuth) {
+            effectiveCreds = authProfileId
+              ? profiles.find((p: any) => p.id === authProfileId)?.credentials ?? {}
+              : authCreds;
+            effectiveType = authProfileId
+              ? profiles.find((p: any) => p.id === authProfileId)?.type ?? authType
+              : authType;
+            authSource = authProfileId ? 'profile' : 'inline';
+          } else if (collectionAuthConfig && collectionAuthConfig.type !== 'none') {
+            // Fall back to collection auth
+            if (collectionAuthConfig.profileId) {
+              const prof = profiles.find((p: any) => p.id === collectionAuthConfig.profileId);
+              effectiveCreds = prof?.credentials ?? collectionAuthConfig.credentials ?? {};
+              effectiveType = prof?.type ?? collectionAuthConfig.type;
+            } else {
+              effectiveCreds = collectionAuthConfig.credentials ?? {};
+              effectiveType = collectionAuthConfig.type;
+            }
+            authSource = 'collection';
+          }
 
           type HeaderRow = { header: string; value: string; source: string; note?: string };
           const rows: HeaderRow[] = [];
           const mask = (v: string) => v ? (v.length > 8 ? `${'•'.repeat(v.length - 4)}${v.slice(-4)}` : '••••') : '(empty)';
 
-          if (effectiveType === 'bearer' && effectiveCreds.token) {
-            rows.push({ header: 'Authorization', value: `Bearer ${mask(effectiveCreds.token)}`, source: authProfileId ? 'profile' : 'inline' });
-          } else if (effectiveType === 'basic' && effectiveCreds.username) {
-            const raw = `${effectiveCreds.username}:${effectiveCreds.password || ''}`;
-            const b64 = btoa(raw);
-            rows.push({ header: 'Authorization', value: `Basic ${mask(b64)}`, source: authProfileId ? 'profile' : 'inline', note: `username: ${effectiveCreds.username}` });
-          } else if (effectiveType === 'apiKey' && (effectiveCreds.value || effectiveCreds.key)) {
-            const val = effectiveCreds.value || effectiveCreds.key;
-            const placement = effectiveCreds.placement || 'header';
-            if (placement === 'header') {
-              rows.push({ header: effectiveCreds.keyName || 'x-api-key', value: mask(val), source: authProfileId ? 'profile' : 'inline' });
-            } else {
-              rows.push({ header: `?${effectiveCreds.keyName || 'api_key'}`, value: mask(val), source: authProfileId ? 'profile' : 'inline', note: 'added as query parameter' });
-            }
-          } else if (effectiveType === 'oauth2') {
-            const token = effectiveCreds.accessToken;
-            const expiresAt = effectiveCreds.expiresAt ? Number(effectiveCreds.expiresAt) : null;
-            const expired = expiresAt ? Date.now() > expiresAt : false;
-            if (token) {
-              rows.push({
-                header: 'Authorization',
-                value: `Bearer ${mask(token)}`,
-                source: authProfileId ? 'profile' : 'inline',
-                note: expired ? 'token expired - will auto-refresh if refresh_token is set' : expiresAt ? `expires ${new Date(expiresAt).toLocaleString()}` : undefined,
-              });
-            } else {
-              rows.push({ header: 'Authorization', value: '(not yet obtained)', source: authProfileId ? 'profile' : 'inline', note: 'Authorize first in the Auth tab' });
+          if (authSource !== 'opted-out' && effectiveType !== 'none') {
+            if (effectiveType === 'bearer' && effectiveCreds.token) {
+              rows.push({ header: 'Authorization', value: `Bearer ${mask(effectiveCreds.token)}`, source: authSource });
+            } else if (effectiveType === 'basic' && effectiveCreds.username) {
+              const raw = `${effectiveCreds.username}:${effectiveCreds.password || ''}`;
+              const b64 = btoa(raw);
+              rows.push({ header: 'Authorization', value: `Basic ${mask(b64)}`, source: authSource, note: `username: ${effectiveCreds.username}` });
+            } else if ((effectiveType === 'apiKey' || effectiveType === 'apikey') && (effectiveCreds.value || effectiveCreds.key)) {
+              const val = effectiveCreds.value || effectiveCreds.key;
+              const placement = effectiveCreds.placement || 'header';
+              if (placement === 'header') {
+                rows.push({ header: effectiveCreds.keyName || 'x-api-key', value: mask(val), source: authSource });
+              } else {
+                rows.push({ header: `?${effectiveCreds.keyName || 'api_key'}`, value: mask(val), source: authSource, note: 'added as query parameter' });
+              }
+            } else if (effectiveType === 'oauth2') {
+              const token = effectiveCreds.accessToken;
+              const expiresAt = effectiveCreds.expiresAt ? Number(effectiveCreds.expiresAt) : null;
+              const expired = expiresAt ? Date.now() > expiresAt : false;
+              if (token) {
+                rows.push({
+                  header: 'Authorization',
+                  value: `Bearer ${mask(token)}`,
+                  source: authSource,
+                  note: expired ? 'token expired - will auto-refresh if refresh_token is set' : expiresAt ? `expires ${new Date(expiresAt).toLocaleString()}` : undefined,
+                });
+              } else {
+                rows.push({ header: 'Authorization', value: '(not yet obtained)', source: authSource, note: 'Authorize first in the Auth tab' });
+              }
             }
           }
+
+          const emptyMessage = authSource === 'opted-out'
+            ? 'Request auth is set to None - collection auth is suppressed for this request'
+            : 'No auth configured on this request or its collection';
 
           return (
             <div className="py-2 max-w-2xl">
@@ -721,21 +754,21 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                     <path d="M9 12h.01M15 12h.01M9 16h6M5 8h14a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a1 1 0 0 1 1-1Z"/>
                     <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
                   </svg>
-                  <span className="text-sm">No auth configured - no headers will be injected</span>
+                  <span className="text-sm">{emptyMessage}</span>
                 </div>
               ) : (
                 <div className="rounded overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                  <div className="grid grid-cols-[180px_1fr_80px] text-xs font-semibold uppercase tracking-widest px-3 py-2" style={{ background: 'var(--surface-3)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                  <div className="grid grid-cols-[180px_1fr_100px] text-xs font-semibold uppercase tracking-widest px-3 py-2" style={{ background: 'var(--surface-3)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
                     <span>Header</span>
                     <span>Value</span>
                     <span>Source</span>
                   </div>
                   {rows.map((row, i) => (
                     <div key={i} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : undefined }}>
-                      <div className="grid grid-cols-[180px_1fr_80px] px-3 py-2 text-sm">
+                      <div className="grid grid-cols-[180px_1fr_100px] px-3 py-2 text-sm">
                         <span className="font-mono truncate" style={{ color: '#7dd3fc' }}>{row.header}</span>
                         <span className="font-mono truncate" style={{ color: 'var(--text-secondary)' }}>{row.value}</span>
-                        <span className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{row.source}</span>
+                        <span className="text-xs capitalize" style={{ color: row.source === 'collection' ? '#a78bfa' : 'var(--text-muted)' }}>{row.source}</span>
                       </div>
                       {row.note && (
                         <div className="px-3 pb-2 text-xs" style={{ color: 'var(--text-muted)' }}>{row.note}</div>

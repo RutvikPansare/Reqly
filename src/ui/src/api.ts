@@ -62,6 +62,30 @@ export async function deleteCollectionVariable(collectionName: string, key: stri
   return res.json();
 }
 
+export async function getCollectionAuth(collectionName: string): Promise<{ type: string; profileId?: string; credentials?: Record<string, string> } | null> {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/auth`);
+  if (!res.ok) throw new Error('Failed to fetch collection auth');
+  return res.json();
+}
+
+export async function setCollectionAuth(collectionName: string, auth: { type: string; profileId?: string; credentials?: Record<string, string> }) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/auth`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(auth)
+  });
+  if (!res.ok) throw new Error('Failed to set collection auth');
+  return res.json();
+}
+
+export async function deleteCollectionAuth(collectionName: string) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/auth`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) throw new Error('Failed to delete collection auth');
+  return res.json();
+}
+
 export async function exportEnvironment(name: string): Promise<void> {
   const res = await fetch(`/api/environments/${encodeURIComponent(name)}/export`);
   if (!res.ok) throw new Error('Failed to export environment');
