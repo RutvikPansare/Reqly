@@ -247,4 +247,191 @@ describe('FlowRunner', () => {
     expect(seen).toEqual(['http://x/u/99']);
     expect(result.dataRows).toBeUndefined();
   });
+
+  // ---- T-097: conditional + poll ----
+
+  it('conditional goto forward skips intermediate steps', async () => {
+    const seen: string[] = [];
+    const executeRequest = vi.fn(async (config: any) => {
+      seen.push(config.url);
+      return resp({ role: 'admin' });
+    });
+    const ctx = makeContext({
+      requests: {
+        'C/A': { name: 'A', method: 'GET', url: 'http://x/a' },
+        'C/Cc': { name: 'Cc', method: 'GET', url: 'http://x/c' },
+        'C/D': { name: 'D', method: 'GET', url: 'http://x/d' },
+      },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'G1',
+      steps: [
+        { type: 'run', id: 's1', collection: 'C', request: 'A' },
+        { type: 'conditional', id: 's2', if: "response.body.role === 'admin'", then: 's4' },
+        { type: 'run', id: 's3', collection: 'C', request: 'Cc' },
+        { type: 'run', id: 's4', collection: 'C', request: 'D' },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(true);
+    expect(seen).toEqual(['http://x/a', 'http://x/d']);
+  });
+
+  it('detects a circular goto loop and aborts', async () => {
+    const seen: string[] = [];
+    const executeRequest = vi.fn(async (config: any) => {
+      seen.push(config.url);
+      return resp({ ok: true });
+    });
+    const ctx = makeContext({
+      requests: { 'C/A': { name: 'A', method: 'GET', url: 'http://x/a' } },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'G2',
+      steps: [
+        { type: 'run', id: 's1', collection: 'C', request: 'A' },
+        { type: 'conditional', id: 's2', if: 'response.body.ok', then: 's1' },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(false);
+    const condStep = result.steps.filter(s => s.stepId === 's2').pop()!;
+    expect(condStep.error).toMatch(/circular|loop/i);
+    // s1 fired at most a bounded number of times, not infinitely.
+    expect(seen.length).toBeLessThanOrEqual(3);
+  });
+
+  it('conditional then: skip continues to the next step', async () => {
+    const seen: string[] = [];
+    const executeRequest = vi.fn(async (config: any) => {
+      seen.push(config.url);
+      return resp({ ok: true });
+    });
+    const ctx = makeContext({
+      requests: {
+        'C/A': { name: 'A', method: 'GET', url: 'http://x/a' },
+        'C/B': { name: 'B', method: 'GET', url: 'http://x/b' },
+      },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'G3',
+      steps: [
+        { type: 'run', id: 's1', collection: 'C', request: 'A' },
+        { type: 'conditional', id: 's2', if: 'response.body.ok', then: 'skip' },
+        { type: 'run', id: 's3', collection: 'C', request: 'B' },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(true);
+    expect(seen).toEqual(['http://x/a', 'http://x/b']);
+  });
+
+  it('conditional then: abort stops the flow and marks it failed', async () => {
+    const seen: string[] = [];
+    const executeRequest = vi.fn(async (config: any) => {
+      seen.push(config.url);
+      return resp({ blocked: true });
+    });
+    const ctx = makeContext({
+      requests: {
+        'C/A': { name: 'A', method: 'GET', url: 'http://x/a' },
+        'C/B': { name: 'B', method: 'GET', url: 'http://x/b' },
+      },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'G4',
+      steps: [
+        { type: 'run', id: 's1', collection: 'C', request: 'A' },
+        { type: 'conditional', id: 's2', if: 'response.body.blocked', then: 'abort' },
+        { type: 'run', id: 's3', collection: 'C', request: 'B' },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(false);
+    expect(seen).toEqual(['http://x/a']);
+  });
+
+  it('poll succeeds once the until expression is truthy', async () => {
+    let calls = 0;
+    const executeRequest = vi.fn(async () => {
+      calls++;
+      return resp({ status: calls >= 3 ? 'done' : 'pending' });
+    });
+    const ctx = makeContext({
+      requests: { 'C/Job': { name: 'Job', method: 'GET', url: 'http://x/job' } },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'P1',
+      steps: [
+        { type: 'poll', id: 's1', collection: 'C', request: 'Job', until: "response.body.status === 'done'", maxAttempts: 5, delay: 0 },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it('poll fails when maxAttempts is exhausted', async () => {
+    let calls = 0;
+    const executeRequest = vi.fn(async () => {
+      calls++;
+      return resp({ status: 'pending' });
+    });
+    const ctx = makeContext({
+      requests: { 'C/Job': { name: 'Job', method: 'GET', url: 'http://x/job' } },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'P2',
+      steps: [
+        { type: 'poll', id: 's1', collection: 'C', request: 'Job', until: "response.body.status === 'done'", maxAttempts: 3, delay: 0 },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(false);
+    expect(calls).toBe(3);
+  });
+
+  it('poll exposes its final response to a downstream extract', async () => {
+    const seen: string[] = [];
+    let calls = 0;
+    const executeRequest = vi.fn(async (config: any) => {
+      seen.push(config.url);
+      if (config.url.includes('job')) {
+        calls++;
+        return resp(calls >= 2 ? { ready: 'yes', token: 'tok9' } : { ready: 'no' });
+      }
+      return resp({ ok: true });
+    });
+    const ctx = makeContext({
+      requests: {
+        'C/Job': { name: 'Job', method: 'GET', url: 'http://x/job' },
+        'C/Use': { name: 'Use', method: 'GET', url: 'http://x/use?t={{tok}}' },
+      },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'P3',
+      steps: [
+        { type: 'poll', id: 's1', collection: 'C', request: 'Job', until: "response.body.ready === 'yes'", maxAttempts: 5, delay: 0 },
+        { type: 'extract', id: 's2', from: 'response.body.token', into: 'tok' },
+        { type: 'run', id: 's3', collection: 'C', request: 'Use' },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+    expect(result.passed).toBe(true);
+    expect(seen[seen.length - 1]).toBe('http://x/use?t=tok9');
+  });
 });

@@ -9,12 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-097** Flow Runner - conditional branching + poll + retry - engine
-  - Prerequisite: T-096 (core runner)
-  - Implement `conditional` step: evaluate `if` expression against flow-local scope + last response fields. Expression is a simple equality/existence check (e.g. `response.body.role === 'admin'`, `flowVar === 'value'`) - no arbitrary JS eval for security. Support `goto <stepId>`, `skip` (skip to next step), `abort` (stop flow, mark failed). Circular `goto` loops must be detected and aborted with an error.
-  - Implement `poll` step: fire the request repeatedly with `delay` ms between attempts, up to `maxAttempts`. After each response evaluate the `until` expression against `response.body`. If truthy, step passes and execution continues. If `maxAttempts` exhausted without truthy result, step fails. Extract and flow-local scope updates from poll responses apply only on the final successful poll.
-  - TDD: failing tests first for: goto forward, goto backward (loop detection), skip, abort, poll success within attempts, poll timeout, poll with extract on success
-
 - [ ] **T-098** Flows - MCP tools + Express routes
   - Prerequisite: T-096 (core runner must exist before exposing tools)
   - MCP tools (agents must have full parity with the UI): `create_flow`, `get_flow`, `list_flows`, `delete_flow`, `add_flow_step`, `update_flow_step`, `delete_flow_step`, `run_flow`
