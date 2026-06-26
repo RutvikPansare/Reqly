@@ -9,14 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-099** Flows - CLI runner
-  - Prerequisite: T-096
-  - `reqly run-flow <name>` sub-command in `src/server/run-flow-command.ts`
-  - Reuse existing JSON and TAP reporters from `reqly run <collection>` - extend them to handle `FlowRunResult` shape (per-step results, data row iterations)
-  - Exit code 0 if all steps pass, exit code 1 if any step fails
-  - `--data-row <json>` flag to inject a single data row override for one-off runs
-  - Update `README.md` and `llms.txt` with `reqly run-flow` usage
-
 - [ ] **T-100** Flows - UI
   - Prerequisite: T-098 (routes must exist)
   - **Pixel-match the design reference at `docs/tasks/T-100-flows-ui-reference.html`** - open it in a browser before writing a single line of React. Every spacing, color, border, and badge must match that file exactly.

@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export interface ParsedArgs {
-  command: 'start' | 'run' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import';
+  command: 'start' | 'run' | 'run-flow' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import';
   args: string[];
   flags: {
     env?: string;
@@ -14,6 +14,7 @@ export interface ParsedArgs {
     projectDir?: string;
     port?: string;
     collection?: string;
+    dataRow?: string;
   };
 }
 
@@ -39,7 +40,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let i = 0;
 
   // check if first non-flag argument is a command
-  const validCommands = ['start', 'run', 'setup', 'use', 'status', 'stop', 'exec', 'import'];
+  const validCommands = ['start', 'run', 'run-flow', 'setup', 'use', 'status', 'stop', 'exec', 'import'];
   let commandFound = false;
   // once `exec`'s child command starts, everything after it (including its own
   // dashed flags) is passed through verbatim rather than parsed as reqly flags
@@ -64,6 +65,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
       result.flags.port = args[++i];
     } else if (arg === '--collection') {
       result.flags.collection = args[++i];
+    } else if (arg === '--data-row') {
+      result.flags.dataRow = args[++i];
     } else if (arg === '--version' || arg === '-v') {
       try {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
@@ -74,7 +77,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       if (!commandFound && validCommands.includes(arg)) {
-        result.command = arg as 'start' | 'run' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import';
+        result.command = arg as 'start' | 'run' | 'run-flow' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import';
         commandFound = true;
       } else {
         result.args.push(arg);

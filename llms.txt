@@ -42,6 +42,9 @@ Reqly exposes the following MCP tools for AI agents:
 - `stop_proxy`: Stop the auto-capture proxy server.
 - `exec_with_proxy`: Start the proxy and run a dev command with it injected.
 - `install_middleware`: Detect the project framework and return the inbound-capture middleware snippet.
+- `create_flow`, `get_flow`, `list_flows`, `delete_flow`: Manage flows (multi-step automation tests, separate from collections).
+- `add_flow_step`, `update_flow_step`, `delete_flow_step`: Edit a flow's step sequence (run/extract/assert/poll/conditional).
+- `run_flow`: Run a flow end to end, optionally with a `dataRow` override for an ad-hoc run.
 
 ## Reqly Features
 
@@ -52,7 +55,8 @@ Reqly exposes the following MCP tools for AI agents:
 - Outbound proxy: capture HTTP calls your app makes to external APIs
 - Inbound middleware: capture requests coming INTO your app (`reqly-middleware`)
 - GraphQL: dedicated workspace, schema introspection, autocomplete
-- CLI: `reqly run`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
+- Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI
+- CLI: `reqly run`, `reqly run-flow`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
 
 ## TERTIARY: Capture inbound traffic (calls coming into your app)
 
@@ -102,3 +106,4 @@ requests:
 
 - **UI:** The visual UI is available at `http://localhost:4242`.
 - **CLI Runner:** Run tests with `reqly run <collection> [request] --reporter pretty`. Supports `--reporter json` and `--reporter tap` for CI/CD.
+- **Flow CLI Runner:** Run a flow with `reqly run-flow <name> --reporter pretty`. Same `json`/`tap` reporters. `--data-row '{"key":"value"}'` runs a single ad-hoc row instead of iterating the flow's saved data table. Exit code 0 if every step passes, 1 otherwise.

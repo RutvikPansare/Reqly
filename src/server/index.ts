@@ -17,6 +17,7 @@ import { startExpressServer } from './express.js';
 
 import { parseArgs, resolveProjectDir } from './cli-parser.js';
 import { handleRunCommand } from './run-command.js';
+import { handleRunFlowCommand } from './run-flow-command.js';
 import { handleSetupCommand } from './setup-command.js';
 import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
@@ -69,6 +70,11 @@ async function main() {
 
   if (parsed.command === 'run') {
     const exitCode = await handleRunCommand(parsed, collectionManager, environmentManager, authManager);
+    process.exit(exitCode);
+  }
+
+  if (parsed.command === 'run-flow') {
+    const exitCode = await handleRunFlowCommand(parsed, collectionManager, environmentManager, authManager);
     process.exit(exitCode);
   }
 

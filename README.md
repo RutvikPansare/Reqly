@@ -141,3 +141,18 @@ Supports reporter formats and environments:
 reqly run users --env prod --reporter json
 reqly run users --reporter tap
 ```
+
+### Running Flows
+
+Flows are multi-step automation tests (login then use the token then assert a field) stored separately from collections. Run one with:
+
+```bash
+reqly run-flow "Login Flow"
+```
+
+Same reporters as `reqly run`, plus a `--data-row` flag to run a single ad-hoc row instead of iterating the flow's saved data table:
+```bash
+reqly run-flow "Login Flow" --reporter json
+reqly run-flow "Login Flow" --reporter tap
+reqly run-flow "Signup Flow" --data-row '{"email":"test@example.com"}'
+```

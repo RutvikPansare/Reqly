@@ -54,6 +54,20 @@ describe('cli-parser', () => {
     expect(parsed.flags.port).toBeUndefined();
   });
 
+  it('parses run-flow command with a flow name', () => {
+    const parsed = parseArgs(['node', 'script.js', 'run-flow', 'Login Flow']);
+    expect(parsed.command).toBe('run-flow');
+    expect(parsed.args).toEqual(['Login Flow']);
+  });
+
+  it('parses run-flow with --data-row and --reporter flags', () => {
+    const parsed = parseArgs(['node', 'script.js', 'run-flow', 'Login Flow', '--data-row', '{"userId":"99"}', '--reporter', 'json']);
+    expect(parsed.command).toBe('run-flow');
+    expect(parsed.args).toEqual(['Login Flow']);
+    expect(parsed.flags.dataRow).toBe('{"userId":"99"}');
+    expect(parsed.flags.reporter).toBe('json');
+  });
+
   it('parses flags before and after command', () => {
     const parsed = parseArgs(['node', 'script.js', '--env', 'production', 'run', 'myCol', '--reporter', 'json', '--project-dir', '/tmp']);
     expect(parsed.command).toBe('run');
