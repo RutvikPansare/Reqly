@@ -27,6 +27,9 @@ import * as importEnvironment from './tools/import-environment.js';
 import * as exportEnvironment from './tools/export-environment.js';
 import * as saveExample from './tools/save-example.js';
 import * as listExamples from './tools/list-examples.js';
+import * as generateCode from './tools/generate-code.js';
+import * as getInheritedHeaders from './tools/get-inherited-headers.js';
+import * as refreshOAuth2Token from './tools/refresh-oauth2-token.js';
 
 const tools = [
   runRequest,
@@ -51,6 +54,9 @@ const tools = [
   exportEnvironment,
   saveExample,
   listExamples,
+  generateCode,
+  getInheritedHeaders,
+  refreshOAuth2Token,
 ];
 
 import { z } from 'zod';
