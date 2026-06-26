@@ -28,7 +28,7 @@ function methodColor(method: string): string {
 }
 
 export function RequestEditor({ request, isActive, onFire, onSave, onChange }: RequestEditorProps) {
-  const tabs = ['params', 'headers', 'body', 'auth', 'assertions', 'variables', 'pre-script', 'post-script'];
+  const tabs = ['params', 'headers', 'body', 'auth', 'inherited', 'assertions', 'variables', 'pre-script', 'post-script'];
 
   const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
   const [activeEnvName, setActiveEnvName] = useState<string>('');
@@ -296,7 +296,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             className={`tab-btn capitalize ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === 'pre-script' ? 'Pre-Script' : tab === 'post-script' ? 'Post-Script' : tab}
+            {tab === 'pre-script' ? 'Pre-Script' : tab === 'post-script' ? 'Post-Script' : tab === 'inherited' ? 'Inherited' : tab}
           </button>
         ))}
       </div>
@@ -644,7 +644,95 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
               </div>
             )}
           </div>
-        ) : activeTab === 'variables' ? (
+        ) : activeTab === 'inherited' ? (() => {
+          // Compute which headers http-executor.ts will inject, mirroring its exact logic.
+          // Resolves from: (1) selected profile, (2) inline auth credentials
+          const effectiveCreds = authProfileId
+            ? profiles.find(p => p.id === authProfileId)?.credentials ?? {}
+            : authCreds;
+          const effectiveType = authProfileId
+            ? profiles.find(p => p.id === authProfileId)?.type ?? authType
+            : authType;
+
+          type HeaderRow = { header: string; value: string; source: string; note?: string };
+          const rows: HeaderRow[] = [];
+          const mask = (v: string) => v ? (v.length > 8 ? `${'•'.repeat(v.length - 4)}${v.slice(-4)}` : '••••') : '(empty)';
+
+          if (effectiveType === 'bearer' && effectiveCreds.token) {
+            rows.push({ header: 'Authorization', value: `Bearer ${mask(effectiveCreds.token)}`, source: authProfileId ? 'profile' : 'inline' });
+          } else if (effectiveType === 'basic' && effectiveCreds.username) {
+            const raw = `${effectiveCreds.username}:${effectiveCreds.password || ''}`;
+            const b64 = btoa(raw);
+            rows.push({ header: 'Authorization', value: `Basic ${mask(b64)}`, source: authProfileId ? 'profile' : 'inline', note: `username: ${effectiveCreds.username}` });
+          } else if (effectiveType === 'apiKey' && (effectiveCreds.value || effectiveCreds.key)) {
+            const val = effectiveCreds.value || effectiveCreds.key;
+            const placement = effectiveCreds.placement || 'header';
+            if (placement === 'header') {
+              rows.push({ header: effectiveCreds.keyName || 'x-api-key', value: mask(val), source: authProfileId ? 'profile' : 'inline' });
+            } else {
+              rows.push({ header: `?${effectiveCreds.keyName || 'api_key'}`, value: mask(val), source: authProfileId ? 'profile' : 'inline', note: 'added as query parameter' });
+            }
+          } else if (effectiveType === 'oauth2') {
+            const token = effectiveCreds.accessToken;
+            const expiresAt = effectiveCreds.expiresAt ? Number(effectiveCreds.expiresAt) : null;
+            const expired = expiresAt ? Date.now() > expiresAt : false;
+            if (token) {
+              rows.push({
+                header: 'Authorization',
+                value: `Bearer ${mask(token)}`,
+                source: authProfileId ? 'profile' : 'inline',
+                note: expired ? 'token expired - will auto-refresh if refresh_token is set' : expiresAt ? `expires ${new Date(expiresAt).toLocaleString()}` : undefined,
+              });
+            } else {
+              rows.push({ header: 'Authorization', value: '(not yet obtained)', source: authProfileId ? 'profile' : 'inline', note: 'Authorize first in the Auth tab' });
+            }
+          }
+
+          return (
+            <div className="py-2 max-w-2xl">
+              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                Read-only preview of headers that will be injected by the active auth configuration before firing.
+                These are added automatically and do not appear in the Headers tab.
+              </p>
+
+              {rows.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: 'var(--text-muted)' }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M9 12h.01M15 12h.01M9 16h6M5 8h14a1 1 0 0 1 1 1v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a1 1 0 0 1 1-1Z"/>
+                    <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+                  </svg>
+                  <span className="text-sm">No auth configured - no headers will be injected</span>
+                </div>
+              ) : (
+                <div className="rounded overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                  <div className="grid grid-cols-[180px_1fr_80px] text-xs font-semibold uppercase tracking-widest px-3 py-2" style={{ background: 'var(--surface-3)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                    <span>Header</span>
+                    <span>Value</span>
+                    <span>Source</span>
+                  </div>
+                  {rows.map((row, i) => (
+                    <div key={i} style={{ borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : undefined }}>
+                      <div className="grid grid-cols-[180px_1fr_80px] px-3 py-2 text-sm">
+                        <span className="font-mono truncate" style={{ color: '#7dd3fc' }}>{row.header}</span>
+                        <span className="font-mono truncate" style={{ color: 'var(--text-secondary)' }}>{row.value}</span>
+                        <span className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{row.source}</span>
+                      </div>
+                      {row.note && (
+                        <div className="px-3 pb-2 text-xs" style={{ color: 'var(--text-muted)' }}>{row.note}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {rows.length > 0 && (
+                <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+                  Values are partially masked for security. The full value is sent in the actual request.
+                </p>
+              )}
+            </div>
+          );
+        })() : activeTab === 'variables' ? (
           <div className="py-2">
             <p className="text-xs text-gray-500 mb-3">
               Variables in scope from the active environment{activeEnvName ? `: ${activeEnvName}` : ''}. Edit them in the Environments panel.
