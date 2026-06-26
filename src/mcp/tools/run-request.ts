@@ -26,7 +26,12 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
 
     const shouldTruncate = args.truncate !== undefined ? args.truncate : true;
     const collectionVars = await context.collectionManager.getCollectionVariables(args.collectionName);
-    const res = await context.executeRequest(req, env || undefined, auth, shouldTruncate, undefined, collectionVars);
+    const { resolveCollectionAuth } = await import('../../engine/collection-auth.js');
+    const collectionAuth = await resolveCollectionAuth(
+      await context.collectionManager.getCollectionAuth(args.collectionName),
+      context.authManager,
+    );
+    const res = await context.executeRequest(req, env || undefined, auth, shouldTruncate, undefined, collectionVars, collectionAuth);
 
     let assertionsResult = undefined;
     if (req.assertions && req.assertions.length > 0) {

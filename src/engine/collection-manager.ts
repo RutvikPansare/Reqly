@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { load, dump } from 'js-yaml';
-import { Collection, CollectionRequest, ExampleResponse, CollectionMeta } from '../types/index.js';
+import { Collection, CollectionRequest, ExampleResponse, CollectionMeta, CollectionAuth } from '../types/index.js';
 
 // Reserved filename for collection-level metadata (variables, description).
 // It lives alongside request files inside the collection folder but is never
@@ -68,7 +68,13 @@ export class CollectionManager {
     }
 
     const meta = await this.readMeta(name);
-    return { name, requests, ...(meta.variables ? { variables: meta.variables } : {}), ...(meta.description ? { description: meta.description } : {}) };
+    return {
+      name,
+      requests,
+      ...(meta.variables ? { variables: meta.variables } : {}),
+      ...(meta.description ? { description: meta.description } : {}),
+      ...(meta.auth ? { auth: meta.auth } : {}),
+    };
   }
 
   private async readMeta(collectionName: string): Promise<CollectionMeta> {
@@ -107,6 +113,23 @@ export class CollectionManager {
     if (meta.variables) {
       delete meta.variables[key];
     }
+    await this.writeMeta(collectionName, meta);
+  }
+
+  async getCollectionAuth(collectionName: string): Promise<CollectionAuth | undefined> {
+    const meta = await this.readMeta(collectionName);
+    return meta.auth;
+  }
+
+  async setCollectionAuth(collectionName: string, auth: CollectionAuth): Promise<void> {
+    const meta = await this.readMeta(collectionName);
+    meta.auth = auth;
+    await this.writeMeta(collectionName, meta);
+  }
+
+  async deleteCollectionAuth(collectionName: string): Promise<void> {
+    const meta = await this.readMeta(collectionName);
+    delete meta.auth;
     await this.writeMeta(collectionName, meta);
   }
 

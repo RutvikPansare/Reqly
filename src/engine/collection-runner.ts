@@ -36,6 +36,8 @@ export class CollectionRunner {
   public async run(collectionName: string, options: RunOptions = {}): Promise<CollectionRunResult> {
     const collection = await this.context.collectionManager.getCollection(collectionName);
     const collectionVars = collection.variables || {};
+    const { resolveCollectionAuth } = await import('./collection-auth.js');
+    const collectionAuth = await resolveCollectionAuth(collection.auth, this.context.authManager);
 
     const results: RequestRunResult[] = [];
     let passedCount = 0;
@@ -59,7 +61,7 @@ export class CollectionRunner {
         // Layered scope: collection vars win over env vars on collision.
         const config = substituteConfig(request, [collectionVars, envVars], this.context.responseStore);
 
-        response = await this.context.executeRequest(config, options.environment, auth, undefined, undefined, collectionVars);
+        response = await this.context.executeRequest(config, options.environment, auth, undefined, undefined, collectionVars, collectionAuth);
         this.context.responseStore.set(request.name, response);
         this.context.historyStore.append(request, response, { collectionName: collectionName });
 

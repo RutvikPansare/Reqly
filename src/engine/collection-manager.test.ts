@@ -298,4 +298,43 @@ describe('CollectionManager', () => {
       await expect(manager.setCollectionVariable('Nope', 'a', '1')).rejects.toThrow(CollectionNotFoundError);
     });
   });
+
+  describe('collection auth', () => {
+    it('returns undefined when no auth is set', async () => {
+      await manager.createCollection('API');
+      expect(await manager.getCollectionAuth('API')).toBeUndefined();
+    });
+
+    it('sets and reads back collection auth', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionAuth('API', { type: 'bearer', credentials: { token: 't' } });
+      expect(await manager.getCollectionAuth('API')).toEqual({ type: 'bearer', credentials: { token: 't' } });
+    });
+
+    it('deletes collection auth', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionAuth('API', { type: 'bearer', credentials: { token: 't' } });
+      await manager.deleteCollectionAuth('API');
+      expect(await manager.getCollectionAuth('API')).toBeUndefined();
+    });
+
+    it('keeps variables intact when setting auth', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'baseUrl', 'https://x');
+      await manager.setCollectionAuth('API', { type: 'bearer', credentials: { token: 't' } });
+      expect(await manager.getCollectionVariables('API')).toEqual({ baseUrl: 'https://x' });
+      expect(await manager.getCollectionAuth('API')).toEqual({ type: 'bearer', credentials: { token: 't' } });
+    });
+
+    it('surfaces auth on the returned collection', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionAuth('API', { type: 'bearer', credentials: { token: 't' } });
+      const col = await manager.getCollection('API');
+      expect(col.auth).toEqual({ type: 'bearer', credentials: { token: 't' } });
+    });
+
+    it('throws when setting auth on a missing collection', async () => {
+      await expect(manager.setCollectionAuth('Nope', { type: 'bearer' })).rejects.toThrow(CollectionNotFoundError);
+    });
+  });
 });

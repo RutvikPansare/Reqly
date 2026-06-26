@@ -18,7 +18,8 @@ export async function execute(
   auth?: AuthProfile,
   truncate: boolean = true,
   maxBodyBytes: number = 50 * 1024,
-  collectionVars: Record<string, string> = {}
+  collectionVars: Record<string, string> = {},
+  collectionAuth?: AuthProfile
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
   // Layered scope chain: collection vars win over env vars on collision.
@@ -72,7 +73,27 @@ export async function execute(
     }
   }
 
-  if (auth) {
+  // Resolve effective auth with precedence:
+  //   request-level auth (resolved profile OR inline, including explicit none) > collection auth > none.
+  // An explicit `type: 'none'` on the request opts out of inherited collection auth entirely.
+  // The caller is responsible for resolving any profileId (request or collection) into a
+  // concrete {type, credentials} object before passing it here - the executor holds no AuthManager.
+  let effectiveAuth: AuthProfile | undefined;
+  if (config.auth?.type === 'none') {
+    effectiveAuth = undefined;
+  } else if (auth) {
+    effectiveAuth = auth;
+  } else if (config.auth) {
+    effectiveAuth = config.auth as AuthProfile;
+  } else if (config.authProfileId) {
+    // Request specified a profile but the caller did not resolve it; do not inherit.
+    effectiveAuth = undefined;
+  } else if (collectionAuth && collectionAuth.type !== ('none' as AuthType)) {
+    effectiveAuth = collectionAuth;
+  }
+
+  if (effectiveAuth) {
+    const auth: AuthProfile = { ...effectiveAuth, credentials: effectiveAuth.credentials || {} };
     if (auth.type === AuthType.BEARER && auth.credentials.token) {
       headers['Authorization'] = `Bearer ${auth.credentials.token}`;
     } else if (auth.type === AuthType.BASIC && auth.credentials.username) {

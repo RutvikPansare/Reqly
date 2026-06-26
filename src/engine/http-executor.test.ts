@@ -228,4 +228,55 @@ describe('http-executor', () => {
       expect(fetch).toHaveBeenCalledWith('https://collection.example.com/users', expect.anything());
     });
   });
+
+  describe('collection auth precedence', () => {
+    const mockOkResponse = () => {
+      vi.mocked(fetch).mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('ok').buffer),
+      } as any);
+    };
+
+    const collAuth: AuthProfile = { id: 'c1', name: 'col', type: AuthType.BEARER, credentials: { token: 'collection-token' } };
+
+    const headersOf = () => (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+
+    it('inherits collection auth when the request has no auth configured', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'http://example.com' };
+      await execute(config, undefined, undefined, true, 50 * 1024, {}, collAuth);
+      expect(headersOf().Authorization).toBe('Bearer collection-token');
+    });
+
+    it('request-level auth wins over collection auth', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'http://example.com' };
+      const reqAuth: AuthProfile = { id: 'r1', name: 'req', type: AuthType.BEARER, credentials: { token: 'request-token' } };
+      await execute(config, undefined, reqAuth, true, 50 * 1024, {}, collAuth);
+      expect(headersOf().Authorization).toBe('Bearer request-token');
+    });
+
+    it('explicit request type:none suppresses collection auth', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'http://example.com', auth: { type: 'none' } };
+      await execute(config, undefined, undefined, true, 50 * 1024, {}, collAuth);
+      expect(headersOf().Authorization).toBeUndefined();
+    });
+
+    it('applies inline request auth and does not inherit collection auth', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'http://example.com', auth: { type: 'bearer', credentials: { token: 'inline-token' } } };
+      await execute(config, undefined, undefined, true, 50 * 1024, {}, collAuth);
+      expect(headersOf().Authorization).toBe('Bearer inline-token');
+    });
+
+    it('does not inherit a collection auth whose type is none', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'http://example.com' };
+      const noneAuth: AuthProfile = { id: 'c2', name: 'col', type: 'none' as AuthType, credentials: {} };
+      await execute(config, undefined, undefined, true, 50 * 1024, {}, noneAuth);
+      expect(headersOf().Authorization).toBeUndefined();
+    });
+  });
 });

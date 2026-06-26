@@ -265,6 +265,33 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.get('/api/collections/:name/auth', async (req, res) => {
+    try {
+      const auth = await context.collectionManager.getCollectionAuth(req.params.name);
+      res.json(auth ?? null);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/collections/:name/auth', async (req, res) => {
+    try {
+      await context.collectionManager.setCollectionAuth(req.params.name, req.body);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/collections/:name/auth', async (req, res) => {
+    try {
+      await context.collectionManager.deleteCollectionAuth(req.params.name);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/auth-profiles', async (req, res) => {
     try {
       const profiles = await context.authManager.listProfiles();
@@ -607,10 +634,16 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       const collectionVars = collectionName
         ? await context.collectionManager.getCollectionVariables(collectionName).catch(() => ({}))
         : {};
+      let collectionAuth = undefined;
+      if (collectionName) {
+        const { resolveCollectionAuth } = await import('../engine/collection-auth.js');
+        const colAuthCfg = await context.collectionManager.getCollectionAuth(collectionName).catch(() => undefined);
+        collectionAuth = await resolveCollectionAuth(colAuthCfg, context.authManager);
+      }
       // Layered scope: collection vars win over env vars on collision.
       const config = substituteConfig(req.body.request, [collectionVars, envVars], context.responseStore);
 
-      const response = await context.executeRequest(config, env, auth, undefined, undefined, collectionVars);
+      const response = await context.executeRequest(config, env, auth, undefined, undefined, collectionVars, collectionAuth);
       context.responseStore.set(req.body.request.name, response);
       context.historyStore.append(req.body.request, response);
 

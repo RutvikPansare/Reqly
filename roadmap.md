@@ -65,6 +65,10 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 - [x] **Pre-run and Post-run Scripts** - Save pre/post execution scripts per request within a collection. Scripts have programmatic access to read and update environment variables. Console output captured and shown in the response viewer Console tab.
 
 - [ ] **Collection-level variables and auth** - per-collection variable set that takes precedence over environment variables when both define the same key; a bulletproof variable resolver handles merge order (collection vars > env vars); collection-level auth type + value (variable reference or hardcoded) auto-injected into every request in the collection; coexists with "Save as Profile" (profiles are reusable across collections, collection auth is scoped to one collection)
+  - [x] T-088: engine + MCP for variables
+  - [x] T-089: UI for variables (CollectionSettingsModal, Variables tab)
+  - [x] T-090: engine + MCP for auth (precedence logic, 3 MCP tools, Express routes)
+  - [ ] T-091: UI for auth (Auth tab in CollectionSettingsModal, inherited headers panel source)
 
 - [ ] Teaching agents how to use the app and create collections using response chaining, also using variables whenever possible for base urls, client ids etc; provide an example collection with full env variable usage in the package that acts as a guide for agents
 

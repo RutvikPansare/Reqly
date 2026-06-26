@@ -9,16 +9,7 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-090** Collection-level auth - engine + MCP
-  - Prerequisite: T-088 (collection YAML metadata store) should be done first so auth can share the same `collection.yaml` top-level file
-  - Add optional `auth` field to collection metadata YAML: same shape as `RequestConfig.auth` (type, profileId or inline credentials)
-  - Auth precedence at execution time: request-level auth (including explicit `type: none`) > collection auth > nothing. Explicit `type: none` on a request suppresses collection auth entirely
-  - Update `http-executor.ts` to accept and apply collection auth as a fallback when the request has no auth configured
-  - Update `run_request` and `run_collection` MCP tools to pass collection auth context through to the executor
-  - Add MCP tools: `get_collection_auth`, `set_collection_auth`, `delete_collection_auth` - agents must be able to configure collection auth without touching the UI
-  - Add Express routes: `GET /api/collections/:name/auth`, `PUT /api/collections/:name/auth`, `DELETE /api/collections/:name/auth`
-  - TDD: failing tests first for the precedence logic (request none suppresses, request unset inherits, collection auth injects correct header)
-  - Do NOT build UI in this task - that is T-091
+- [x] **T-090** Collection-level auth - engine + MCP
 
 - [ ] **T-091** Collection-level auth - UI
   - Prerequisite: T-090 must be done first

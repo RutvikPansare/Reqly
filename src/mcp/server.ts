@@ -33,6 +33,9 @@ import * as refreshOAuth2Token from './tools/refresh-oauth2-token.js';
 import * as getCollectionVariables from './tools/get-collection-variables.js';
 import * as setCollectionVariable from './tools/set-collection-variable.js';
 import * as deleteCollectionVariable from './tools/delete-collection-variable.js';
+import * as getCollectionAuth from './tools/get-collection-auth.js';
+import * as setCollectionAuth from './tools/set-collection-auth.js';
+import * as deleteCollectionAuth from './tools/delete-collection-auth.js';
 
 const tools = [
   runRequest,
@@ -63,6 +66,9 @@ const tools = [
   getCollectionVariables,
   setCollectionVariable,
   deleteCollectionVariable,
+  getCollectionAuth,
+  setCollectionAuth,
+  deleteCollectionAuth,
 ];
 
 import { z } from 'zod';
