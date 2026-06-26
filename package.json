@@ -31,15 +31,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RutvikPansare/AgentMan.git"
+    "url": "git+https://github.com/RutvikPansare/Reqly.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/RutvikPansare/AgentMan/issues"
+    "url": "https://github.com/RutvikPansare/Reqly/issues"
   },
-  "homepage": "https://github.com/RutvikPansare/AgentMan#readme",
+  "homepage": "https://github.com/RutvikPansare/Reqly#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "cors": "^2.8.6",

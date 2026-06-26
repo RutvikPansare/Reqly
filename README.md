@@ -24,6 +24,16 @@ npm install -g @rutvikpansare123/reqly
 reqly setup
 ```
 
+On macOS, you can also install via Homebrew:
+
+```bash
+brew tap RutvikPansare/reqly
+brew install reqly
+reqly setup
+```
+
+(Homebrew will ask you to run `brew trust RutvikPansare/reqly` the first time, since it's a third-party tap.)
+
 ## The fastest way to start
 
 Don't capture traffic, don't write YAML by hand - just tell your agent to read your code:

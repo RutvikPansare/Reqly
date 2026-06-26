@@ -8,6 +8,12 @@ Newest entries at the top.
 
 ## 2026-06-26
 
+**Decision:** `homebrew-reqly`'s `Formula/reqly.rb` points at the scoped npm tarball `https://registry.npmjs.org/@rutvikpansare123/reqly/-/reqly-1.0.5.tgz` with `license "ISC"`, diverging from the original task spec's template (unscoped `reqly` URL, `MIT` license).
+**Why:** The spec was written before the package was actually published and assumed an unscoped name and a license that was never accurate - `package.json` has always said `ISC`. Formula correctness was verified by testing, not by following the template literally: built and ran `brew test`/`reqly --version` against a local tap first, then again against the real pushed repo, before treating the task as done.
+
+**Decision:** Fixed `package.json`'s `repository`/`homepage`/`bugs` URLs (were `github.com/RutvikPansare/AgentMan`, an old project name) to `github.com/RutvikPansare/Reqly`, matching the actual git remote.
+**Why:** Found while building the Homebrew formula's `homepage` field - the npm package metadata was still pointing at a renamed-away repo, which would have been wrong information shipped to every npm install.
+
 **Decision:** Added a build step (`tsc`, new `packages/reqly-middleware/tsconfig.json`) to `reqly-middleware` and repointed its `main`/`exports`/`files` at compiled `dist/` output instead of raw `src/*.ts`.
 **Why:** The package as originally written had no compiled output - `main: "src/index.ts"` and `exports` pointing straight at TypeScript source. That's unusable by a plain Node consumer with no TS loader, which is exactly who this middleware targets (any Express/Fastify/Next.js app). Caught this while publishing `reqly-middleware@0.1.0` to npm as part of T-086 - fixed before publishing rather than shipping a broken package.
 
