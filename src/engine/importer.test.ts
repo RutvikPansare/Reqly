@@ -378,3 +378,216 @@ get { url: https://api.example.com }
     expect(result.collectionName).toBe('BrunoCol');
   });
 });
+
+// ── parseInsomnia ────────────────────────────────────────────────────────────
+
+import { parseInsomnia, parseOpenApi } from './importer.js';
+
+describe('parseInsomnia', () => {
+  it('extracts the collection name from workspace name', () => {
+    const data = {
+      _type: 'export',
+      __export_format: 4,
+      resources: [
+        { _type: 'workspace', _id: 'wrk_1', name: 'My Insomnia API' },
+      ],
+    };
+    const { collectionName } = parseInsomnia(JSON.stringify(data));
+    expect(collectionName).toBe('My Insomnia API');
+  });
+
+  it('maps a simple GET request', () => {
+    const data = {
+      _type: 'export',
+      __export_format: 4,
+      resources: [
+        { _type: 'workspace', _id: 'wrk_1', name: 'Test' },
+        { _type: 'request', _id: 'req_1', parentId: 'wrk_1', name: 'Get Users', method: 'GET', url: 'https://api.example.com/users', headers: [], body: {} },
+      ],
+    };
+    const { requests } = parseInsomnia(JSON.stringify(data));
+    expect(requests).toHaveLength(1);
+    expect(requests[0].name).toBe('Get Users');
+    expect(requests[0].method).toBe('GET');
+    expect(requests[0].url).toBe('https://api.example.com/users');
+  });
+
+  it('maps headers and JSON body', () => {
+    const data = {
+      _type: 'export',
+      __export_format: 4,
+      resources: [
+        { _type: 'workspace', _id: 'wrk_1', name: 'Test' },
+        {
+          _type: 'request', _id: 'req_2', parentId: 'wrk_1',
+          name: 'Create User', method: 'POST',
+          url: 'https://api.example.com/users',
+          headers: [{ name: 'Content-Type', value: 'application/json' }],
+          body: { mimeType: 'application/json', text: '{"name":"Alice"}' },
+        },
+      ],
+    };
+    const { requests } = parseInsomnia(JSON.stringify(data));
+    expect(requests[0].headers?.['Content-Type']).toBe('application/json');
+    expect(requests[0].body).toBe('{"name":"Alice"}');
+  });
+
+  it('flattens requests from folder groups', () => {
+    const data = {
+      _type: 'export',
+      __export_format: 4,
+      resources: [
+        { _type: 'workspace', _id: 'wrk_1', name: 'Test' },
+        { _type: 'request_group', _id: 'grp_1', parentId: 'wrk_1', name: 'Users' },
+        { _type: 'request', _id: 'req_1', parentId: 'grp_1', name: 'List', method: 'GET', url: 'https://api.example.com/users', headers: [], body: {} },
+      ],
+    };
+    const { requests } = parseInsomnia(JSON.stringify(data));
+    expect(requests).toHaveLength(1);
+    expect(requests[0].name).toBe('List');
+  });
+
+  it('falls back to "Imported" when no workspace found', () => {
+    const data = { _type: 'export', __export_format: 4, resources: [] };
+    const { collectionName } = parseInsomnia(JSON.stringify(data));
+    expect(collectionName).toBe('Imported');
+  });
+});
+
+// ── parseOpenApi ─────────────────────────────────────────────────────────────
+
+describe('parseOpenApi - OAS 3.0 JSON', () => {
+  it('extracts collection name from info.title', () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'Pet Store API', version: '1.0.0' },
+      paths: {},
+    };
+    const { collectionName } = parseOpenApi(JSON.stringify(spec));
+    expect(collectionName).toBe('Pet Store API');
+  });
+
+  it('maps a simple GET path', () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'API', version: '1' },
+      paths: {
+        '/pets': {
+          get: { operationId: 'listPets', summary: 'List pets', parameters: [] },
+        },
+      },
+    };
+    const { requests } = parseOpenApi(JSON.stringify(spec));
+    expect(requests).toHaveLength(1);
+    expect(requests[0].method).toBe('GET');
+    expect(requests[0].url).toBe('/pets');
+    expect(requests[0].name).toBe('listPets');
+  });
+
+  it('uses summary when operationId is absent', () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'API', version: '1' },
+      paths: {
+        '/pets': {
+          post: { summary: 'Create a pet' },
+        },
+      },
+    };
+    const { requests } = parseOpenApi(JSON.stringify(spec));
+    expect(requests[0].name).toBe('Create a pet');
+    expect(requests[0].method).toBe('POST');
+  });
+
+  it('prepends servers[0].url as base URL', () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'API', version: '1' },
+      servers: [{ url: 'https://api.example.com/v2' }],
+      paths: { '/users': { get: { operationId: 'listUsers' } } },
+    };
+    const { requests } = parseOpenApi(JSON.stringify(spec));
+    expect(requests[0].url).toBe('https://api.example.com/v2/users');
+  });
+
+  it('maps multiple methods on the same path', () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'API', version: '1' },
+      paths: {
+        '/items': {
+          get: { operationId: 'listItems' },
+          post: { operationId: 'createItem' },
+        },
+      },
+    };
+    const { requests } = parseOpenApi(JSON.stringify(spec));
+    expect(requests).toHaveLength(2);
+  });
+});
+
+describe('parseOpenApi - Swagger 2.0 JSON', () => {
+  it('extracts collection name from info.title', () => {
+    const spec = {
+      swagger: '2.0',
+      info: { title: 'Swagger API', version: '1' },
+      paths: {},
+    };
+    const { collectionName } = parseOpenApi(JSON.stringify(spec));
+    expect(collectionName).toBe('Swagger API');
+  });
+
+  it('builds URL from host + basePath + path', () => {
+    const spec = {
+      swagger: '2.0',
+      info: { title: 'API', version: '1' },
+      host: 'api.example.com',
+      basePath: '/v1',
+      paths: {
+        '/users': { get: { operationId: 'listUsers' } },
+      },
+    };
+    const { requests } = parseOpenApi(JSON.stringify(spec));
+    expect(requests[0].url).toBe('https://api.example.com/v1/users');
+  });
+});
+
+describe('importFromContent - insomnia + openapi', () => {
+  let tmpDir: string;
+  let manager: CollectionManager;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reqly-test-'));
+    manager = new CollectionManager(tmpDir);
+  });
+  afterEach(async () => {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('imports Insomnia content', async () => {
+    const data = {
+      _type: 'export', __export_format: 4,
+      resources: [
+        { _type: 'workspace', _id: 'wrk_1', name: 'InsomniaCol' },
+        { _type: 'request', _id: 'req_1', parentId: 'wrk_1', name: 'Get All', method: 'GET', url: 'https://example.com', headers: [], body: {} },
+      ],
+    };
+    const result = await importFromContent(JSON.stringify(data), 'insomnia', manager);
+    expect(result.collectionName).toBe('InsomniaCol');
+    expect(result.requestsImported).toBe(1);
+  });
+
+  it('imports OpenAPI content', async () => {
+    const spec = {
+      openapi: '3.0.0',
+      info: { title: 'OpenAPICol', version: '1' },
+      paths: {
+        '/items': { get: { operationId: 'listItems' } },
+        '/items/{id}': { delete: { operationId: 'deleteItem' } },
+      },
+    };
+    const result = await importFromContent(JSON.stringify(spec), 'openapi', manager);
+    expect(result.collectionName).toBe('OpenAPICol');
+    expect(result.requestsImported).toBe(2);
+  });
+});

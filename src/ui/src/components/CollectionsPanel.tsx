@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, FolderInput, Search } from 'lucide-react';
+import { ChevronRight, Play, Plus, FolderInput, Search, Download } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection, exportCollection } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
@@ -57,14 +57,35 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     const file = e.target.files?.[0];
     if (!file) return;
     setImportError(null);
-    const format: 'postman' | 'bruno' = file.name.endsWith('.json') ? 'postman' : 'bruno';
+    const name = file.name.toLowerCase();
+    let format: 'postman' | 'bruno' | 'insomnia' | 'openapi';
+    if (name.endsWith('.bru')) {
+      format = 'bruno';
+    } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+      format = 'openapi';
+    } else {
+      // JSON - detect from content
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (parsed._type === 'export' && parsed.__export_format === 4) format = 'insomnia';
+        else if (parsed.openapi || parsed.swagger) format = 'openapi';
+        else format = 'postman';
+        await importCollection(text, format);
+        loadData();
+        setImportSuccess(file.name.replace(/\.(json|bru|yaml|yml)$/i, ''));
+      } catch (err: any) {
+        setImportError(err.message || 'Import failed');
+      } finally {
+        e.target.value = '';
+      }
+      return;
+    }
     try {
       const content = await file.text();
       await importCollection(content, format);
       loadData();
-      // Show the collection name without extension as the success label
-      const collectionName = file.name.replace(/\.(json|bru)$/i, '');
-      setImportSuccess(collectionName);
+      setImportSuccess(file.name.replace(/\.(json|bru|yaml|yml)$/i, ''));
     } catch (err: any) {
       setImportError(err.message || 'Import failed');
     } finally {
@@ -199,7 +220,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.bru"
+        accept=".json,.bru,.yaml,.yml"
         className="hidden"
         onChange={handleImportFile}
       />
@@ -301,21 +322,36 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-secondary)' }}>{col.name}</span>
                   )}
                 </div>
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-0.5">
                   <button
                     className="px-1.5 flex items-center transition-colors"
                     style={{ color: 'var(--text-muted)' }}
                     title="Add Request"
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                     onClick={(e) => { e.stopPropagation(); setAddingReqTo(col.name); setExpandedCols(p => ({ ...p, [col.name]: true })); }}
                   >
                     <Plus size={14} />
                   </button>
                   <button
-                    className="text-blue-400 hover:text-blue-300 px-1.5 flex items-center"
+                    className="px-1.5 flex items-center transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
                     title="Run Collection"
+                    onMouseEnter={e => (e.currentTarget.style.color = '#60a5fa')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                     onClick={(e) => { e.stopPropagation(); onRunCollection(col.name); }}
                   >
                     <Play size={14} />
+                  </button>
+                  <button
+                    className="px-1.5 flex items-center transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    title="Export Collection"
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    onClick={(e) => { e.stopPropagation(); exportCollection(col.name, 'postman').catch(console.error); }}
+                  >
+                    <Download size={13} />
                   </button>
                 </div>
               </div>

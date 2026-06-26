@@ -3,6 +3,7 @@ import { Loader2, Copy, Check, Search, Braces, BookMarked } from 'lucide-react';
 import { statusBadgeClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
 import { saveExample, listExamples } from '../api';
+import { pushConsoleLogs } from './BottomPanel';
 
 interface ResponseViewerProps {
   response: any;
@@ -57,6 +58,14 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
     setExamples([]);
     setExamplesLoaded(false);
   }, [collectionName, requestName]);
+
+  // Push script logs to global bottom panel console
+  useEffect(() => {
+    if (response?.consoleLogs?.length) {
+      const source = request?.name ? `${request.name}` : undefined;
+      pushConsoleLogs(response.consoleLogs, source);
+    }
+  }, [response]);
 
   const loadExamples = async () => {
     if (!collectionName || !requestName) return;
@@ -228,19 +237,6 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
             {tab}
           </button>
         ))}
-        {response?.consoleLogs && response.consoleLogs.length > 0 && (
-          <button
-            disabled={isSending}
-            className={`tab-btn disabled:opacity-40 ${activeTab === 'console' ? 'active' : ''}`}
-            style={activeTab === 'console' ? { color: '#fbbf24', borderBottomColor: '#f59e0b' } : {}}
-            onClick={() => setActiveTab('console')}
-          >
-            Console
-            <span className="ml-1.5 text-[10px] font-bold px-1 rounded" style={{ background: '#92400e', color: '#fcd34d' }}>
-              {response.consoleLogs.length}
-            </span>
-          </button>
-        )}
         {hasDiff && (
           <button
             disabled={isSending}
@@ -310,23 +306,6 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
             {'\n\n'}
             {typeof body === 'object' ? JSON.stringify(body, null, 2) : body}
           </pre>
-        )}
-
-        {activeTab === 'console' && (
-          <div className="p-3 font-mono text-xs space-y-0.5">
-            {(response?.consoleLogs ?? []).length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }} className="italic">No console output</p>
-            ) : (response?.consoleLogs ?? []).map((line: string, i: number) => {
-              const isWarn = line.startsWith('[warn]');
-              const isError = line.startsWith('[error]');
-              const color = isError ? '#f87171' : isWarn ? '#fbbf24' : 'var(--text-secondary)';
-              return (
-                <div key={i} className="py-0.5 px-2 rounded" style={{ color, background: isError ? 'rgba(248,113,113,0.06)' : isWarn ? 'rgba(251,191,36,0.06)' : 'transparent' }}>
-                  {line}
-                </div>
-              );
-            })}
-          </div>
         )}
 
         {activeTab === 'diff' && hasDiff && (

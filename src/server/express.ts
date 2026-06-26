@@ -151,12 +151,13 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     try {
       const { content, format, collectionName } = req.body as {
         content: string;
-        format: 'postman' | 'bruno';
+        format: 'postman' | 'bruno' | 'insomnia' | 'openapi';
         collectionName?: string;
       };
       if (!content) return res.status(400).json({ error: 'content is required' });
-      if (format !== 'postman' && format !== 'bruno') {
-        return res.status(400).json({ error: 'format must be "postman" or "bruno"' });
+      const validFormats = ['postman', 'bruno', 'insomnia', 'openapi'];
+      if (!validFormats.includes(format)) {
+        return res.status(400).json({ error: `format must be one of: ${validFormats.join(', ')}` });
       }
       const { importFromContent } = await import('../engine/importer.js');
       const result = await importFromContent(content, format, context.collectionManager, collectionName);

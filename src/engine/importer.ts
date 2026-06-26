@@ -9,37 +9,24 @@ export interface ImportResult {
 }
 
 // ── Bruno block parser ──────────────────────────────────────────────────────
-// Parses the .bru text format into named blocks. Block names may contain
-// colons (e.g. body:json). Content between the outer braces is captured
-// verbatim so nested JSON braces are preserved correctly.
 
 function parseBrunoBlocks(content: string): Record<string, string> {
   const blocks: Record<string, string> = {};
   let pos = 0;
-
   while (pos < content.length) {
-    // skip whitespace / blank lines
     while (pos < content.length && /\s/.test(content[pos])) pos++;
     if (pos >= content.length) break;
-
-    // skip comment lines
     if (content[pos] === '#') {
       while (pos < content.length && content[pos] !== '\n') pos++;
       continue;
     }
-
-    // read block name: word chars and colons (e.g. "body:json")
     const nameStart = pos;
     while (pos < content.length && /[\w:]/.test(content[pos])) pos++;
     const blockName = content.slice(nameStart, pos);
     if (!blockName) { pos++; continue; }
-
-    // skip to opening brace (stop at newline - this line has no block)
     while (pos < content.length && content[pos] !== '{' && content[pos] !== '\n') pos++;
     if (pos >= content.length || content[pos] !== '{') continue;
-    pos++; // consume '{'
-
-    // collect content until the matching closing '}'
+    pos++;
     let depth = 1;
     const blockStart = pos;
     while (pos < content.length && depth > 0) {
@@ -48,16 +35,12 @@ function parseBrunoBlocks(content: string): Record<string, string> {
       if (depth > 0) pos++;
       else break;
     }
-
     blocks[blockName] = content.slice(blockStart, pos).trim();
-    pos++; // consume closing '}'
+    pos++;
   }
-
   return blocks;
 }
 
-// Parses simple "key: value" lines. Splits on the first colon only so
-// URLs (which contain colons) are preserved intact as values.
 function parseKv(text: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of text.split('\n')) {
@@ -98,7 +81,6 @@ function flattenPostmanItems(items: any[]): CollectionRequest[] {
   const requests: CollectionRequest[] = [];
   for (const item of items) {
     if (Array.isArray(item.item)) {
-      // folder - flatten recursively
       requests.push(...flattenPostmanItems(item.item));
     } else if (item.request) {
       const req = item.request;
@@ -107,15 +89,10 @@ function flattenPostmanItems(items: any[]): CollectionRequest[] {
       const body: string | undefined = req.body?.raw || undefined;
       const method = ((req.method as string) ?? 'GET').toUpperCase() as HttpMethod;
       const name = ((item.name as string) ?? 'Request')
-        .replace(/[/\\:*?"<>|]/g, '-')
-        .slice(0, 50)
-        .trim();
-
+        .replace(/[/\\:*?"<>|]/g, '-').slice(0, 50).trim();
       const cr: CollectionRequest = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        name,
-        method,
-        url,
+        name, method, url,
       };
       if (headers) cr.headers = headers;
       if (params) cr.params = params;
@@ -135,20 +112,18 @@ export function parsePostman(content: string): { collectionName: string; request
 
 // ── Bruno parser ─────────────────────────────────────────────────────────────
 
-const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
+const BRUNO_HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
 export function parseBruno(
   content: string,
   defaultName?: string
 ): { requestName: string; request: CollectionRequest } {
   const blocks = parseBrunoBlocks(content);
-
   const metaKv = parseKv(blocks['meta'] ?? '');
   const requestName = metaKv['name'] || defaultName || 'Request';
-
   let method: HttpMethod = 'GET';
   let url = '';
-  for (const m of HTTP_METHODS) {
+  for (const m of BRUNO_HTTP_METHODS) {
     if (blocks[m] !== undefined) {
       method = m.toUpperCase() as HttpMethod;
       const kv = parseKv(blocks[m]);
@@ -156,36 +131,150 @@ export function parseBruno(
       break;
     }
   }
-
   let headers: Record<string, string> | undefined;
   if (blocks['headers']) {
     const kv = parseKv(blocks['headers']);
     if (Object.keys(kv).length) headers = kv;
   }
-
   let params: Record<string, string> | undefined;
   if (blocks['query']) {
     const kv = parseKv(blocks['query']);
     if (Object.keys(kv).length) params = kv;
   }
-
   let body: string | undefined;
   if (blocks['body:json']) {
     const raw = blocks['body:json'].trim();
     if (raw) body = raw;
   }
-
   const request: CollectionRequest = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    name: requestName,
-    method,
-    url,
+    name: requestName, method, url,
   };
   if (headers) request.headers = headers;
   if (params) request.params = params;
   if (body) request.body = body;
-
   return { requestName, request };
+}
+
+// ── Insomnia v4 parser ───────────────────────────────────────────────────────
+
+function sanitizeName(name: string): string {
+  return (name || 'Request').replace(/[/\\:*?"<>|]/g, '-').slice(0, 50).trim();
+}
+
+export function parseInsomnia(content: string): { collectionName: string; requests: CollectionRequest[] } {
+  const data = JSON.parse(content);
+  const resources: any[] = data.resources ?? [];
+  const workspace = resources.find((r: any) => r._type === 'workspace');
+  const collectionName = workspace?.name || 'Imported';
+  const requests: CollectionRequest[] = [];
+  for (const r of resources) {
+    if (r._type !== 'request') continue;
+    const method = ((r.method as string) ?? 'GET').toUpperCase() as HttpMethod;
+    const url: string = r.url ?? '';
+    const name = sanitizeName(r.name);
+    const headers: Record<string, string> = {};
+    for (const h of r.headers ?? []) {
+      if (h.name && !h.disabled) headers[h.name] = h.value ?? '';
+    }
+    let body: string | undefined;
+    if (r.body?.text) body = r.body.text;
+    const cr: CollectionRequest = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name, method, url,
+    };
+    if (Object.keys(headers).length) cr.headers = headers;
+    if (body) cr.body = body;
+    requests.push(cr);
+  }
+  return { collectionName, requests };
+}
+
+// ── OpenAPI 3.0 / Swagger 2.0 parser ────────────────────────────────────────
+
+const OPENAPI_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'] as const;
+
+function parseScalar(s: string): any {
+  if (s === 'true') return true;
+  if (s === 'false') return false;
+  if (s === 'null' || s === '~') return null;
+  if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
+function parseSimpleYaml(content: string): any {
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const root: any = {};
+  const stack: Array<{ obj: any; indent: number }> = [{ obj: root, indent: -1 }];
+  for (const raw of lines) {
+    if (/^\s*#/.test(raw) || /^\s*$/.test(raw)) continue;
+    const indent = raw.search(/\S/);
+    const line = raw.trimStart();
+    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+    const parent = stack[stack.length - 1].obj;
+    if (line.startsWith('- ')) {
+      const val = line.slice(2).trim();
+      if (Array.isArray(parent)) parent.push(parseScalar(val));
+      continue;
+    }
+    const colonIdx = line.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = line.slice(0, colonIdx).trim();
+    const rest = line.slice(colonIdx + 1).trim();
+    if (!key) continue;
+    if (!rest || rest === '|' || rest === '>') {
+      const child: any = {};
+      if (Array.isArray(parent)) parent.push(child);
+      else parent[key] = child;
+      stack.push({ obj: child, indent });
+    } else {
+      const val = parseScalar(rest);
+      if (Array.isArray(parent)) parent.push({ [key]: val });
+      else parent[key] = val;
+    }
+  }
+  return root;
+}
+
+function tryParseYamlOrJson(content: string): any {
+  try { return JSON.parse(content); } catch { /* fall through to YAML */ }
+  return parseSimpleYaml(content);
+}
+
+export function parseOpenApi(content: string): { collectionName: string; requests: CollectionRequest[] } {
+  const spec = tryParseYamlOrJson(content);
+  const collectionName: string = spec.info?.title || 'Imported';
+  const requests: CollectionRequest[] = [];
+
+  let baseUrl = '';
+  if (spec.openapi) {
+    const server = (spec.servers ?? [])[0];
+    baseUrl = server?.url ?? '';
+  } else if (spec.swagger) {
+    const host: string = spec.host ?? '';
+    const basePath: string = spec.basePath ?? '';
+    if (host) baseUrl = `https://${host}${basePath}`;
+    else baseUrl = basePath;
+  }
+
+  const paths: Record<string, any> = spec.paths ?? {};
+  for (const [pathKey, pathItem] of Object.entries(paths)) {
+    if (!pathItem || typeof pathItem !== 'object') continue;
+    for (const method of OPENAPI_METHODS) {
+      const op: any = (pathItem as any)[method];
+      if (!op) continue;
+      const name = sanitizeName(op.operationId ?? op.summary ?? `${method.toUpperCase()} ${pathKey}`);
+      const url = baseUrl ? `${baseUrl}${pathKey}` : pathKey;
+      requests.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name, method: method.toUpperCase() as HttpMethod, url,
+      });
+    }
+  }
+  return { collectionName, requests };
 }
 
 // ── Shared writer ────────────────────────────────────────────────────────────
@@ -201,11 +290,13 @@ async function persistRequests(
   }
 }
 
-// ── File-based import (CLI and MCP tool) ─────────────────────────────────────
+// ── File-based import ────────────────────────────────────────────────────────
+
+export type ImportFormat = 'postman' | 'bruno' | 'insomnia' | 'openapi';
 
 export async function importFromFile(
   sourcePath: string,
-  format: 'postman' | 'bruno',
+  format: ImportFormat,
   manager: CollectionManager
 ): Promise<ImportResult> {
   const stat = await fs.stat(sourcePath).catch(() => null);
@@ -214,6 +305,20 @@ export async function importFromFile(
   if (format === 'postman') {
     const content = await fs.readFile(sourcePath, 'utf8');
     const { collectionName, requests } = parsePostman(content);
+    await persistRequests(collectionName, requests, manager);
+    return { collectionName, requestsImported: requests.length };
+  }
+
+  if (format === 'insomnia') {
+    const content = await fs.readFile(sourcePath, 'utf8');
+    const { collectionName, requests } = parseInsomnia(content);
+    await persistRequests(collectionName, requests, manager);
+    return { collectionName, requestsImported: requests.length };
+  }
+
+  if (format === 'openapi') {
+    const content = await fs.readFile(sourcePath, 'utf8');
+    const { collectionName, requests } = parseOpenApi(content);
     await persistRequests(collectionName, requests, manager);
     return { collectionName, requestsImported: requests.length };
   }
@@ -241,17 +346,29 @@ export async function importFromFile(
 }
 
 // ── Content-based import (UI via Express) ────────────────────────────────────
-// The browser reads the file and sends its contents as a string. Format is
-// detected from the file extension before the request is made.
 
 export async function importFromContent(
   content: string,
-  format: 'postman' | 'bruno',
+  format: ImportFormat,
   manager: CollectionManager,
   collectionName?: string
 ): Promise<ImportResult> {
   if (format === 'postman') {
     const parsed = parsePostman(content);
+    const name = collectionName || parsed.collectionName;
+    await persistRequests(name, parsed.requests, manager);
+    return { collectionName: name, requestsImported: parsed.requests.length };
+  }
+
+  if (format === 'insomnia') {
+    const parsed = parseInsomnia(content);
+    const name = collectionName || parsed.collectionName;
+    await persistRequests(name, parsed.requests, manager);
+    return { collectionName: name, requestsImported: parsed.requests.length };
+  }
+
+  if (format === 'openapi') {
+    const parsed = parseOpenApi(content);
     const name = collectionName || parsed.collectionName;
     await persistRequests(name, parsed.requests, manager);
     return { collectionName: name, requestsImported: parsed.requests.length };

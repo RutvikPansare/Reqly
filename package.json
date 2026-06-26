@@ -16,6 +16,7 @@
   "scripts": {
     "dev": "tsx src/server/index.ts",
     "build": "tsc && cd src/ui && npm install && npm run build && cd ../.. && rm -rf dist/ui && cp -R src/ui/dist dist/ui",
+    "build:ui": "cd src/ui && npm run build && cd ../.. && rm -rf dist/ui && cp -R src/ui/dist dist/ui",
     "test": "vitest run",
     "start": "node dist/server/index.js"
   },

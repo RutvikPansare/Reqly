@@ -43,8 +43,8 @@ export function CodeGenModal({ request, onClose }: CodeGenModalProps) {
   };
 
   return (
-    <Modal title="Generate Code" onClose={onClose} icon={<Code2 size={16} style={{ color: 'var(--accent)' }} />}>
-      <div className="flex flex-col gap-0" style={{ minWidth: '520px' }}>
+    <Modal title="Generate Code" onClose={onClose} icon={<Code2 size={16} style={{ color: 'var(--accent)' }} />} width="w-[600px]">
+      <div className="flex flex-col gap-0">
         <div className="flex items-center justify-between mb-2">
           <div className="flex gap-1">
             {TABS.map(t => (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { fetchEnvironments, setActiveEnvironment } from '../api';
+import { ChevronRight, Download } from 'lucide-react';
+import { fetchEnvironments, setActiveEnvironment, exportEnvironment } from '../api';
 
 export function SidebarEnvSection() {
   const [environments, setEnvironments] = useState<any[]>([]);
@@ -59,7 +59,7 @@ export function SidebarEnvSection() {
               <li
                 key={env.name}
                 onClick={() => handleSelect(env.name)}
-                className="flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-sm transition-colors select-none"
+                className="flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-sm transition-colors select-none group"
                 style={{ background: isActive ? 'var(--surface-3)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
@@ -68,10 +68,20 @@ export function SidebarEnvSection() {
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: isActive ? '#4ade80' : 'var(--border-strong)' }}
                 />
-                <span className="truncate">{env.name}</span>
+                <span className="truncate flex-1">{env.name}</span>
                 {isActive && (
-                  <span className="ml-auto text-[10px] font-medium shrink-0" style={{ color: '#4ade80' }}>active</span>
+                  <span className="text-[10px] font-medium shrink-0" style={{ color: '#4ade80' }}>active</span>
                 )}
+                <button
+                  title={`Export ${env.name}`}
+                  onClick={async (e) => { e.stopPropagation(); await exportEnvironment(env.name).catch(console.error); }}
+                  className="shrink-0 rounded p-0.5 transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                >
+                  <Download size={11} />
+                </button>
               </li>
             );
           })}

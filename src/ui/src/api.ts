@@ -175,7 +175,7 @@ export interface HistoryEntry {
   collectionName?: string;
 }
 
-export async function importCollection(content: string, format: 'postman' | 'bruno', collectionName?: string) {
+export async function importCollection(content: string, format: 'postman' | 'bruno' | 'insomnia' | 'openapi', collectionName?: string) {
   const res = await fetch('/api/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

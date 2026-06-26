@@ -17,6 +17,7 @@ import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
 import { SplitPane } from './components/SplitPane';
+import { BottomBar, BottomPanel, useConsoleStats } from './components/BottomPanel';
 
 interface TabData {
   id: string;
@@ -99,6 +100,8 @@ function App() {
   const [activeTabId, setActiveTabId] = useLocalStorage<string>(ACTIVE_TAB_KEY, tabs[0]?.id || 'default');
   const [runningCollection, setRunningCollection] = useState<string | null>(null);
   const [saveModal, setSaveModal] = useState<{ tabId: string; request: any } | null>(null);
+  const [bottomOpen, setBottomOpen] = useState(false);
+  const [bottomHeight, setBottomHeight] = useState(220);
   const tabBarRef = useRef<HTMLDivElement>(null);
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameTabValue, setRenameTabValue] = useState('');
@@ -166,6 +169,18 @@ function App() {
     return () => { if (persistTimer.current) clearTimeout(persistTimer.current); };
   }, [tabs]);
 
+  // Keyboard shortcut: Ctrl+` to toggle bottom panel
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '`' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setBottomOpen(o => !o);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const scrollTabs = (dir: 'left' | 'right') => {
     const el = tabBarRef.current;
     if (!el) return;
@@ -173,6 +188,7 @@ function App() {
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
+  const consoleStats = useConsoleStats();
 
   const updateTab = (id: string, updates: Partial<TabData>) => {
     setTabs(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
@@ -250,7 +266,9 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--surface-1)' }}>
+    <div className="h-screen flex flex-col relative" style={{ background: 'var(--surface-1)', overflow: 'hidden' }}>
+      {/* Main area: header + sidebar/content - flex-1 so bottom bar is never squeezed out */}
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
         {/* Wordmark - left */}
         <h1
@@ -517,6 +535,19 @@ function App() {
           )}
         </main>
       </div>
+      </div>{/* end main flex area */}
+      <BottomPanel
+        open={bottomOpen}
+        onClose={() => setBottomOpen(false)}
+        height={bottomHeight}
+        onHeightChange={setBottomHeight}
+      />
+      <BottomBar
+        consoleOpen={bottomOpen}
+        onToggleConsole={() => setBottomOpen(o => !o)}
+        entryCount={consoleStats.total}
+        errorCount={consoleStats.errors}
+      />
       {showSearch && (
         <SpotlightSearch
           onSelectRequest={handleSelectRequestFromSidebar}

@@ -1,19 +1,22 @@
 import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
-import { importFromFile } from '../../engine/importer.js';
+import { importFromFile, ImportFormat } from '../../engine/importer.js';
+
+const VALID_FORMATS: ImportFormat[] = ['postman', 'bruno', 'insomnia', 'openapi'];
 
 export const definition: ToolDefinition = {
   name: 'import_collection',
-  description: 'Imports an existing Postman v2.1 collection (JSON) or Bruno request file (.bru) or Bruno collection directory into Reqly. When to use: when a developer already has a Postman or Bruno collection and wants to switch to Reqly without re-creating requests manually. Preferred pattern: call list_collections first to check what already exists, then import. After import, call list_collections again to verify the requests landed correctly.',
+  description: 'Imports a collection into Reqly from a file. Supported formats: "postman" (Postman v2.1 JSON), "bruno" (Bruno .bru file or directory), "insomnia" (Insomnia v4 JSON export), "openapi" (OpenAPI 3.0 or Swagger 2.0 JSON/YAML). When to use: when a developer already has an existing collection and wants to switch to Reqly without re-creating requests manually. Preferred pattern: call list_collections first to check what already exists, then import. After import, call list_collections again to verify the requests landed correctly.',
   inputSchema: {
     type: 'object',
     properties: {
       source: {
         type: 'string',
-        description: 'Absolute path to a Postman JSON file, a Bruno .bru file, or a directory of .bru files'
+        description: 'Absolute path to the collection file (JSON/YAML for Postman/Insomnia/OpenAPI) or a directory of .bru files for Bruno'
       },
       format: {
         type: 'string',
-        description: 'Import format: "postman" for Postman v2.1 JSON, "bruno" for Bruno .bru files'
+        enum: VALID_FORMATS,
+        description: 'Import format: "postman", "bruno", "insomnia", or "openapi"'
       }
     },
     required: ['source', 'format']
@@ -22,9 +25,9 @@ export const definition: ToolDefinition = {
 
 export async function handler(args: any, context: EngineContext): Promise<ToolHandlerResult> {
   try {
-    const format = args.format as 'postman' | 'bruno';
-    if (format !== 'postman' && format !== 'bruno') {
-      return { content: [{ type: 'text', text: 'format must be "postman" or "bruno"' }], isError: true };
+    const format = args.format as ImportFormat;
+    if (!VALID_FORMATS.includes(format)) {
+      return { content: [{ type: 'text', text: `format must be one of: ${VALID_FORMATS.join(', ')}` }], isError: true };
     }
     const result = await importFromFile(args.source, format, context.collectionManager);
     return { content: [{ type: 'text', text: JSON.stringify(result) }] };

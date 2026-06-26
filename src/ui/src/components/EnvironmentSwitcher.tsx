@@ -134,7 +134,10 @@ export function EnvironmentSwitcher() {
                 </button>
                 <button
                   title={`Export ${env.name}`}
-                  className="px-2 py-2 text-gray-600 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="px-2 py-2 transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                   onClick={async (e) => { e.stopPropagation(); await exportEnvironment(env.name).catch(console.error); }}
                 >
                   <Download size={12} />
