@@ -8,6 +8,12 @@ Newest entries at the top.
 
 ## 2026-06-26
 
+**Decision:** T-100's reference mockup (`docs/tasks/T-100-flows-ui-reference.html`) uses the Tabler icon webfont via a CDN `<link>`. The real implementation uses `lucide-react`'s `GitBranch` icon instead, with no new icon dependency added.
+**Why:** An earlier decision (2026-06-24) standardized the entire UI on `lucide-react` as the single icon library, specifically to avoid the kind of inconsistency a second icon system (font-based, CDN-loaded) would reintroduce. The mockup is a static visual reference for pixel-matching colors/spacing/layout, not a literal instruction to add a webfont dependency - `GitBranch` is visually equivalent to `ti-git-branch` and keeps the one-import-path rule intact.
+
+**Decision:** Flows and collections share the same `.reqly/` base directory (`FlowManager` reads/writes `.reqly/flows/`, `CollectionManager` reads/writes everything else directly under `.reqly/`), with `CollectionManager.listCollections()` excluding a small `RESERVED_DIRS` set (currently just `flows`) rather than giving flows their own top-level root.
+**Why:** T-095 already chose `.reqly/flows/<name>.yaml` to keep flows alongside collections in the same git-tracked tree (consistent with "collections are plain text, travel with the repo"). The cost is that `CollectionManager`, which lists every directory under its base dir as a collection, picked up `flows/` as a fake collection with one fake "request" per flow file - caught while wiring the Flows UI's sidebar (T-100), which rendered exactly that. A reserved-name exclusion is the minimal fix; the alternative (a separate root directory for flows) would have meant passing a second path through every CLI/MCP/Express entry point for no real benefit, since the two managers already don't share any file-reading code.
+
 **Decision:** The "Collection Settings" modal (T-089) saves on an explicit Save button against a local draft, not on every `KeyValueEditor` keystroke.
 **Why:** `KeyValueEditor`'s `onChange` fires on every field edit, so a naive per-keystroke persist would fire a set/delete API call per character typed - wasteful, and a half-typed key could get persisted then immediately deleted on the next keystroke. `EnvironmentsPanel` already solved this exact problem (local draft state, diff-and-persist on Save), so the new modal copies that pattern rather than inventing a new one.
 

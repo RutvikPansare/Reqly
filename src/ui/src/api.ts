@@ -311,3 +311,89 @@ export async function deleteExample(collectionName: string, requestName: string,
   if (!res.ok) throw new Error('Failed to delete example');
   return res.json();
 }
+
+export async function fetchFlows() {
+  const res = await fetch('/api/flows');
+  if (!res.ok) throw new Error('Failed to fetch flows');
+  return res.json();
+}
+
+export async function getFlow(name: string) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(name)}`);
+  if (!res.ok) throw new Error('Failed to fetch flow');
+  return res.json();
+}
+
+export async function createFlow(name: string, description?: string) {
+  const res = await fetch('/api/flows', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description }),
+  });
+  if (!res.ok) throw new Error('Failed to create flow');
+  return res.json();
+}
+
+export async function deleteFlow(name: string) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(name)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete flow');
+  return res.json();
+}
+
+export async function updateFlowMeta(name: string, updates: { name?: string; description?: string }) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(name)}/meta`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error('Failed to update flow');
+  return res.json();
+}
+
+export async function setFlowData(name: string, data: Record<string, string>[]) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(name)}/data`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  });
+  if (!res.ok) throw new Error('Failed to update flow data');
+  return res.json();
+}
+
+export async function addFlowStep(flowName: string, step: any) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(flowName)}/steps`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(step),
+  });
+  if (!res.ok) throw new Error('Failed to add flow step');
+  return res.json();
+}
+
+export async function updateFlowStep(flowName: string, stepId: string, step: any) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(flowName)}/steps/${encodeURIComponent(stepId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(step),
+  });
+  if (!res.ok) throw new Error('Failed to update flow step');
+  return res.json();
+}
+
+export async function deleteFlowStep(flowName: string, stepId: string) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(flowName)}/steps/${encodeURIComponent(stepId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete flow step');
+  return res.json();
+}
+
+export async function runFlow(name: string, dataRow?: Record<string, string>) {
+  const res = await fetch(`/api/flows/${encodeURIComponent(name)}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dataRow ? { dataRow } : {}),
+  });
+  if (!res.ok) throw new Error('Failed to run flow');
+  return res.json();
+}

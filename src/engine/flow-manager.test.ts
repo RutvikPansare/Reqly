@@ -114,4 +114,29 @@ describe('FlowManager', () => {
     const flow = await manager.getFlow('Data Flow');
     expect(flow.data).toEqual([{ username: 'a' }, { username: 'b' }]);
   });
+
+  it('updates a flow description without renaming', async () => {
+    await manager.createFlow('Login Flow', 'old description');
+    await manager.updateFlowMeta('Login Flow', { description: 'new description' });
+
+    const flow = await manager.getFlow('Login Flow');
+    expect(flow.name).toBe('Login Flow');
+    expect(flow.description).toBe('new description');
+  });
+
+  it('renames a flow, preserving its steps and data', async () => {
+    await manager.createFlow('Old Name');
+    await manager.addFlowStep('Old Name', { type: 'run', id: 's1', collection: 'Auth', request: 'Login' });
+
+    await manager.updateFlowMeta('Old Name', { name: 'New Name' });
+
+    const flow = await manager.getFlow('New Name');
+    expect(flow.name).toBe('New Name');
+    expect(flow.steps).toHaveLength(1);
+    await expect(manager.getFlow('Old Name')).rejects.toThrow(FlowNotFoundError);
+  });
+
+  it('throws FlowNotFoundError when updating meta on a missing flow', async () => {
+    await expect(manager.updateFlowMeta('Missing', { description: 'x' })).rejects.toThrow(FlowNotFoundError);
+  });
 });

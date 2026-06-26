@@ -76,6 +76,22 @@ export class FlowManager {
     await fs.unlink(filePath);
   }
 
+  async updateFlowMeta(name: string, updates: { name?: string; description?: string }): Promise<FlowConfig> {
+    const flow = await this.getFlow(name);
+    if (updates.description !== undefined) flow.description = updates.description;
+
+    if (updates.name && updates.name !== name) {
+      const oldPath = this.flowPath(name);
+      flow.name = updates.name;
+      await fs.writeFile(this.flowPath(updates.name), dump(flow), 'utf8');
+      await fs.unlink(oldPath);
+      return flow;
+    }
+
+    await this.saveFlow(flow);
+    return flow;
+  }
+
   private async saveFlow(flow: FlowConfig): Promise<void> {
     await fs.writeFile(this.flowPath(flow.name), dump(flow), 'utf8');
   }

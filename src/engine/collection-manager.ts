@@ -9,6 +9,10 @@ import { Collection, CollectionRequest, ExampleResponse, CollectionMeta, Collect
 // treated as a request.
 const META_FILE = 'collection.yaml';
 
+// Top-level directories reserved by other managers sharing the same .reqly
+// base dir (e.g. FlowManager's `flows/`) - never treated as collections.
+const RESERVED_DIRS = new Set(['flows']);
+
 export class CollectionNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -138,7 +142,7 @@ export class CollectionManager {
     const cols: Collection[] = [];
     const entries = await fs.readdir(this.baseDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory()) {
+      if (entry.isDirectory() && !RESERVED_DIRS.has(entry.name)) {
         const col = await this.getCollection(entry.name);
         cols.push(col);
       }

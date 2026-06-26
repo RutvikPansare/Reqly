@@ -91,7 +91,9 @@ export class FlowRunner {
             break;
           }
           case 'assert': {
-            r.passed = this.execAssert(step, lastResponse);
+            const assertResult = this.execAssert(step, lastResponse);
+            r.passed = assertResult.passed;
+            r.error = assertResult.error;
             break;
           }
           case 'poll': {
@@ -231,10 +233,11 @@ export class FlowRunner {
     flowScope.set(step.into, strVal);
   }
 
-  private execAssert(step: AssertStep, lastResponse: HttpResponse | undefined): boolean {
+  private execAssert(step: AssertStep, lastResponse: HttpResponse | undefined): { passed: boolean; error?: string } {
     if (!lastResponse) throw new Error('assert step has no preceding response');
     const results = runAssertions(lastResponse, step.assertions);
-    return results.every(a => a.passed);
+    const failed = results.find(a => !a.passed);
+    return { passed: !failed, error: failed?.message };
   }
 
   private evalConditional(step: ConditionalStep, lastResponse: HttpResponse | undefined, flowScope: Map<string, string>): boolean {

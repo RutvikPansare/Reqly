@@ -15,6 +15,8 @@ import { ResponseViewer } from './components/ResponseViewer';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
+import { FlowsPanel } from './components/FlowsPanel';
+import { FlowWorkspace } from './components/FlowWorkspace';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
 import { SplitPane } from './components/SplitPane';
 import { BottomBar, BottomPanel, useConsoleStats } from './components/BottomPanel';
@@ -105,6 +107,8 @@ function App() {
   const tabBarRef = useRef<HTMLDivElement>(null);
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameTabValue, setRenameTabValue] = useState('');
+  const [selectedFlowName, setSelectedFlowName] = useState<string | null>(null);
+  const [flowLastResults, setFlowLastResults] = useState<Record<string, any>>({});
 
   const startTabRename = (id: string, currentName: string) => {
     setRenamingTabId(id);
@@ -392,6 +396,13 @@ function App() {
               {activePanel === 'capture' && (
                 <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
               )}
+              {activePanel === 'flows' && (
+                <FlowsPanel
+                  selectedFlow={selectedFlowName}
+                  onSelectFlow={setSelectedFlowName}
+                  lastResults={flowLastResults}
+                />
+              )}
             </div>
           </aside>
         )}
@@ -399,6 +410,18 @@ function App() {
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 relative" style={{ background: 'var(--surface-1)' }}>
           {activePanel === 'graphql' ? (
             <GraphQLWorkspace />
+          ) : activePanel === 'flows' ? (
+            selectedFlowName ? (
+              <FlowWorkspace
+                flowName={selectedFlowName}
+                lastResult={flowLastResults[selectedFlowName] || null}
+                onRunComplete={(name, result) => setFlowLastResults(prev => ({ ...prev, [name]: result }))}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+                Select a flow, or create one in the sidebar
+              </div>
+            )
           ) : (
             <>
               <div className="flex items-center shrink-0" style={{ height: '40px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>

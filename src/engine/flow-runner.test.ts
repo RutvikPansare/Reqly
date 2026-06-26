@@ -176,7 +176,9 @@ describe('FlowRunner', () => {
 
     const result = await new FlowRunner(ctx).run(flow);
     expect(result.passed).toBe(false);
-    expect(result.steps.find(s => s.stepId === 's2')!.passed).toBe(false);
+    const assertStep = result.steps.find(s => s.stepId === 's2')!;
+    expect(assertStep.passed).toBe(false);
+    expect(assertStep.error).toMatch(/status/i);
   });
 
   it('runs the step sequence once per data row and aggregates results', async () => {

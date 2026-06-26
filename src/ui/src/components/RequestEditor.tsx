@@ -8,6 +8,7 @@ import type { VariableItem } from './VariableInput';
 import { ScriptEditor } from './ScriptEditor';
 import { CurlImportModal } from './CurlImportModal';
 import { CodeGenModal } from './CodeGenModal';
+import { AssertionEditor } from './AssertionEditor';
 
 interface RequestEditorProps {
   request: any;
@@ -137,14 +138,6 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     const base = qIndex === -1 ? url : url.slice(0, qIndex);
     setUrl(updateUrlWithParams(base, newParams));
   };
-
-  const addAssertion = () => setAssertions([...assertions, { field: 'status', operator: 'eq', value: '' }]);
-  const updateAssertion = (index: number, key: string, val: string) => {
-    const newAss = [...assertions];
-    newAss[index][key] = val;
-    setAssertions(newAss);
-  };
-  const removeAssertion = (index: number) => setAssertions(assertions.filter((_, i) => i !== index));
 
     const [authType, setAuthType] = useState(request?.auth?.type || 'none');
     const [authProfileId, setAuthProfileId] = useState(request?.authProfileId || '');
@@ -377,44 +370,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             />
           </div>
         ) : activeTab === 'assertions' ? (
-          <div className="space-y-2">
-            {assertions.map((ass, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select 
-                  className="bg-gray-800 text-gray-300 border border-gray-700 rounded p-1 text-sm"
-                  value={ass.field} onChange={e => updateAssertion(i, 'field', e.target.value)}
-                >
-                  <option value="status">Status</option>
-                  <option value="body">Body</option>
-                  <option value="latency">Latency</option>
-                </select>
-                {ass.field === 'body' && (
-                  <input 
-                    type="text" placeholder="path (e.g. data.token)" 
-                    className="bg-gray-800 text-gray-300 border border-gray-700 rounded p-1 text-sm w-32"
-                    value={ass.path || ''} onChange={e => updateAssertion(i, 'path', e.target.value)}
-                  />
-                )}
-                <select 
-                  className="bg-gray-800 text-gray-300 border border-gray-700 rounded p-1 text-sm"
-                  value={ass.operator} onChange={e => updateAssertion(i, 'operator', e.target.value)}
-                >
-                  <option value="eq">equals</option>
-                  <option value="neq">not equals</option>
-                  <option value="contains">contains</option>
-                  <option value="lt">less than</option>
-                  <option value="gt">greater than</option>
-                </select>
-                <input 
-                  type="text" placeholder="value" 
-                  className="flex-1 bg-gray-800 text-gray-300 border border-gray-700 rounded p-1 text-sm"
-                  value={ass.value} onChange={e => updateAssertion(i, 'value', e.target.value)}
-                />
-                <button onClick={() => removeAssertion(i)} className="text-gray-500 hover:text-red-400">🗑️</button>
-              </div>
-            ))}
-            <button onClick={addAssertion} className="text-blue-400 text-sm hover:underline mt-2">+ Add Assertion</button>
-          </div>
+          <AssertionEditor assertions={assertions} onChange={setAssertions} />
         ) : activeTab === 'auth' ? (
           <div className="max-w-2xl">
             <div className="mb-6 flex gap-4 items-center">

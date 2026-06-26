@@ -40,6 +40,15 @@ describe('CollectionManager', () => {
     expect(cols.map(c => c.name).sort()).toEqual(['Col1', 'Col2']);
   });
 
+  it('does not list the reserved flows/ directory as a collection', async () => {
+    await manager.createCollection('Col1');
+    fs.mkdirSync(path.join(tmpDir, 'flows'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'flows', 'MyFlow.yaml'), 'name: MyFlow\nsteps: []\n');
+
+    const cols = await manager.listCollections();
+    expect(cols.map(c => c.name)).toEqual(['Col1']);
+  });
+
   it('should throw CollectionNotFoundError if getting missing collection', async () => {
     await expect(manager.getCollection('Missing')).rejects.toThrow(CollectionNotFoundError);
   });

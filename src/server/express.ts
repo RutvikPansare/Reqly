@@ -329,6 +329,24 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.put('/api/flows/:name/meta', async (req, res) => {
+    try {
+      const flow = await context.flowManager.updateFlowMeta(req.params.name, req.body);
+      res.json(flow);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/flows/:name/data', async (req, res) => {
+    try {
+      await context.flowManager.setFlowData(req.params.name, req.body.data || []);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/flows/:name/steps', async (req, res) => {
     try {
       await context.flowManager.addFlowStep(req.params.name, req.body);
