@@ -234,4 +234,10 @@ export class CollectionManager {
     const req = await this.getRequest(collectionName, requestName);
     return req.examples || [];
   }
+
+  async deleteExample(collectionName: string, requestName: string, exampleId: string): Promise<void> {
+    const req = await this.getRequest(collectionName, requestName);
+    req.examples = (req.examples || []).filter(e => e.id !== exampleId);
+    await this.addRequest(collectionName, req);
+  }
 }

@@ -542,6 +542,15 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.delete('/api/collections/:col/requests/:req/examples/:exampleId', async (req, res) => {
+    try {
+      await context.collectionManager.deleteExample(req.params.col, req.params.req, req.params.exampleId);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/switch-project', async (req, res) => {
     try {
       const projectDir: string = req.body.projectDir;

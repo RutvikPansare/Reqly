@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, FolderInput, Search, Download } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection, exportCollection } from '../api';
+import { ChevronRight, Play, Plus, FolderInput, Search, Download, BookMarked, Trash2 } from 'lucide-react';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection, exportCollection, deleteExample } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
@@ -15,6 +15,7 @@ interface CollectionsPanelProps {
 export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection }: CollectionsPanelProps) {
   const [collections, setCollections] = useState<any[]>([]);
   const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
+  const [expandedReqs, setExpandedReqs] = useState<Record<string, boolean>>({});
 
   const [creatingCol, setCreatingCol] = useState(false);
   const [newColName, setNewColName] = useState('');
@@ -37,6 +38,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const [contextMenu, setContextMenu] = useState<
     | { x: number; y: number; type: 'col'; col: string }
     | { x: number; y: number; type: 'req'; col: string; req: string }
+    | { x: number; y: number; type: 'example'; col: string; req: string; exampleId: string }
     | null
   >(null);
 
@@ -118,6 +120,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const handleDeleteReq = async (col: string, req: string) => {
     await deleteRequest(col, req);
+    loadData();
+  };
+
+  const handleDeleteExample = async (col: string, req: string, exampleId: string) => {
+    await deleteExample(col, req, exampleId);
     loadData();
   };
 
@@ -378,37 +385,92 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   )}
 
                   {col.requests.map((req: any) => {
-                    const isActive = activeRequest?.name === req.name && activeRequest?._collection === col.name;
+                    const isActive = activeRequest?.name === req.name && activeRequest?._collection === col.name && !activeRequest?._isExample;
                     const isRenaming = renaming?.col === col.name && renaming?.req === req.name;
+                    const reqKey = `${col.name}/${req.name}`;
+                    const hasExamples = req.examples && req.examples.length > 0;
+                    const reqExpanded = expandedReqs[reqKey];
                     return (
-                      <li
-                        key={req.name}
-                        className="text-sm cursor-pointer py-1 pl-2 pr-1 rounded flex items-center gap-2 group transition-colors"
-                        style={{ background: isActive ? 'var(--surface-3)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
-                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
-                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                        onClick={() => !isRenaming && onSelectRequest(req, col.name)}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setContextMenu({ x: e.pageX, y: e.pageY, type: 'req', col: col.name, req: req.name });
-                        }}
-                      >
-                        <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
-                        {isRenaming ? (
-                          <input
-                            autoFocus
-                            className="input flex-1 text-sm py-0"
-                            value={renameValue}
-                            onChange={e => setRenameValue(e.target.value)}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') commitRename();
-                              if (e.key === 'Escape') { setRenaming(null); setRenameValue(''); }
-                            }}
-                            onBlur={commitRename}
-                            onClick={e => e.stopPropagation()}
-                          />
-                        ) : (
-                          <span className="truncate">{req.name}</span>
+                      <li key={req.name}>
+                        <div
+                          className="text-sm cursor-pointer py-1 pl-2 pr-1 rounded flex items-center gap-2 group transition-colors"
+                          style={{ background: isActive ? 'var(--surface-3)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                          onClick={() => !isRenaming && onSelectRequest(req, col.name)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setContextMenu({ x: e.pageX, y: e.pageY, type: 'req', col: col.name, req: req.name });
+                          }}
+                        >
+                          <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
+                          {isRenaming ? (
+                            <input
+                              autoFocus
+                              className="input flex-1 text-sm py-0"
+                              value={renameValue}
+                              onChange={e => setRenameValue(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') commitRename();
+                                if (e.key === 'Escape') { setRenaming(null); setRenameValue(''); }
+                              }}
+                              onBlur={commitRename}
+                              onClick={e => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span className="truncate flex-1">{req.name}</span>
+                          )}
+                          {hasExamples && !isRenaming && (
+                            <button
+                              className="shrink-0 flex items-center transition-transform"
+                              style={{ color: 'var(--text-muted)', transform: reqExpanded ? 'rotate(90deg)' : 'none' }}
+                              title={reqExpanded ? 'Hide examples' : `${req.examples.length} example${req.examples.length > 1 ? 's' : ''}`}
+                              onClick={e => { e.stopPropagation(); setExpandedReqs(p => ({ ...p, [reqKey]: !reqExpanded })); }}
+                            >
+                              <ChevronRight size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Examples sub-list */}
+                        {hasExamples && reqExpanded && (
+                          <ul className="pl-4 ml-1 mt-0.5 space-y-0.5 mb-1" style={{ borderLeft: '1px dashed var(--border)' }}>
+                            {req.examples.map((ex: any) => {
+                              const isExActive = activeRequest?._isExample && activeRequest?._exampleId === ex.id && activeRequest?._collection === col.name;
+                              const statusColor = ex.status >= 500 ? '#ef4444' : ex.status >= 400 ? '#f59e0b' : ex.status >= 300 ? '#3b82f6' : '#22c55e';
+                              return (
+                                <li
+                                  key={ex.id}
+                                  className="flex items-center gap-1.5 py-1 pl-2 pr-1 rounded cursor-pointer group transition-colors text-xs"
+                                  style={{ background: isExActive ? 'var(--surface-3)' : 'transparent', color: isExActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                                  onMouseEnter={e => { if (!isExActive) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                                  onMouseLeave={e => { if (!isExActive) e.currentTarget.style.background = 'transparent'; }}
+                                  onClick={() => onSelectRequest({
+                                    ...req,
+                                    _isExample: true,
+                                    _exampleId: ex.id,
+                                    _exampleResponse: { status: ex.status, body: ex.body, headers: ex.headers, latency: ex.latency },
+                                  }, col.name)}
+                                  onContextMenu={e => {
+                                    e.preventDefault();
+                                    setContextMenu({ x: e.pageX, y: e.pageY, type: 'example', col: col.name, req: req.name, exampleId: ex.id });
+                                  }}
+                                >
+                                  <BookMarked size={11} className="shrink-0" style={{ color: '#a78bfa' }} />
+                                  <span className="truncate flex-1">{ex.name}</span>
+                                  <span className="shrink-0 font-mono text-[10px] font-semibold" style={{ color: statusColor }}>{ex.status}</span>
+                                  <button
+                                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:text-red-400"
+                                    style={{ color: 'var(--text-muted)' }}
+                                    title="Delete example"
+                                    onClick={e => { e.stopPropagation(); handleDeleteExample(col.name, req.name, ex.id); }}
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
                         )}
                       </li>
                     );
@@ -479,6 +541,18 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { handleDeleteCol(contextMenu.col); setContextMenu(null); }}
+              >
+                Delete
+              </button>
+            </>
+          ) : contextMenu.type === 'example' ? (
+            <>
+              <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Example</div>
+              <button
+                className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { handleDeleteExample(contextMenu.col, contextMenu.req, contextMenu.exampleId); setContextMenu(null); }}
               >
                 Delete
               </button>

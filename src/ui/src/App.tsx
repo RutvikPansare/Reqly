@@ -236,6 +236,26 @@ function App() {
   };
 
   const handleSelectRequestFromSidebar = (req: any, col: string) => {
+    if (req._isExample) {
+      // Open (or focus) the parent request tab and show the example's saved response.
+      const tabId = `${col}-${req.name}`;
+      const existing = tabs.find(t => t.id === tabId);
+      if (existing) {
+        updateTab(tabId, { response: req._exampleResponse });
+        setActiveTabId(tabId);
+      } else {
+        const parentReq = { ...req };
+        delete parentReq._isExample;
+        delete parentReq._exampleId;
+        delete parentReq._exampleResponse;
+        const t = makeTab({ ...parentReq, _collection: col });
+        t.id = tabId;
+        t.response = req._exampleResponse;
+        setTabs(prev => [...prev, t]);
+        setActiveTabId(tabId);
+      }
+      return;
+    }
     const tabId = `${col}-${req.name}`;
     const existing = tabs.find(t => t.id === tabId);
     if (existing) {

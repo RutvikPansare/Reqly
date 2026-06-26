@@ -302,3 +302,12 @@ export async function listExamples(collectionName: string, requestName: string) 
   if (!res.ok) throw new Error('Failed to list examples');
   return res.json();
 }
+
+export async function deleteExample(collectionName: string, requestName: string, exampleId: string) {
+  const res = await fetch(
+    `/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}/examples/${encodeURIComponent(exampleId)}`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) throw new Error('Failed to delete example');
+  return res.json();
+}
