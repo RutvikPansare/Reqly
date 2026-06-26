@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Loader2, Copy, Check, Search, Braces, BookMarked } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, Copy, Check, Search, Braces, BookMarked, X } from 'lucide-react';
 import { statusBadgeClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
 import { saveExample, listExamples } from '../api';
@@ -49,6 +49,9 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
   const [savedExampleMsg, setSavedExampleMsg] = useState('');
   const [examples, setExamples] = useState<any[]>([]);
   const [examplesLoaded, setExamplesLoaded] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalName, setSaveModalName] = useState('');
+  const saveModalInputRef = useRef<HTMLInputElement>(null);
 
   const collectionName = request?._collection;
   const requestName = request?.name;
@@ -79,10 +82,18 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
     }
   };
 
-  const handleSaveExample = async () => {
+  const handleSaveExample = () => {
     if (!canSaveExample) return;
-    const name = prompt('Name this example (e.g. "Success 200", "Not Found 404"):');
+    const statusLabel = response?.status ? `${response.status}` : '';
+    setSaveModalName(statusLabel ? `Success ${statusLabel}` : '');
+    setShowSaveModal(true);
+    setTimeout(() => saveModalInputRef.current?.focus(), 50);
+  };
+
+  const confirmSaveExample = async () => {
+    const name = saveModalName.trim();
     if (!name) return;
+    setShowSaveModal(false);
     setSavingExample(true);
     try {
       await saveExample(collectionName, requestName, {
@@ -94,7 +105,6 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
       });
       setSavedExampleMsg(`Saved "${name}"`);
       setTimeout(() => setSavedExampleMsg(''), 3000);
-      // Reload sidebar so the example appears, and auto-expand the parent request
       window.dispatchEvent(new CustomEvent('reqly-example-saved', { detail: { col: collectionName, req: requestName } }));
       window.dispatchEvent(new Event('reqly-reload'));
       if (activeTab === 'examples') loadExamples();
@@ -371,6 +381,71 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
       </div>
       {showTsInterface && body != null && (
         <TsInterfaceModal body={body} onClose={() => setShowTsInterface(false)} />
+      )}
+      {showSaveModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowSaveModal(false); }}
+        >
+          <div
+            className="w-[420px] rounded-lg p-6 flex flex-col gap-4"
+            style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookMarked size={15} style={{ color: '#a78bfa' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Save Example</span>
+              </div>
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="rounded p-1 hover:bg-white/10 transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Example name
+              </label>
+              <input
+                ref={saveModalInputRef}
+                type="text"
+                value={saveModalName}
+                onChange={e => setSaveModalName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') confirmSaveExample();
+                  if (e.key === 'Escape') setShowSaveModal(false);
+                }}
+                placeholder='e.g. "Success 200" or "Not Found 404"'
+                className="rounded px-3 py-2 text-sm w-full outline-none"
+                style={{
+                  background: 'var(--surface-0)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="px-4 py-1.5 rounded text-sm transition-colors hover:bg-white/10"
+                style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSaveExample}
+                disabled={!saveModalName.trim()}
+                className="px-4 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-40"
+                style={{ background: '#6366f1', color: '#fff' }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
