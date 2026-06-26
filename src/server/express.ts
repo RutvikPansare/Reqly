@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as os from 'os';
+import * as http from 'http';
+import * as crypto from 'crypto';
 import { EngineContext } from '../mcp/tools/types.js';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
@@ -262,6 +264,132 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  // OAuth2: manual token refresh
+  app.post('/api/auth-profiles/:id/refresh', async (req, res) => {
+    try {
+      const updated = await context.authManager.refreshOAuth2Token(req.params.id);
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // OAuth2: initiate authorization code + PKCE flow
+  // Opens the system browser at the provider's authUrl, starts a temporary
+  // local HTTP callback server, exchanges the code for tokens, stores them.
+  app.post('/api/auth-profiles/:id/authorize', async (req, res) => {
+    try {
+      const profile = await context.authManager.getProfile(req.params.id);
+      const { clientId, authUrl, tokenUrl, redirectUri, scope, clientSecret } = profile.credentials;
+
+      if (!authUrl) return res.status(400).json({ error: 'No authUrl configured on profile' }) as any;
+      if (!tokenUrl) return res.status(400).json({ error: 'No tokenUrl configured on profile' }) as any;
+      if (!clientId) return res.status(400).json({ error: 'No clientId configured on profile' }) as any;
+
+      // PKCE
+      const codeVerifier = crypto.randomBytes(32).toString('base64url');
+      const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+      const state = crypto.randomBytes(16).toString('hex');
+
+      // Parse the redirect URI to get the callback port
+      const callbackUri = redirectUri || 'http://localhost:9876/callback';
+      const callbackUrl = new URL(callbackUri);
+      const callbackPort = parseInt(callbackUrl.port || '9876', 10);
+
+      // Build authorization URL
+      const authParams = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        redirect_uri: callbackUri,
+        state,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+        ...(scope ? { scope } : {}),
+      });
+      const fullAuthUrl = `${authUrl}?${authParams.toString()}`;
+
+      // Start local callback server
+      const codePromise = new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          server.close();
+          reject(new Error('OAuth2 authorization timed out after 5 minutes'));
+        }, 5 * 60 * 1000);
+
+        const server = http.createServer((cbReq, cbRes) => {
+          const cbUrl = new URL(cbReq.url || '/', `http://localhost:${callbackPort}`);
+          const returnedState = cbUrl.searchParams.get('state');
+          const code = cbUrl.searchParams.get('code');
+          const error = cbUrl.searchParams.get('error');
+
+          cbRes.writeHead(200, { 'Content-Type': 'text/html' });
+          if (error || returnedState !== state || !code) {
+            cbRes.end('<html><body><h2>Authorization failed</h2><p>You can close this tab.</p></body></html>');
+            clearTimeout(timeout);
+            server.close();
+            reject(new Error(error || 'Authorization failed: invalid state or missing code'));
+            return;
+          }
+          cbRes.end('<html><body><h2>Authorization successful!</h2><p>You can close this tab and return to Reqly.</p></body></html>');
+          clearTimeout(timeout);
+          server.close();
+          resolve(code);
+        });
+
+        server.listen(callbackPort);
+      });
+
+      // Open browser
+      const { exec } = await import('child_process');
+      const openCmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+      exec(`${openCmd} "${fullAuthUrl}"`);
+
+      // Notify caller that flow has started
+      res.json({ status: 'browser_opened', authUrl: fullAuthUrl });
+
+      // Exchange code for tokens in background; update profile when done
+      codePromise.then(async (code) => {
+        const body = new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: callbackUri,
+          client_id: clientId,
+          code_verifier: codeVerifier,
+          ...(clientSecret ? { client_secret: clientSecret } : {}),
+        });
+
+        const { fetch: undiciFetch } = await import('undici');
+        const tokenRes = await undiciFetch(tokenUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        });
+
+        if (!tokenRes.ok) {
+          console.error(`[OAuth2] Token exchange failed: ${tokenRes.status}`);
+          return;
+        }
+
+        const data: any = await tokenRes.json();
+        const expiresAt = data.expires_in ? String(Date.now() + Number(data.expires_in) * 1000) : undefined;
+
+        await context.authManager.updateProfile(profile.id, {
+          credentials: {
+            ...profile.credentials,
+            accessToken: data.access_token,
+            ...(data.refresh_token ? { refreshToken: data.refresh_token } : {}),
+            ...(expiresAt ? { expiresAt } : {}),
+          },
+        });
+        console.error(`[OAuth2] Tokens stored for profile "${profile.name}"`);
+      }).catch(e => {
+        console.error(`[OAuth2] Authorization failed: ${e.message}`);
+      });
+
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/environments', async (req, res) => {
     try {
       const envs = await context.environmentManager.listEnvironments();
@@ -381,6 +509,17 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       let auth = undefined;
       if (req.body.request.authProfileId) {
         auth = await context.authManager.getProfile(req.body.request.authProfileId);
+        // Auto-refresh OAuth2 token if expired or expiring within 60 seconds
+        if (auth.type === 'oauth2' && auth.credentials.refreshToken) {
+          const expiresAt = Number(auth.credentials.expiresAt || 0);
+          if (!expiresAt || Date.now() > expiresAt - 60_000) {
+            try {
+              auth = await context.authManager.refreshOAuth2Token(auth.id);
+            } catch (e: any) {
+              console.error(`[OAuth2] Auto-refresh failed: ${e.message}`);
+            }
+          }
+        }
       }
 
       // Add responseStore to request config substitute call before execution

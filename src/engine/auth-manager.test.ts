@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -81,5 +81,133 @@ describe('AuthManager', () => {
 
     expect(await manager.getActiveProject()).toBe('/Users/dev/my-project');
     expect(await manager.listProfiles()).toHaveLength(1);
+  });
+
+  describe('OAuth2', () => {
+    it('should create an oauth2 profile with all credential fields', async () => {
+      const profile = await manager.createProfile({
+        name: 'My OAuth2',
+        type: AuthType.OAUTH2,
+        credentials: {
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          authUrl: 'https://auth.example.com/authorize',
+          tokenUrl: 'https://auth.example.com/token',
+          redirectUri: 'http://localhost:9876/callback',
+          scope: 'openid profile',
+        },
+      });
+      expect(profile.type).toBe(AuthType.OAUTH2);
+      expect(profile.credentials.clientId).toBe('client-id');
+      expect(profile.credentials.scope).toBe('openid profile');
+    });
+
+    it('should store and retrieve access/refresh tokens on an oauth2 profile', async () => {
+      const profile = await manager.createProfile({
+        name: 'Token Profile',
+        type: AuthType.OAUTH2,
+        credentials: {
+          clientId: 'cid',
+          tokenUrl: 'https://auth.example.com/token',
+          accessToken: 'initial-access',
+          refreshToken: 'initial-refresh',
+          expiresAt: String(Date.now() + 3600_000),
+        },
+      });
+      const loaded = await manager.getProfile(profile.id);
+      expect(loaded.credentials.accessToken).toBe('initial-access');
+      expect(loaded.credentials.refreshToken).toBe('initial-refresh');
+    });
+
+    it('should refresh an oauth2 token via POST to tokenUrl', async () => {
+      const profile = await manager.createProfile({
+        name: 'Refresh Test',
+        type: AuthType.OAUTH2,
+        credentials: {
+          clientId: 'cid',
+          clientSecret: 'secret',
+          tokenUrl: 'https://auth.example.com/token',
+          refreshToken: 'old-refresh',
+          accessToken: 'old-access',
+          expiresAt: String(Date.now() - 1000), // expired
+        },
+      });
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          access_token: 'new-access',
+          refresh_token: 'new-refresh',
+          expires_in: 3600,
+        }),
+      });
+
+      const refreshed = await manager.refreshOAuth2Token(profile.id, mockFetch as any);
+      expect(refreshed.credentials.accessToken).toBe('new-access');
+      expect(refreshed.credentials.refreshToken).toBe('new-refresh');
+      expect(Number(refreshed.credentials.expiresAt)).toBeGreaterThan(Date.now());
+
+      // Verify the token POST used the right parameters
+      const [url, opts] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://auth.example.com/token');
+      const body = new URLSearchParams(opts.body as string);
+      expect(body.get('grant_type')).toBe('refresh_token');
+      expect(body.get('refresh_token')).toBe('old-refresh');
+      expect(body.get('client_id')).toBe('cid');
+    });
+
+    it('should throw when refresh token is missing', async () => {
+      const profile = await manager.createProfile({
+        name: 'No Refresh',
+        type: AuthType.OAUTH2,
+        credentials: { clientId: 'cid', tokenUrl: 'https://t.example.com/token' },
+      });
+      await expect(manager.refreshOAuth2Token(profile.id)).rejects.toThrow('No refresh token');
+    });
+
+    it('should throw when profile is not oauth2 type', async () => {
+      const profile = await manager.createProfile({
+        name: 'Bearer',
+        type: AuthType.BEARER,
+        credentials: { token: 'abc' },
+      });
+      await expect(manager.refreshOAuth2Token(profile.id)).rejects.toThrow('not an OAuth2 profile');
+    });
+
+    it('should throw when token refresh request fails', async () => {
+      const profile = await manager.createProfile({
+        name: 'Bad Token',
+        type: AuthType.OAUTH2,
+        credentials: {
+          clientId: 'cid',
+          tokenUrl: 'https://auth.example.com/token',
+          refreshToken: 'old-refresh',
+        },
+      });
+      const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: 'invalid_grant' }) });
+      await expect(manager.refreshOAuth2Token(profile.id, mockFetch as any)).rejects.toThrow('Token refresh failed: 401');
+    });
+
+    it('should update stored credentials after refresh', async () => {
+      const profile = await manager.createProfile({
+        name: 'Persist Refresh',
+        type: AuthType.OAUTH2,
+        credentials: {
+          clientId: 'cid',
+          tokenUrl: 'https://auth.example.com/token',
+          refreshToken: 'old-refresh',
+          accessToken: 'old-access',
+          expiresAt: String(Date.now() - 1000),
+        },
+      });
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ access_token: 'persisted-new', expires_in: 600 }),
+      });
+      await manager.refreshOAuth2Token(profile.id, mockFetch as any);
+
+      const reloaded = await manager.getProfile(profile.id);
+      expect(reloaded.credentials.accessToken).toBe('persisted-new');
+    });
   });
 });

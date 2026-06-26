@@ -1,7 +1,8 @@
 import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import * as path from 'path';
-import { AuthProfile } from '../types/index.js';
+import { fetch as undiciFetch } from 'undici';
+import { AuthProfile, AuthType } from '../types/index.js';
 
 export class AuthProfileNotFoundError extends Error {
   constructor(message: string) {
@@ -56,6 +57,18 @@ export class AuthManager {
     return newProfile;
   }
 
+  async updateProfile(id: string, updates: Partial<AuthProfile>): Promise<AuthProfile> {
+    const config = await this.loadConfig();
+    const profiles = config.authProfiles || [];
+    const index = profiles.findIndex(p => p.id === id);
+    if (index === -1) throw new AuthProfileNotFoundError(`Auth profile ${id} not found`);
+
+    profiles[index] = { ...profiles[index], ...updates };
+    config.authProfiles = profiles;
+    await this.saveConfig(config);
+    return profiles[index];
+  }
+
   async getProfile(id: string): Promise<AuthProfile> {
     const config = await this.loadConfig();
     const profiles = config.authProfiles || [];
@@ -94,5 +107,55 @@ export class AuthManager {
     const config = await this.loadConfig();
     config.activeProject = projectDir;
     await this.saveConfig(config);
+  }
+
+  /**
+   * Refresh an OAuth2 access token using the stored refresh_token.
+   * Persists the new tokens back to config. Returns the updated profile.
+   */
+  async refreshOAuth2Token(
+    profileId: string,
+    fetchFn: typeof undiciFetch = undiciFetch,
+  ): Promise<AuthProfile> {
+    const profile = await this.getProfile(profileId);
+
+    if (profile.type !== AuthType.OAUTH2) {
+      throw new Error(`Profile "${profile.name}" is not an OAuth2 profile`);
+    }
+
+    const { refreshToken, clientId, clientSecret, tokenUrl } = profile.credentials;
+    if (!refreshToken) throw new Error('No refresh token stored on this profile');
+    if (!tokenUrl) throw new Error('No tokenUrl configured on this profile');
+
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId || '',
+      ...(clientSecret ? { client_secret: clientSecret } : {}),
+    });
+
+    const res = await fetchFn(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Token refresh failed: ${res.status}`);
+    }
+
+    const data: any = await res.json();
+    const expiresAt = data.expires_in
+      ? Date.now() + Number(data.expires_in) * 1000
+      : undefined;
+
+    const updatedCreds: Record<string, string> = {
+      ...profile.credentials,
+      accessToken: data.access_token,
+      ...(data.refresh_token ? { refreshToken: data.refresh_token } : {}),
+      ...(expiresAt !== undefined ? { expiresAt: String(expiresAt) } : {}),
+    };
+
+    return this.updateProfile(profileId, { credentials: updatedCreds });
   }
 }

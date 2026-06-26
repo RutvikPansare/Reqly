@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send as SendIcon, Save as SaveIcon, Terminal, Code2 } from 'lucide-react';
-import { fetchAuthProfiles, createAuthProfile, fetchEnvironments } from '../api';
+import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, ExternalLink } from 'lucide-react';
+import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
@@ -126,6 +126,8 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     const [authProfileId, setAuthProfileId] = useState(request?.authProfileId || '');
     const [authCreds, setAuthCreds] = useState<any>(request?.auth?.credentials || {});
     const [profiles, setProfiles] = useState<any[]>([]);
+    const [oauth2Status, setOauth2Status] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+    const [oauth2StatusMsg, setOauth2StatusMsg] = useState('');
 
     useEffect(() => {
       fetchAuthProfiles().then(setProfiles).catch(console.error);
@@ -405,15 +407,15 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
 
             <div className="mb-6 flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24">Auth Type</label>
-              <div className="flex gap-2">
-                {['none', 'bearer', 'apikey', 'basic'].map(t => (
+              <div className="flex gap-2 flex-wrap">
+                {['none', 'bearer', 'apikey', 'basic', 'oauth2'].map(t => (
                   <button 
                     key={t}
                     disabled={!!authProfileId}
                     className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
-                    {t === 'apikey' ? 'API Key' : t}
+                    {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t}
                   </button>
                 ))}
               </div>
@@ -499,6 +501,134 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                       onChange={val => setAuthCreds({ ...authCreds, password: val })}
                     />
                   </div>
+                </div>
+              )}
+
+              {authType === 'oauth2' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Client ID</label>
+                      <VariableInput variables={availableVariables} disabled={!!authProfileId}
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        value={authCreds.clientId || ''} onChange={val => setAuthCreds({ ...authCreds, clientId: val })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Client Secret</label>
+                      <VariableInput variables={availableVariables} disabled={!!authProfileId} type="password"
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        value={authCreds.clientSecret || ''} onChange={val => setAuthCreds({ ...authCreds, clientSecret: val })} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Authorization URL</label>
+                    <VariableInput variables={availableVariables} disabled={!!authProfileId}
+                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      placeholder="https://provider.com/oauth/authorize"
+                      value={authCreds.authUrl || ''} onChange={val => setAuthCreds({ ...authCreds, authUrl: val })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Token URL</label>
+                    <VariableInput variables={availableVariables} disabled={!!authProfileId}
+                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      placeholder="https://provider.com/oauth/token"
+                      value={authCreds.tokenUrl || ''} onChange={val => setAuthCreds({ ...authCreds, tokenUrl: val })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Redirect URI</label>
+                      <input disabled={!!authProfileId}
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        placeholder="http://localhost:9876/callback"
+                        value={authCreds.redirectUri || ''} onChange={e => setAuthCreds({ ...authCreds, redirectUri: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Scope</label>
+                      <input disabled={!!authProfileId}
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        placeholder="openid profile email"
+                        value={authCreds.scope || ''} onChange={e => setAuthCreds({ ...authCreds, scope: e.target.value })} />
+                    </div>
+                  </div>
+
+                  {/* Token status + actions */}
+                  {authProfileId && (() => {
+                    const prof = profiles.find(p => p.id === authProfileId);
+                    const hasToken = !!prof?.credentials?.accessToken;
+                    const expiry = prof?.credentials?.expiresAt ? new Date(Number(prof.credentials.expiresAt)) : null;
+                    const isExpired = expiry ? Date.now() > expiry.getTime() : false;
+                    return (
+                      <div className="mt-2 p-3 rounded border border-gray-700 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400">
+                            {hasToken
+                              ? isExpired
+                                ? <span className="text-red-400">Token expired {expiry?.toLocaleString()}</span>
+                                : <span className="text-green-400">Token valid until {expiry?.toLocaleString() ?? 'unknown'}</span>
+                              : <span className="text-gray-500">No access token stored</span>}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                            onClick={async () => {
+                              setOauth2Status('pending');
+                              setOauth2StatusMsg('Opening browser...');
+                              try {
+                                await startOAuth2Flow(authProfileId);
+                                setOauth2Status('pending');
+                                setOauth2StatusMsg('Waiting for authorization in browser...');
+                                // Poll for token update
+                                let tries = 0;
+                                const interval = setInterval(async () => {
+                                  tries++;
+                                  const updated = await (await fetch('/api/auth-profiles')).json();
+                                  const updatedProf = updated.find((p: any) => p.id === authProfileId);
+                                  if (updatedProf?.credentials?.accessToken !== prof?.credentials?.accessToken) {
+                                    clearInterval(interval);
+                                    setProfiles(prev => prev.map(p => p.id === authProfileId ? updatedProf : p));
+                                    setOauth2Status('success');
+                                    setOauth2StatusMsg('Authorized! Token stored.');
+                                  }
+                                  if (tries > 60) { clearInterval(interval); setOauth2Status('error'); setOauth2StatusMsg('Timed out waiting for token.'); }
+                                }, 5000);
+                              } catch (e: any) {
+                                setOauth2Status('error');
+                                setOauth2StatusMsg(e.message);
+                              }
+                            }}
+                          >
+                            <ExternalLink size={13} /> Authorize
+                          </button>
+                          {hasToken && (
+                            <button
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+                              onClick={async () => {
+                                setOauth2Status('pending');
+                                setOauth2StatusMsg('Refreshing token...');
+                                try {
+                                  const updated = await refreshOAuth2Token(authProfileId);
+                                  setProfiles(prev => prev.map(p => p.id === authProfileId ? updated : p));
+                                  setOauth2Status('success');
+                                  setOauth2StatusMsg('Token refreshed!');
+                                } catch (e: any) {
+                                  setOauth2Status('error');
+                                  setOauth2StatusMsg(e.message);
+                                }
+                              }}
+                            >
+                              <RefreshCw size={13} /> Refresh Token
+                            </button>
+                          )}
+                        </div>
+                        {oauth2StatusMsg && (
+                          <p className={`text-xs ${oauth2Status === 'error' ? 'text-red-400' : oauth2Status === 'success' ? 'text-green-400' : 'text-gray-400'}`}>
+                            {oauth2StatusMsg}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

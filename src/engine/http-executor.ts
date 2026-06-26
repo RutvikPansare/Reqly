@@ -76,6 +76,15 @@ export async function execute(
       headers['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
     } else if (auth.type === AuthType.API_KEY && auth.credentials.key) {
       headers['x-api-key'] = auth.credentials.key;
+    } else if (auth.type === AuthType.OAUTH2) {
+      const { accessToken, expiresAt } = auth.credentials;
+      // Only inject if we have a token; the executor does not refresh here -
+      // callers (express route / MCP tool) should call AuthManager.refreshOAuth2Token
+      // before execute() when the token is expired. Callers can detect expiry via:
+      //   expiresAt && Date.now() > Number(expiresAt) - 60_000
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
     }
   }
 

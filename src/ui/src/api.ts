@@ -130,6 +130,18 @@ export async function createAuthProfile(profile: any) {
   return res.json();
 }
 
+export async function refreshOAuth2Token(profileId: string) {
+  const res = await fetch(`/api/auth-profiles/${profileId}/refresh`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to refresh OAuth2 token');
+  return res.json();
+}
+
+export async function startOAuth2Flow(profileId: string) {
+  const res = await fetch(`/api/auth-profiles/${profileId}/authorize`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to start OAuth2 flow');
+  return res.json();
+}
+
 export interface HistoryEntry {
   id: string;
   timestamp: number;
