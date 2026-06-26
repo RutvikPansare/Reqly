@@ -732,11 +732,22 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
-  app.post('/api/codegen', (req, res) => {
+  app.post('/api/codegen', async (req, res) => {
     try {
       const { request, target } = req.body as { request: any; target: 'curl' | 'fetch' | 'axios' };
       if (!request || !target) return res.status(400).json({ error: 'request and target fields required' });
-      const code = generateCode(request, target);
+
+      // Resolve variables before generating code (same logic as /api/run)
+      const { substituteConfig } = await import('../engine/variable-substitutor.js');
+      const env = await context.environmentManager.getActive().catch(() => undefined);
+      const envVars = env ? env.variables : {};
+      const collectionName = request._collection;
+      const collectionVars = collectionName
+        ? await context.collectionManager.getCollectionVariables(collectionName).catch(() => ({}))
+        : {};
+      const resolved = substituteConfig(request, [collectionVars, envVars], context.responseStore);
+
+      const code = generateCode(resolved, target);
       res.json({ code });
     } catch (e: any) {
       res.status(400).json({ error: e.message });
