@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flows UI Reference - T-100</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --surface-0: #0f0f0f;
+    --surface-1: #161616;
+    --surface-2: #1e1e1e;
+    --surface-3: #252525;
+    --text-primary: #e8e8e6;
+    --text-secondary: #a8a8a4;
+    --text-muted: #666660;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --bg-accent: rgba(56,139,253,0.12);
+    --text-accent: #58a6ff;
+    --fill-accent: #2f81f7;
+    --fill-accent-hover: #388bfd;
+    --on-accent: #fff;
+    --bg-success: rgba(59,109,17,0.15);
+    --text-success: #7ee787;
+    --bg-danger: rgba(163,45,45,0.15);
+    --text-danger: #f85149;
+    --bg-warning: rgba(187,128,9,0.15);
+    --text-warning: #d29922;
+    --radius: 6px;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'SF Mono', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); font-size: 13px; background: #0b0b0b; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+
+  .app { display: flex; height: 580px; width: 100%; max-width: 960px; background: var(--surface-0); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .nav-rail { width: 44px; background: var(--surface-1); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 2px; flex-shrink: 0; }
+  .nav-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); color: var(--text-muted); font-size: 16px; cursor: pointer; position: relative; }
+  .nav-icon.active { background: var(--bg-accent); color: var(--text-accent); }
+  .nav-icon.active::before { content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); width: 3px; height: 18px; background: var(--fill-accent); border-radius: 0 2px 2px 0; }
+
+  .sidebar { width: 200px; border-right: 0.5px solid var(--border); background: var(--surface-1); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-header { padding: 10px 12px 8px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .sidebar-title { font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sidebar-add { color: var(--text-muted); font-size: 16px; cursor: pointer; }
+  .sidebar-add:hover { color: var(--text-primary); }
+
+  .flow-item { padding: 7px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); border-left: 2px solid transparent; }
+  .flow-item:hover { background: var(--surface-0); }
+  .flow-item.active { background: var(--surface-0); color: var(--text-primary); border-left-color: var(--fill-accent); }
+  .flow-item i { font-size: 14px; flex-shrink: 0; }
+  .flow-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .flow-badge { margin-left: auto; font-size: 10px; padding: 1px 5px; border-radius: 10px; flex-shrink: 0; }
+  .badge-pass { background: var(--bg-success); color: var(--text-success); }
+  .badge-fail { background: var(--bg-danger); color: var(--text-danger); }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .top-bar { padding: 0 16px; height: 40px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 10px; background: var(--surface-1); flex-shrink: 0; }
+  .flow-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .flow-desc { font-size: 12px; color: var(--text-muted); }
+  .spacer { flex: 1; }
+  .btn { padding: 0 12px; height: 26px; border-radius: var(--radius); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-secondary); }
+  .btn:hover { background: var(--surface-2); }
+  .btn-primary { background: var(--fill-accent); color: var(--on-accent); border-color: var(--fill-accent); font-weight: 500; }
+  .btn-primary:hover { background: var(--fill-accent-hover); }
+
+  .content { flex: 1; display: flex; overflow: hidden; }
+
+  .steps-panel { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+
+  .step-card { border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--surface-2); overflow: hidden; }
+  .step-card.pass { border-left: 3px solid #3B6D11; }
+  .step-card.fail { border-left: 3px solid #A32D2D; }
+
+  .step-header { padding: 8px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .step-header:hover { background: var(--surface-3); }
+  .step-status { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .status-pass { background: var(--bg-success); color: var(--text-success); }
+  .status-fail { background: var(--bg-danger); color: var(--text-danger); }
+  .status-pending { background: var(--surface-0); border: 0.5px solid var(--border-strong); }
+
+  .step-type-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 500; flex-shrink: 0; }
+  .type-run { background: var(--bg-accent); color: var(--text-accent); }
+  .type-extract { background: rgba(83,74,183,0.15); color: #a89be8; }
+  .type-assert { background: var(--bg-success); color: var(--text-success); }
+  .type-poll { background: rgba(186,117,23,0.15); color: #d4a44c; }
+  .type-conditional { background: var(--bg-warning); color: var(--text-warning); }
+
+  .step-label { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .step-meta { font-size: 11px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .step-timing { font-size: 11px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
+  .step-chevron { font-size: 14px; color: var(--text-muted); flex-shrink: 0; }
+
+  .step-body { padding: 0 10px 8px; border-top: 0.5px solid var(--border); }
+  .step-body-inner { padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .step-field { display: flex; align-items: flex-start; gap: 6px; }
+  .step-field-label { font-size: 11px; color: var(--text-muted); width: 52px; flex-shrink: 0; padding-top: 1px; }
+  .step-field-value { font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); background: var(--surface-0); border: 0.5px solid var(--border); border-radius: 4px; padding: 2px 6px; flex: 1; }
+
+  .response-snippet { margin-top: 6px; background: var(--surface-0); border: 0.5px solid var(--border); border-radius: 4px; padding: 6px 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  .response-line-added { color: #7ee787; }
+
+  .add-step-btn { padding: 0 10px; height: 26px; border-radius: var(--radius); font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px; border: 0.5px dashed var(--border-strong); background: transparent; color: var(--text-muted); margin-top: 2px; }
+  .add-step-btn:hover { background: var(--surface-2); color: var(--text-secondary); border-style: solid; }
+
+  .results-bar { padding: 6px 16px; border-top: 0.5px solid var(--border); background: var(--surface-1); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .result-stat { font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-secondary); }
+  .dot-pass { width: 6px; height: 6px; border-radius: 50%; background: #3B6D11; flex-shrink: 0; }
+  .dot-fail { width: 6px; height: 6px; border-radius: 50%; background: #A32D2D; flex-shrink: 0; }
+  .dot-pending { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); flex-shrink: 0; }
+  .total-time { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+  .data-panel { width: 196px; border-left: 0.5px solid var(--border); background: var(--surface-1); flex-shrink: 0; display: flex; flex-direction: column; }
+  .data-header { padding: 10px 12px 8px; border-bottom: 0.5px solid var(--border); font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 6px; }
+  .data-row-item { padding: 6px 12px; border-bottom: 0.5px solid var(--border); cursor: pointer; }
+  .data-row-item:hover { background: var(--surface-0); }
+  .data-row-item.active { background: var(--surface-0); }
+  .data-row-label { color: var(--text-primary); font-weight: 500; margin-bottom: 2px; font-size: 11px; }
+  .data-row-sub { color: var(--text-muted); font-family: var(--font-mono); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .data-row-status { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 10px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<!--
+  T-100: Flows UI - Design Reference
+  This file is the exact visual target for the Flows UI implementation.
+  Match layout, colors, spacing, and component structure precisely.
+  This is a dark-mode mockup using Reqly's existing design system.
+
+  Key implementation notes:
+  - Nav rail: add "Flows" icon (ti-git-branch) between GraphQL and Capture icons
+  - Sidebar: same pattern as CollectionsPanel - list with +New, click to open
+  - Step cards: colored left border (3px) for pass (green #3B6D11) / fail (red #A32D2D)
+  - Step type badges: pill shape, color-coded per type (see CSS classes below)
+  - Expanded step: shows field/value rows + response snippet inline
+  - Data panel: right-side panel, only shown when flow has data rows defined
+  - Results bar: fixed bottom bar showing pass/fail/pending counts + total time
+  - Reuse existing components: AssertionEditor for assert steps, same KeyValueEditor for data rows
+-->
+
+<div class="app">
+  <div class="nav-rail">
+    <div class="nav-icon" title="Collections"><i class="ti ti-folder"></i></div>
+    <div class="nav-icon" title="Environments"><i class="ti ti-variable"></i></div>
+    <div class="nav-icon" title="History"><i class="ti ti-history"></i></div>
+    <div class="nav-icon" title="GraphQL"><i class="ti ti-brand-graphql"></i></div>
+    <div class="nav-icon active" title="Flows"><i class="ti ti-git-branch"></i></div>
+    <div class="nav-icon" title="Capture"><i class="ti ti-record-mail"></i></div>
+    <div style="flex:1"></div>
+    <div class="nav-icon" title="Settings"><i class="ti ti-settings"></i></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Flows</span>
+      <i class="ti ti-plus sidebar-add"></i>
+    </div>
+    <div class="flow-item active">
+      <i class="ti ti-git-branch"></i>
+      <span class="flow-name">checkout-e2e</span>
+      <span class="flow-badge badge-fail">1 fail</span>
+    </div>
+    <div class="flow-item">
+      <i class="ti ti-git-branch"></i>
+      <span class="flow-name">auth-smoke</span>
+      <span class="flow-badge badge-pass">pass</span>
+    </div>
+    <div class="flow-item">
+      <i class="ti ti-git-branch"></i>
+      <span class="flow-name">stripe-webhook</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="top-bar">
+      <span class="flow-title">checkout-e2e</span>
+      <span class="flow-desc">Full checkout from login to order confirmation</span>
+      <div class="spacer"></div>
+      <button class="btn"><i class="ti ti-table"></i> Data (2 rows)</button>
+      <button class="btn"><i class="ti ti-settings"></i> Settings</button>
+      <button class="btn btn-primary"><i class="ti ti-player-play"></i> Run flow</button>
+    </div>
+
+    <div class="content">
+      <div class="steps-panel">
+
+        <!-- Step: run (expanded, passed) -->
+        <div class="step-card pass">
+          <div class="step-header">
+            <div class="step-status status-pass"><i class="ti ti-check"></i></div>
+            <span class="step-type-badge type-run">run</span>
+            <span class="step-label">login</span>
+            <span class="step-meta">auth / login</span>
+            <span class="step-timing">143ms</span>
+            <i class="ti ti-chevron-down step-chevron"></i>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <div class="step-field">
+                <span class="step-field-label">request</span>
+                <span class="step-field-value">auth / login</span>
+              </div>
+              <div class="step-field">
+                <span class="step-field-label">extract</span>
+                <span class="step-field-value">response.body.token → authToken</span>
+              </div>
+              <div class="response-snippet">
+                <div>{ "userId": "u_8821",</div>
+                <div class="response-line-added">+ "token": "eyJhbGci..." }</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step: run (collapsed, passed) -->
+        <div class="step-card pass">
+          <div class="step-header">
+            <div class="step-status status-pass"><i class="ti ti-check"></i></div>
+            <span class="step-type-badge type-run">run</span>
+            <span class="step-label">add-to-cart</span>
+            <span class="step-meta">cart / addItem</span>
+            <span class="step-timing">89ms</span>
+            <i class="ti ti-chevron-right step-chevron"></i>
+          </div>
+        </div>
+
+        <!-- Step: assert (expanded, failed) -->
+        <div class="step-card fail">
+          <div class="step-header">
+            <div class="step-status status-fail"><i class="ti ti-x"></i></div>
+            <span class="step-type-badge type-assert">assert</span>
+            <span class="step-label">verify-checkout</span>
+            <span class="step-meta">status 200, body.orderId exists</span>
+            <span class="step-timing">201ms</span>
+            <i class="ti ti-chevron-down step-chevron"></i>
+          </div>
+          <div class="step-body">
+            <div class="step-body-inner">
+              <div class="step-field">
+                <span class="step-field-label">expected</span>
+                <span class="step-field-value">status 200</span>
+              </div>
+              <div class="step-field">
+                <span class="step-field-label">received</span>
+                <span class="step-field-value" style="color: var(--text-danger);">status 422</span>
+              </div>
+              <div class="step-field">
+                <span class="step-field-label">body</span>
+                <span class="step-field-value" style="color: var(--text-danger);">{ "error": "card_declined" }</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step: poll (pending) -->
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-status status-pending"></div>
+            <span class="step-type-badge type-poll">poll</span>
+            <span class="step-label">wait-for-order</span>
+            <span class="step-meta">until response.body.status === 'completed' · max 10 attempts</span>
+            <i class="ti ti-chevron-right step-chevron"></i>
+          </div>
+        </div>
+
+        <!-- Step: conditional (pending) -->
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-status status-pending"></div>
+            <span class="step-type-badge type-conditional">if</span>
+            <span class="step-label">check-role</span>
+            <span class="step-meta">response.body.role === 'admin' → goto admin-only</span>
+            <i class="ti ti-chevron-right step-chevron"></i>
+          </div>
+        </div>
+
+        <button class="add-step-btn"><i class="ti ti-plus"></i> Add step</button>
+      </div>
+
+      <!-- Data rows panel (only shown when flow.data is defined) -->
+      <div class="data-panel">
+        <div class="data-header"><i class="ti ti-table" style="font-size:13px"></i> Data rows</div>
+        <div class="data-row-item active">
+          <div class="data-row-label">Row 1</div>
+          <div class="data-row-sub">alice · tok_visa</div>
+          <div class="data-row-status">
+            <div class="dot-pass"></div>
+            2 pass · 1 fail
+          </div>
+        </div>
+        <div class="data-row-item">
+          <div class="data-row-label">Row 2</div>
+          <div class="data-row-sub">bob · tok_mastercard</div>
+          <div class="data-row-status">
+            <div class="dot-pending"></div>
+            not run
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-bar">
+      <div class="result-stat"><div class="dot-pass"></div> 2 passed</div>
+      <div class="result-stat"><div class="dot-fail"></div> 1 failed</div>
+      <div class="result-stat"><div class="dot-pending"></div><span style="color:var(--text-muted)">2 pending</span></div>
+      <span class="total-time">433ms total · row 1 of 2</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>
