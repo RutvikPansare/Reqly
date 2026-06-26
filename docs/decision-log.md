@@ -6,6 +6,11 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-26
+
+**Decision:** Replaced `.npmignore`-based exclusion with an explicit `files` allowlist in `package.json` for npm publishing, and moved `tsx`/`typescript`/`vitest` from `dependencies` to `devDependencies`.
+**Why:** `npm pack --dry-run` (T-086 pre-publish check) revealed `.npmignore`'s `src/` rule was not reliably excluding nested content - `src/ui/node_modules` alone leaked in 8516 files, ballooning the tarball to 149.7MB unpacked. An explicit `files` allowlist (`dist`, `packages/reqly-middleware/src/*.ts`, `packages/reqly-middleware/package.json`, `README.md`, `llms.txt`) is unambiguous regardless of ignore-pattern quirks. `tsx`/`typescript`/`vitest` are only used by dev scripts and the test suite - the built CLI (`dist/server/index.js`) runs under plain `node` per its shebang, so they don't belong in runtime `dependencies` for end users installing the package.
+
 ## 2026-06-24
 
 **Decision:** `reqly-middleware` lives at `packages/reqly-middleware/` as its own npm-publishable package inside the main repo (workspaces, not a separate repo), and the inbound-capture payload includes a `collection` field even though the original T-070 spec text only listed `{method, url, headers, body, timestamp}`.
