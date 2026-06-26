@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, ExternalLink } from 'lucide-react';
-import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow } from '../api';
+import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
@@ -32,17 +32,37 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
 
   const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
   const [activeEnvName, setActiveEnvName] = useState<string>('');
+  const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchEnvironments()
-      .then((data: any) => {
-        const active = data.environments?.find((e: any) => e.name === data.active);
-        setActiveEnvName(active?.name || '');
-        setActiveEnvVars(active?.variables || {});
-      })
-      .catch(console.error);
+    const loadEnv = () => {
+      fetchEnvironments()
+        .then((data: any) => {
+          const active = data.environments?.find((e: any) => e.name === data.active);
+          setActiveEnvName(active?.name || '');
+          setActiveEnvVars(active?.variables || {});
+        })
+        .catch(console.error);
+    };
+    loadEnv();
+    window.addEventListener('reqly-reload', loadEnv);
+    return () => window.removeEventListener('reqly-reload', loadEnv);
   }, []);
-  
+
+  useEffect(() => {
+    const colName = request?._collection;
+    if (!colName) {
+      setCollectionVars({});
+      return;
+    }
+    const loadColVars = () => {
+      getCollectionVariables(colName).then(setCollectionVars).catch(console.error);
+    };
+    loadColVars();
+    window.addEventListener('reqly-reload', loadColVars);
+    return () => window.removeEventListener('reqly-reload', loadColVars);
+  }, [request?._collection]);
+
   if (!request) {
     return <div className="h-full flex items-center justify-center text-gray-500">Select a request to edit</div>;
   }
@@ -217,7 +237,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       onChange(buildRequest());
     }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds, preScript, postScript]);
 
-  const availableVariables = Object.keys(activeEnvVars);
+  const availableVariables = Array.from(new Set([...Object.keys(collectionVars), ...Object.keys(activeEnvVars)]));
 
   return (
     <div className="flex flex-col h-full rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
@@ -735,22 +755,33 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         })() : activeTab === 'variables' ? (
           <div className="py-2">
             <p className="text-xs text-gray-500 mb-3">
-              Variables in scope from the active environment{activeEnvName ? `: ${activeEnvName}` : ''}. Edit them in the Environments panel.
+              Variables in scope: collection variables{request?._collection ? ` (${request._collection})` : ''} take priority over the active environment{activeEnvName ? ` (${activeEnvName})` : ''} on name collisions. Edit collection variables via the collection's right-click Settings menu, environment variables in the Environments panel.
             </p>
-            {Object.keys(activeEnvVars).length === 0 ? (
-              <p className="text-sm text-gray-600 italic">No variables in the active environment.</p>
+            {Object.keys(collectionVars).length === 0 && Object.keys(activeEnvVars).length === 0 ? (
+              <p className="text-sm text-gray-600 italic">No variables in scope.</p>
             ) : (
               <div className="border border-gray-800 rounded overflow-hidden">
-                <div className="grid grid-cols-[1fr_1fr] bg-gray-950 text-xs font-semibold text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-gray-800">
+                <div className="grid grid-cols-[1fr_1fr_1fr] bg-gray-950 text-xs font-semibold text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-gray-800">
                   <span>Key</span>
                   <span>Value</span>
+                  <span>Source</span>
                 </div>
-                {Object.entries(activeEnvVars).map(([k, v]) => (
-                  <div key={k} className="grid grid-cols-[1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
+                {Object.entries(collectionVars).map(([k, v]) => (
+                  <div key={`col-${k}`} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
                     <span className="text-gray-300 font-mono truncate">{`{{${k}}}`}</span>
                     <span className="text-gray-400 font-mono truncate">{String(v)}</span>
+                    <span className="text-gray-500 truncate">{request?._collection}</span>
                   </div>
                 ))}
+                {Object.entries(activeEnvVars)
+                  .filter(([k]) => collectionVars[k] === undefined)
+                  .map(([k, v]) => (
+                    <div key={`env-${k}`} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
+                      <span className="text-gray-300 font-mono truncate">{`{{${k}}}`}</span>
+                      <span className="text-gray-400 font-mono truncate">{String(v)}</span>
+                      <span className="text-gray-500 truncate">{activeEnvName || 'env'}</span>
+                    </div>
+                  ))}
               </div>
             )}
           </div>

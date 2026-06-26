@@ -601,13 +601,16 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         }
       }
 
-      // Add responseStore to request config substitute call before execution
-      // Wait, we need to substitute config using responseStore
       const { substituteConfig } = await import('../engine/variable-substitutor.js');
-      const vars = env ? env.variables : {};
-      const config = substituteConfig(req.body.request, vars, context.responseStore);
+      const envVars = env ? env.variables : {};
+      const collectionName = req.body.request._collection;
+      const collectionVars = collectionName
+        ? await context.collectionManager.getCollectionVariables(collectionName).catch(() => ({}))
+        : {};
+      // Layered scope: collection vars win over env vars on collision.
+      const config = substituteConfig(req.body.request, [collectionVars, envVars], context.responseStore);
 
-      const response = await context.executeRequest(config, env, auth);
+      const response = await context.executeRequest(config, env, auth, undefined, undefined, collectionVars);
       context.responseStore.set(req.body.request.name, response);
       context.historyStore.append(req.body.request, response);
 

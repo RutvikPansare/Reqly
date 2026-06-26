@@ -8,6 +8,9 @@ Newest entries at the top.
 
 ## 2026-06-26
 
+**Decision:** The "Collection Settings" modal (T-089) saves on an explicit Save button against a local draft, not on every `KeyValueEditor` keystroke.
+**Why:** `KeyValueEditor`'s `onChange` fires on every field edit, so a naive per-keystroke persist would fire a set/delete API call per character typed - wasteful, and a half-typed key could get persisted then immediately deleted on the next keystroke. `EnvironmentsPanel` already solved this exact problem (local draft state, diff-and-persist on Save), so the new modal copies that pattern rather than inventing a new one.
+
 **Decision:** Collection-level variables (T-088) are stored in a reserved `collection.yaml` file inside each collection folder, and the variable resolver was rewritten as a layered scope chain (`resolveVariables(template, layers[], responseStore?)`) rather than a hardcoded two-level merge.
 **Why:** Collections are folders of `<request>.yaml` files with no metadata file; `collection.yaml` is the natural home for collection-scoped metadata (variables now, auth in T-090), and `CollectionManager.getCollection` simply skips it when listing requests (`addRequest` also rejects a request named "collection" so it can't clobber the metadata file). The resolver is layered because the upcoming flow runner (T-092+) needs to prepend a flow-local scope (`[flowLocalScope, collectionVars, envVars]`) without touching resolver internals - a two-level `collection-over-env` merge would have to be torn out again. First-layer-wins gives the required "collection wins over env on collision" precedence as a special case of the general design. Plain `{{name}}` lookups and dotted `{{x.response.y}}` chaining stay on separate resolution paths so they never collide. `substitute`/`substituteConfig` keep accepting a single vars object for back-compat (wrapped into a one-element layer array internally), so existing callers were untouched.
 

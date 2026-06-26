@@ -4,6 +4,7 @@ import { fetchCollections, createCollection, addRequest, deleteRequest, updateRe
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
+import { CollectionSettingsModal } from './CollectionSettingsModal';
 
 interface CollectionsPanelProps {
   activeRequest: any;
@@ -31,6 +32,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [settingsFor, setSettingsFor] = useState<string | null>(null);
 
   const [contextMenu, setContextMenu] = useState<
     | { x: number; y: number; type: 'col'; col: string }
@@ -450,6 +452,15 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                 style={{ color: 'var(--text-secondary)' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { setSettingsFor(contextMenu.col); setContextMenu(null); }}
+              >
+                Settings
+              </button>
+              <button
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 onClick={() => { exportCollection(contextMenu.col, 'postman').catch(console.error); setContextMenu(null); }}
               >
                 Export as Postman
@@ -511,6 +522,10 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           sub={importSuccess}
           onDone={() => setImportSuccess(null)}
         />
+      )}
+
+      {settingsFor && (
+        <CollectionSettingsModal collectionName={settingsFor} onClose={() => setSettingsFor(null)} />
       )}
     </div>
   );

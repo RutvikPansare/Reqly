@@ -38,6 +38,30 @@ export const deleteEnvironment = async (name: string) => {
   return res.json();
 };
 
+export async function getCollectionVariables(collectionName: string): Promise<Record<string, string>> {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/variables`);
+  if (!res.ok) throw new Error('Failed to fetch collection variables');
+  return res.json();
+}
+
+export async function setCollectionVariable(collectionName: string, key: string, value: string) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/variables/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value })
+  });
+  if (!res.ok) throw new Error('Failed to set collection variable');
+  return res.json();
+}
+
+export async function deleteCollectionVariable(collectionName: string, key: string) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/variables/${encodeURIComponent(key)}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) throw new Error('Failed to delete collection variable');
+  return res.json();
+}
+
 export async function exportEnvironment(name: string): Promise<void> {
   const res = await fetch(`/api/environments/${encodeURIComponent(name)}/export`);
   if (!res.ok) throw new Error('Failed to export environment');
