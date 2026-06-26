@@ -9,6 +9,7 @@ import * as crypto from 'crypto';
 import { EngineContext } from '../mcp/tools/types.js';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
+import { FlowManager } from '../engine/flow-manager.js';
 import { writeLock, readLock } from './lock.js';
 import { fileURLToPath } from 'url';
 import { parseCurl } from '../engine/curl-parser.js';
@@ -292,6 +293,81 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.get('/api/flows', async (req, res) => {
+    try {
+      const flows = await context.flowManager.listFlows();
+      res.json(flows);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/flows', async (req, res) => {
+    try {
+      const flow = await context.flowManager.createFlow(req.body.name, req.body.description);
+      res.json(flow);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/flows/:name', async (req, res) => {
+    try {
+      const flow = await context.flowManager.getFlow(req.params.name);
+      res.json(flow);
+    } catch (e: any) {
+      res.status(404).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/flows/:name', async (req, res) => {
+    try {
+      await context.flowManager.deleteFlow(req.params.name);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/flows/:name/steps', async (req, res) => {
+    try {
+      await context.flowManager.addFlowStep(req.params.name, req.body);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/flows/:name/steps/:stepId', async (req, res) => {
+    try {
+      await context.flowManager.updateFlowStep(req.params.name, req.params.stepId, req.body);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/flows/:name/steps/:stepId', async (req, res) => {
+    try {
+      await context.flowManager.deleteFlowStep(req.params.name, req.params.stepId);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/flows/:name/run', async (req, res) => {
+    try {
+      const flow = await context.flowManager.getFlow(req.params.name);
+      const { FlowRunner } = await import('../engine/flow-runner.js');
+      const runner = new FlowRunner(context);
+      const result = await runner.run(flow, req.body?.dataRow ? { dataRow: req.body.dataRow } : {});
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/auth-profiles', async (req, res) => {
     try {
       const profiles = await context.authManager.listProfiles();
@@ -563,6 +639,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
       context.collectionManager = new CollectionManager(collectionsDir);
       context.environmentManager = new EnvironmentManager(environmentsPath);
+      context.flowManager = new FlowManager(collectionsDir);
 
       const lock = await readLock();
       await writeLock(projectDir, lock?.port || port);

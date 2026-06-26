@@ -9,13 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-098** Flows - MCP tools + Express routes
-  - Prerequisite: T-096 (core runner must exist before exposing tools)
-  - MCP tools (agents must have full parity with the UI): `create_flow`, `get_flow`, `list_flows`, `delete_flow`, `add_flow_step`, `update_flow_step`, `delete_flow_step`, `run_flow`
-  - `run_flow` accepts `name` and optional `dataRow` (single row override for ad-hoc runs). Returns `FlowRunResult` structured object.
-  - Express routes: `GET /api/flows`, `POST /api/flows`, `GET /api/flows/:name`, `DELETE /api/flows/:name`, `POST /api/flows/:name/steps`, `PUT /api/flows/:name/steps/:stepId`, `DELETE /api/flows/:name/steps/:stepId`, `POST /api/flows/:name/run`
-  - TDD: tool contract tests asserting input/output schema for each MCP tool
-
 - [ ] **T-099** Flows - CLI runner
   - Prerequisite: T-096
   - `reqly run-flow <name>` sub-command in `src/server/run-flow-command.ts`

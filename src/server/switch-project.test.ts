@@ -10,6 +10,7 @@ import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
+import { FlowManager } from '../engine/flow-manager.js';
 import { LOCK_PATH, writeLock, readLock, clearLock } from './lock.js';
 
 function buildContext(projectDir: string): EngineContext {
@@ -22,6 +23,7 @@ function buildContext(projectDir: string): EngineContext {
     tunnelManager: new TunnelManager(),
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
+    flowManager: new FlowManager(projectDir),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),
   };
 }

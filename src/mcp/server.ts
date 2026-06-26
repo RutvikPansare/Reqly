@@ -36,6 +36,14 @@ import * as deleteCollectionVariable from './tools/delete-collection-variable.js
 import * as getCollectionAuth from './tools/get-collection-auth.js';
 import * as setCollectionAuth from './tools/set-collection-auth.js';
 import * as deleteCollectionAuth from './tools/delete-collection-auth.js';
+import * as createFlow from './tools/create-flow.js';
+import * as getFlow from './tools/get-flow.js';
+import * as listFlows from './tools/list-flows.js';
+import * as deleteFlow from './tools/delete-flow.js';
+import * as addFlowStep from './tools/add-flow-step.js';
+import * as updateFlowStep from './tools/update-flow-step.js';
+import * as deleteFlowStep from './tools/delete-flow-step.js';
+import * as runFlow from './tools/run-flow.js';
 
 const tools = [
   runRequest,
@@ -69,6 +77,14 @@ const tools = [
   getCollectionAuth,
   setCollectionAuth,
   deleteCollectionAuth,
+  createFlow,
+  getFlow,
+  listFlows,
+  deleteFlow,
+  addFlowStep,
+  updateFlowStep,
+  deleteFlowStep,
+  runFlow,
 ];
 
 import { z } from 'zod';

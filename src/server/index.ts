@@ -7,6 +7,7 @@ import { AuthManager } from '../engine/auth-manager.js';
 import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
+import { FlowManager } from '../engine/flow-manager.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -64,6 +65,7 @@ async function main() {
 
   const collectionManager = new CollectionManager(collectionsDir);
   const environmentManager = new EnvironmentManager(environmentsPath);
+  const flowManager = new FlowManager(collectionsDir);
 
   if (parsed.command === 'run') {
     const exitCode = await handleRunCommand(parsed, collectionManager, environmentManager, authManager);
@@ -95,6 +97,7 @@ async function main() {
     tunnelManager,
     responseStore,
     historyStore,
+    flowManager,
     executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;

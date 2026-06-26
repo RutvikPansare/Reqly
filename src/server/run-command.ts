@@ -5,6 +5,7 @@ import { AuthManager } from '../engine/auth-manager.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { runAssertions } from '../engine/assertion-runner.js';
 import { CollectionRunner } from '../engine/collection-runner.js';
+import { FlowManager } from '../engine/flow-manager.js';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
 import { ResponseStore } from '../engine/response-store.js';
@@ -108,6 +109,7 @@ export async function handleRunCommand(
         tunnelManager,
         responseStore,
         historyStore,
+        flowManager: new FlowManager(collectionManager.getBaseDir()),
         executeRequest
       };
 
