@@ -1,6 +1,19 @@
 # Reqly
 
-Reqly is an execution engine for API requests, designed primarily as an MCP (Model Context Protocol) server for AI coding agents. It gives your AI the ability to directly fire HTTP requests, test endpoints, and store API context in plain-text YAML inside your repository.
+Reqly is a prompt-first, agent-native API client. A local background service that exposes two interfaces from the same engine:
+
+1. **MCP server (stdio)** - AI coding agents (Cursor, Claude Code, Windsurf) call Reqly's tools directly to fire requests, manage collections, and verify API behaviour. Zero UI, zero LLM cost on our side.
+2. **Localhost web UI** - Humans open `localhost:4242` to browse collections, run requests visually, and use a prompt bar (BYOK) to describe what they want.
+
+## Why Reqly beats Postman, Insomnia, and Bruno for AI-native developers
+
+**Collections are plain YAML in your repo.** Every other tool stores collections in a proprietary format or database (Insomnia uses NeDB binary files, Postman locks them behind a cloud account). Reqly's `.reqly/` folder travels with your code via git - readable, diffable, committable. AI agents can read and write collection files directly without any tool calls.
+
+**Reqly is an MCP server, not an MCP client.** Insomnia recently added an MCP client so it can call external tools. Reqly goes further: it *is* the MCP server. Your AI agent in Cursor or Claude Code connects once and gets a full set of tools to fire requests, chain responses, run collections, and verify assertions - no UI required, no extra configuration.
+
+**Auto-capture, zero manual work.** Reqly can capture outbound traffic from your dev server via a proxy (`reqly exec npm run dev`), inbound traffic via a one-line middleware, and inbound webhooks via a public tunnel - then save everything into collections automatically. No other tool does all three.
+
+**BYOK, no cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. The prompt bar in the UI uses your own API key. Nothing is sent to Reqly's servers.
 
 ## Quick Setup
 
@@ -46,7 +59,18 @@ Reqly exposes these tools directly to your AI agent:
 | `start_proxy` | Auto-captures local outbound traffic into a collection | `port`, `collectionName` |
 | `stop_proxy` | Stops traffic interception | (None) |
 | `exec_with_proxy` | Starts the proxy and runs a dev command with it injected | `command`, `collection`, `port` |
+| `export_collection` | Exports a collection as Postman v2.1 or OpenAPI 3.0 JSON | `collectionName`, `format` |
 | `install_middleware` | Detects your framework and returns the inbound-capture middleware snippet | (None) |
+
+## Recently shipped
+
+- **cURL import** - paste any cURL command into the URL bar modal; fields populate instantly
+- **Code snippet generation** - one-click fetch/axios/curl snippet from any request
+- **TypeScript interface generator** - infers a typed TS interface from any JSON response body
+- **Collection export** - export as Postman v2.1 or OpenAPI 3.0 JSON (UI right-click or MCP tool)
+- **Script console** - `console.log/warn/error` in pre/post scripts are captured and shown in a Console tab in the response viewer
+- **Response diffing** - detects what changed between runs; shows status, latency delta, and body diff
+- **GraphQL workspace** - dedicated editor with schema introspection, syntax highlighting, and variable panel
 
 ## Capture Inbound Requests (Middleware)
 
