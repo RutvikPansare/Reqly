@@ -123,4 +123,64 @@ export class EnvironmentManager {
     }
     await this.saveStore(store);
   }
+
+  /**
+   * Import a Postman environment JSON string.
+   * Creates the environment if it doesn't exist; replaces variables if it does.
+   * Disabled variables (enabled: false) are skipped.
+   */
+  async importEnvironmentFromPostman(json: string, nameOverride?: string): Promise<Environment> {
+    let parsed: any;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new Error('Invalid environment JSON: could not parse');
+    }
+
+    if (!Array.isArray(parsed.values)) {
+      throw new Error('Invalid Postman environment: missing "values" array');
+    }
+
+    const name = nameOverride || parsed.name || 'Imported Environment';
+    const variables: Record<string, string> = {};
+    for (const entry of parsed.values) {
+      if (entry.enabled !== false && entry.key) {
+        variables[entry.key] = String(entry.value ?? '');
+      }
+    }
+
+    const store = await this.loadStore();
+    const existing = store.environments.find(e => e.name === name);
+
+    if (existing) {
+      existing.variables = variables;
+      await this.saveStore(store);
+      return existing;
+    }
+
+    return this.createEnvironment(name, variables);
+  }
+
+  /**
+   * Export an environment as a Postman environment JSON string.
+   */
+  async exportEnvironmentToPostman(name: string): Promise<string> {
+    const env = await this.getEnvironment(name);
+    const values = Object.entries(env.variables).map(([key, value]) => ({
+      key,
+      value,
+      enabled: true,
+      type: 'default',
+    }));
+
+    const postmanEnv = {
+      id: env.id,
+      name: env.name,
+      values,
+      _postman_variable_scope: 'environment',
+      _exporter_id: 'reqly',
+    };
+
+    return JSON.stringify(postmanEnv, null, 2);
+  }
 }

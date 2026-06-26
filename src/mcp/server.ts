@@ -23,6 +23,8 @@ import * as execWithProxy from './tools/exec-with-proxy.js';
 import * as installMiddleware from './tools/install-middleware.js';
 import * as importCollection from './tools/import-collection.js';
 import * as exportCollection from './tools/export-collection.js';
+import * as importEnvironment from './tools/import-environment.js';
+import * as exportEnvironment from './tools/export-environment.js';
 
 const tools = [
   runRequest,
@@ -42,7 +44,9 @@ const tools = [
   execWithProxy,
   installMiddleware,
   importCollection,
-  exportCollection
+  exportCollection,
+  importEnvironment,
+  exportEnvironment,
 ];
 
 import { z } from 'zod';

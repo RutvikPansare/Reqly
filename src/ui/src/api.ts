@@ -38,6 +38,28 @@ export const deleteEnvironment = async (name: string) => {
   return res.json();
 };
 
+export async function exportEnvironment(name: string): Promise<void> {
+  const res = await fetch(`/api/environments/${encodeURIComponent(name)}/export`);
+  if (!res.ok) throw new Error('Failed to export environment');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}.postman_environment.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function importEnvironmentFromJson(content: string, nameOverride?: string) {
+  const res = await fetch('/api/environments/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, nameOverride }),
+  });
+  if (!res.ok) throw new Error('Failed to import environment');
+  return res.json();
+}
+
 export async function setActiveEnvironment(name: string) {
   const res = await fetch('/api/environments/active', {
     method: 'POST',

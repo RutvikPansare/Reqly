@@ -436,6 +436,31 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  // Export environment as Postman JSON (triggers download in browser)
+  app.get('/api/environments/:name/export', async (req, res) => {
+    try {
+      const json = await context.environmentManager.exportEnvironmentToPostman(req.params.name);
+      const filename = `${req.params.name}.postman_environment.json`;
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(json);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Import environment from Postman JSON
+  app.post('/api/environments/import', async (req, res) => {
+    try {
+      const { content, nameOverride } = req.body as { content: string; nameOverride?: string };
+      if (!content) return res.status(400).json({ error: 'content is required' }) as any;
+      const env = await context.environmentManager.importEnvironmentFromPostman(content, nameOverride);
+      res.json({ success: true, name: env.name, variableCount: Object.keys(env.variables).length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/switch-project', async (req, res) => {
     try {
       const projectDir: string = req.body.projectDir;

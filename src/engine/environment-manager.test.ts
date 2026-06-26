@@ -83,4 +83,67 @@ describe('EnvironmentManager', () => {
 
     expect(await manager.getActiveEnvironment()).toBeNull();
   });
+
+  describe('import/export (Postman format)', () => {
+    const postmanEnv = {
+      id: 'abc-123',
+      name: 'Staging',
+      _postman_variable_scope: 'environment',
+      values: [
+        { key: 'baseUrl', value: 'https://staging.api.example.com', enabled: true },
+        { key: 'apiKey', value: 'staging-key', enabled: true },
+        { key: 'disabled', value: 'ignored', enabled: false },
+      ],
+    };
+
+    it('should import a Postman environment JSON and create the environment', async () => {
+      const env = await manager.importEnvironmentFromPostman(JSON.stringify(postmanEnv));
+      expect(env.name).toBe('Staging');
+      expect(env.variables['baseUrl']).toBe('https://staging.api.example.com');
+      expect(env.variables['apiKey']).toBe('staging-key');
+      // disabled vars are skipped
+      expect(env.variables['disabled']).toBeUndefined();
+    });
+
+    it('should import with a name override', async () => {
+      const env = await manager.importEnvironmentFromPostman(JSON.stringify(postmanEnv), 'Override Name');
+      expect(env.name).toBe('Override Name');
+    });
+
+    it('should update an existing environment if name already exists on import', async () => {
+      await manager.createEnvironment('Staging', { old: 'value' });
+      const env = await manager.importEnvironmentFromPostman(JSON.stringify(postmanEnv));
+      expect(env.name).toBe('Staging');
+      expect(env.variables['baseUrl']).toBe('https://staging.api.example.com');
+      expect(env.variables['old']).toBeUndefined();
+    });
+
+    it('should throw on invalid JSON', async () => {
+      await expect(manager.importEnvironmentFromPostman('not json')).rejects.toThrow('Invalid environment JSON');
+    });
+
+    it('should throw when values array is missing', async () => {
+      await expect(manager.importEnvironmentFromPostman(JSON.stringify({ name: 'X' }))).rejects.toThrow('values');
+    });
+
+    it('should export an environment as Postman JSON', async () => {
+      await manager.createEnvironment('Production', { host: 'prod.api.com', token: 'abc' });
+      const json = await manager.exportEnvironmentToPostman('Production');
+      const parsed = JSON.parse(json);
+
+      expect(parsed.name).toBe('Production');
+      expect(parsed._postman_variable_scope).toBe('environment');
+      expect(Array.isArray(parsed.values)).toBe(true);
+      const keys = parsed.values.map((v: any) => v.key);
+      expect(keys).toContain('host');
+      expect(keys).toContain('token');
+      const hostEntry = parsed.values.find((v: any) => v.key === 'host');
+      expect(hostEntry.value).toBe('prod.api.com');
+      expect(hostEntry.enabled).toBe(true);
+    });
+
+    it('should throw when exporting a missing environment', async () => {
+      await expect(manager.exportEnvironmentToPostman('nonexistent')).rejects.toThrow('not found');
+    });
+  });
 });
