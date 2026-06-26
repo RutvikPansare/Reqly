@@ -233,17 +233,20 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--surface-1)' }}>
-      <header className="flex items-center px-4 shrink-0 gap-3" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
+      <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
+        {/* Wordmark - left */}
         <h1
-          className="shrink-0 font-bold"
-          style={{ fontSize: '1.125rem', letterSpacing: '-0.03em', color: 'var(--text-primary)', lineHeight: 1 }}
+          className="shrink-0 select-none"
+          style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 600, fontSize: '1.2rem', letterSpacing: '0.01em', color: '#e4e4e7', lineHeight: 1 }}
         >
-          Req<span style={{ color: '#3b82f6' }}>ly</span>
+          Reqly
         </h1>
+
+        {/* Search - absolutely centered */}
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 cursor-pointer transition-colors px-3 rounded shrink-0"
-          style={{ height: '32px', width: '200px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 cursor-pointer transition-colors px-3 rounded"
+          style={{ height: '32px', width: '240px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}
           title="Search (Cmd+K)"
         >
           <Search size={13} />
