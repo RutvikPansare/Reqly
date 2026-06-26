@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface VariableItem {
   name: string;
@@ -20,6 +21,84 @@ interface VariableInputProps {
   disabled?: boolean;
   type?: string;
   spellCheck?: boolean;
+}
+
+interface VarTooltipState {
+  varName: string;
+  resolvedValue: string | undefined;
+  x: number;
+  y: number;
+}
+
+function VarTooltip({ state }: { state: VarTooltipState }) {
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-[9999] whitespace-nowrap rounded px-2 py-1 text-xs font-sans"
+      style={{
+        left: state.x,
+        top: state.y,
+        transform: 'translateX(-50%) translateY(-100%)',
+        background: '#1e1e2e',
+        border: '1px solid rgba(96,165,250,0.4)',
+        color: '#e2e8f0',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+        marginTop: '-6px',
+      }}
+    >
+      <span style={{ color: '#a78bfa' }}>{state.varName}</span>
+      <span style={{ color: '#64748b' }}> = </span>
+      <span style={{ color: state.resolvedValue !== undefined ? '#86efac' : '#f87171' }}>
+        {state.resolvedValue !== undefined ? state.resolvedValue : 'not set'}
+      </span>
+    </div>,
+    document.body
+  );
+}
+
+function VarPill({
+  varName,
+  resolvedValue,
+}: {
+  varName: string;
+  resolvedValue: string | undefined;
+}) {
+  const [tooltip, setTooltip] = useState<VarTooltipState | null>(null);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({
+      varName,
+      resolvedValue,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 4,
+    });
+  }, [varName, resolvedValue]);
+
+  const handleMouseLeave = useCallback(() => setTooltip(null), []);
+
+  return (
+    <>
+      <span
+        className="inline-flex items-center px-1.5 rounded font-mono shrink-0"
+        style={{
+          fontSize: '0.75rem',
+          lineHeight: '1.4',
+          background: resolvedValue !== undefined ? 'rgba(96, 165, 250, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+          color: resolvedValue !== undefined ? '#60a5fa' : '#f87171',
+          border: `1px solid ${resolvedValue !== undefined ? 'rgba(96, 165, 250, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+          verticalAlign: 'middle',
+          marginTop: '1px',
+          marginBottom: '1px',
+          cursor: 'default',
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {varName || '…'}
+      </span>
+      {tooltip && <VarTooltip state={tooltip} />}
+    </>
+  );
 }
 
 function TokenDisplay({
@@ -57,47 +136,7 @@ function TokenDisplay({
     if (match) {
       const varName = match[1] || '';
       const resolvedValue = variableValues[varName];
-      const tooltip = resolvedValue !== undefined
-        ? `${varName} = ${resolvedValue}`
-        : `${varName} (not set)`;
-      return (
-        <span
-          key={i}
-          className="relative group inline-flex items-center px-1.5 rounded font-mono shrink-0"
-          style={{
-            fontSize: '0.75rem',
-            lineHeight: '1.4',
-            background: resolvedValue !== undefined ? 'rgba(96, 165, 250, 0.15)' : 'rgba(239, 68, 68, 0.12)',
-            color: resolvedValue !== undefined ? '#60a5fa' : '#f87171',
-            border: `1px solid ${resolvedValue !== undefined ? 'rgba(96, 165, 250, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-            verticalAlign: 'middle',
-            marginTop: '1px',
-            marginBottom: '1px',
-            cursor: 'default',
-          }}
-          title={tooltip}
-        >
-          {varName || '…'}
-          {/* Floating tooltip shown on group-hover */}
-          <span
-            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50
-                       opacity-0 group-hover:opacity-100 transition-opacity duration-150
-                       whitespace-nowrap rounded px-2 py-1 text-xs font-sans"
-            style={{
-              background: '#1e1e2e',
-              border: '1px solid rgba(96,165,250,0.4)',
-              color: '#e2e8f0',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            }}
-          >
-            <span style={{ color: '#a78bfa' }}>{varName}</span>
-            <span style={{ color: '#64748b' }}> = </span>
-            <span style={{ color: resolvedValue !== undefined ? '#86efac' : '#f87171' }}>
-              {resolvedValue !== undefined ? resolvedValue : 'not set'}
-            </span>
-          </span>
-        </span>
-      );
+      return <VarPill key={i} varName={varName} resolvedValue={resolvedValue} />;
     }
     return part ? (
       <span key={i} style={{ verticalAlign: 'middle' }}>
