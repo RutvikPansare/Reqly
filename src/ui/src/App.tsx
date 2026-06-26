@@ -237,7 +237,7 @@ function App() {
         {/* Wordmark - left */}
         <h1
           className="shrink-0 select-none"
-          style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 600, fontSize: '1.2rem', letterSpacing: '0.01em', color: '#e4e4e7', lineHeight: 1 }}
+          style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.04em', color: '#e4e4e7', lineHeight: 1 }}
         >
           Reqly
         </h1>
@@ -246,7 +246,7 @@ function App() {
         <button
           onClick={() => setShowSearch(true)}
           className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 cursor-pointer transition-colors px-3 rounded"
-          style={{ height: '32px', width: '240px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}
+          style={{ height: '32px', width: '340px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', fontSize: '0.8125rem' }}
           title="Search (Cmd+K)"
         >
           <Search size={13} />
