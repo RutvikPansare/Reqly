@@ -242,10 +242,18 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds, preScript, postScript]);
 
   const availableVariables: VariableItem[] = [
-    ...Object.keys(collectionVars).map(k => ({ name: k, source: request?._collection || 'collection' })),
+    ...Object.keys(collectionVars).map(k => ({
+      name: k,
+      sourceType: 'collection',
+      sourceName: request?._collection || 'collection',
+    })),
     ...Object.keys(activeEnvVars)
       .filter(k => !(k in collectionVars))
-      .map(k => ({ name: k, source: activeEnvName || 'env' })),
+      .map(k => ({
+        name: k,
+        sourceType: 'env',
+        sourceName: activeEnvName || 'env',
+      })),
   ];
 
   return (
