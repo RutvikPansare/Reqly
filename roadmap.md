@@ -57,9 +57,28 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 - [x] **Response Diffing** - Show what changed between the last run and this run. Detect silent API contract breaks. No other tool does this well.
 - [x] **GraphQL Support** - First-class GraphQL alongside REST. Single `POST /graphql` execution through the same HTTP Executor (done). Schema introspection (done). Query editor in the UI with syntax highlighting and autocomplete from the schema (done) - lives in its own nav-rail workspace, not the REST editor (T-053). Variables panel (done). Remaining: persist GraphQL requests to collection YAML typed as `graphql`, and have MCP tool `run_request` handle GraphQL transparently. Targets developers hitting GitHub, Shopify, Linear, and other GraphQL APIs.
 - [x] **Webhook Testing** - Expose a temporary public URL that captures incoming webhook payloads. Essential for testing Stripe, Shopify, and other inbound webhooks locally.
-- [x] **Pre-run and Post-run Scripts** - Similar to Hoppscotch and Postman. Save pre/post execution scripts per request within a collection. Requires adding text editors in the UI for these scripts. Scripts should have programmatic access to read and initialize/update environment variable keys with values.
-- [ ] need to give per collection varibales as well along with thecurrent env variabes, i think collectio varibale should hol precedecne if there iare matching variables in both places, we will need to build a variable resolver for this purpose which should be bulletproof. we already have  "Save as Profile" functionality so need to discuss how both features will live together, also collection level auth type and auth value(using variable or hardcoding) setup needs to be set as well where theauth will be reused by each request automaticlly that is set at the collection level
-- [ ] teaching agents how to use the app and create collections using response chaining, also using varibales whenever possible for base urls, client ids etc, can we also give example collection with full env varibale usage in the package that wil act like a guide for agents?
+- [x] **Code snippet generation** - generate fetch/axios/curl snippets from any request; one-click copy; accessible via the `</>` button in the URL bar and the `generate_code` MCP tool
+- [x] **Response-to-TypeScript interface** - infers typed TS interface from any JSON response body; `{TS}` button in the response viewer; works client-side with no server round-trip
+- [x] **Collection export** - export any collection as Postman v2.1 JSON or OpenAPI 3.0 JSON; right-click context menu in the sidebar; `GET /api/collections/:name/export` and `export_collection` MCP tool
+- [x] **Script console output** - `console.log/warn/error` calls in pre/post scripts are captured and shown in a Console tab in the response viewer with color-coded levels
+- [x] **cURL import** - paste a cURL command in the terminal icon modal in the URL bar; populates method, URL, headers, body instantly; also available as `POST /api/import/curl`
+- [x] **Pre-run and Post-run Scripts** - Save pre/post execution scripts per request within a collection. Scripts have programmatic access to read and update environment variables. Console output captured and shown in the response viewer Console tab.
+
+- [ ] **Collection-level variables and auth** - per-collection variable set that takes precedence over environment variables when both define the same key; a bulletproof variable resolver handles merge order (collection vars > env vars); collection-level auth type + value (variable reference or hardcoded) auto-injected into every request in the collection; coexists with "Save as Profile" (profiles are reusable across collections, collection auth is scoped to one collection)
+
+- [ ] Teaching agents how to use the app and create collections using response chaining, also using variables whenever possible for base urls, client ids etc; provide an example collection with full env variable usage in the package that acts as a guide for agents
+
+- [ ] **T-077** OAuth 2.0 authorization code flow - full PKCE flow, auto token refresh, UI editor for client credentials + "Authorize" button
+
+- [ ] **Keyboard shortcuts palette** - searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor); consistent with the shortcuts already wired for `cmd+enter` / `cmd+s`
+
+- [ ] **Environment import/export** - import Postman environment JSON; export any active environment as a `.json` file; both via UI env switcher dropdown and MCP tool `import_environment` / `export_environment`
+
+- [ ] **Inherited headers panel** - read-only panel in the request editor showing which headers will be injected by the active auth profile and collection-level auth, so the developer sees the complete outbound request before firing
+
+- [ ] **Collection example responses** - save one or more example responses against a request as documentation; stored in YAML alongside the request; visible in the response viewer as a "Saved Examples" tab; MCP tool `save_example` / `list_examples`
+
+- [ ] **Insomnia + OpenAPI import** - extend the existing import engine to handle Insomnia v4 JSON and OpenAPI 3.0/Swagger 2.0 YAML/JSON; currently only Postman v2.1 and Bruno are supported
 
 ---
 
@@ -82,3 +101,14 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 **Why not M4:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). A secrets layer syncs those across teammates' machines. This is a harder product (encryption at rest, access controls, SOC 2 territory) and a real paid tier - but only worth building once the core tool has users. Not "cloud sync of collections" - that's redundant with git.
 
 - [ ] **Team Secrets Vault** - Sync auth profiles and environment variable secret values across a team. Encrypted at rest. Access-controlled per team member. First true cloud infrastructure Reqly needs.
+
+---
+
+## Later: Protocol Expansion
+
+**Why post-M4:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
+
+- [ ] **WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` requests.
+- [ ] **MQTT / Socket.IO** - Additional realtime protocol support for IoT and event-driven apps.
+- [ ] **Multipart body editor** - File upload support with per-part content types, filename, and mime type. Essential for testing file upload endpoints.
+- [ ] **Shared requests** - URL-shareable requests with embed options - useful for sharing a repro case with a teammate or filing a bug report.

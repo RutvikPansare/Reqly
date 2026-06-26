@@ -165,3 +165,37 @@ export async function clearHistory() {
   if (!res.ok) throw new Error('Failed to clear history');
   return res.json();
 }
+
+export async function importFromCurl(curl: string): Promise<{ url: string; method: string; headers: Record<string, string>; body?: string }> {
+  const res = await fetch('/api/import/curl', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ curl })
+  });
+  if (!res.ok) throw new Error('Failed to parse cURL');
+  const data = await res.json();
+  return data.request;
+}
+
+export async function generateCodeSnippet(request: any, target: 'curl' | 'fetch' | 'axios'): Promise<string> {
+  const res = await fetch('/api/codegen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ request, target })
+  });
+  if (!res.ok) throw new Error('Failed to generate code');
+  const data = await res.json();
+  return data.code;
+}
+
+export async function exportCollection(name: string, format: 'postman' | 'openapi'): Promise<void> {
+  const res = await fetch(`/api/collections/${encodeURIComponent(name)}/export?format=${format}`);
+  if (!res.ok) throw new Error('Failed to export collection');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}_${format}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

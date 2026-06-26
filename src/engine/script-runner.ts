@@ -6,14 +6,24 @@ export interface ScriptContext {
   response?: Record<string, unknown>;
 }
 
-export function runScript(script: string, context: ScriptContext): void {
+export interface ScriptResult {
+  consoleLogs: string[];
+}
+
+function formatArgs(...args: unknown[]): string {
+  return args.map(a => (a !== null && typeof a === 'object') ? JSON.stringify(a) : String(a)).join(' ');
+}
+
+export function runScript(script: string, context: ScriptContext): ScriptResult {
+  const consoleLogs: string[] = [];
+
   const sandbox: Record<string, unknown> = {
     env: context.env,
     request: context.request,
     console: {
-      log: (...args: unknown[]) => console.error('[script]', ...args),
-      error: (...args: unknown[]) => console.error('[script]', ...args),
-      warn: (...args: unknown[]) => console.error('[script]', ...args),
+      log:   (...args: unknown[]) => consoleLogs.push(`[log] ${formatArgs(...args)}`),
+      warn:  (...args: unknown[]) => consoleLogs.push(`[warn] ${formatArgs(...args)}`),
+      error: (...args: unknown[]) => consoleLogs.push(`[error] ${formatArgs(...args)}`),
     },
   };
   if (context.response !== undefined) {
@@ -22,6 +32,8 @@ export function runScript(script: string, context: ScriptContext): void {
   try {
     vm.runInNewContext(script, sandbox, { timeout: 2000 });
   } catch (err: any) {
-    console.error('[script-runner] Script error:', err.message);
+    consoleLogs.push(`[error] Script error: ${err.message}`);
   }
+
+  return { consoleLogs };
 }

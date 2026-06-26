@@ -20,10 +20,12 @@ export async function execute(
   maxBodyBytes: number = 50 * 1024
 ): Promise<HttpResponse> {
   const vars = env?.variables || {};
+  const consoleLogs: string[] = [];
 
   // Run preScript before substitution so env mutations are picked up
   if (config.preScript) {
-    runScript(config.preScript, { env: vars, request: config as unknown as Record<string, unknown> });
+    const { consoleLogs: pre } = runScript(config.preScript, { env: vars, request: config as unknown as Record<string, unknown> });
+    consoleLogs.push(...pre);
   }
 
   let url = substitute(config.url, vars);
@@ -159,8 +161,11 @@ export async function execute(
   };
 
   if (config.postScript) {
-    runScript(config.postScript, { env: vars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+    const { consoleLogs: post } = runScript(config.postScript, { env: vars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+    consoleLogs.push(...post);
   }
+
+  if (consoleLogs.length > 0) result.consoleLogs = consoleLogs;
 
   return result;
 }

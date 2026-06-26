@@ -69,4 +69,42 @@ describe('script-runner', () => {
     expect(() => runScript('console.log("debug"); env.ok = "yes"', ctx)).not.toThrow();
     expect(ctx.env.ok).toBe('yes');
   });
+
+  it('console.log output is captured in consoleLogs', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript('console.log("hello world")', ctx);
+    expect(consoleLogs).toHaveLength(1);
+    expect(consoleLogs[0]).toBe('[log] hello world');
+  });
+
+  it('console.warn and console.error are captured with correct levels', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript('console.warn("caution"); console.error("boom")', ctx);
+    expect(consoleLogs[0]).toBe('[warn] caution');
+    expect(consoleLogs[1]).toBe('[error] boom');
+  });
+
+  it('multiple console.log calls are all captured in order', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript('console.log(1); console.log(2); console.log(3)', ctx);
+    expect(consoleLogs).toEqual(['[log] 1', '[log] 2', '[log] 3']);
+  });
+
+  it('objects passed to console.log are serialized as JSON', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript('console.log({a: 1})', ctx);
+    expect(consoleLogs[0]).toBe('[log] {"a":1}');
+  });
+
+  it('script error is captured as [error] log and does not throw', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript('throw new Error("oops")', ctx);
+    expect(consoleLogs[0]).toMatch(/^\[error\] Script error: oops/);
+  });
+
+  it('returns empty consoleLogs when script has no console calls', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript('env.x = "1"', ctx);
+    expect(consoleLogs).toEqual([]);
+  });
 });

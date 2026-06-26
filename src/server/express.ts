@@ -9,6 +9,9 @@ import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
 import { writeLock, readLock } from './lock.js';
 import { fileURLToPath } from 'url';
+import { parseCurl } from '../engine/curl-parser.js';
+import { generateCode } from '../engine/code-generator.js';
+import { exportToPostman, exportToOpenApi } from '../engine/exporter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -433,6 +436,47 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       res.json(newConfig);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/collections/:name/export', async (req, res) => {
+    try {
+      const name = decodeURIComponent(req.params.name);
+      const format = (req.query.format as string) || 'postman';
+      if (!['postman', 'openapi'].includes(format)) {
+        return res.status(400).json({ error: 'format must be "postman" or "openapi"' });
+      }
+      const collection = await context.collectionManager.getCollection(name);
+      const content = format === 'openapi' ? exportToOpenApi(collection) : exportToPostman(collection);
+      const ext = format === 'openapi' ? 'json' : 'json';
+      const filename = `${name.replace(/[^a-zA-Z0-9-_]/g, '_')}_${format}.${ext}`;
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(content);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/import/curl', (req, res) => {
+    try {
+      const { curl } = req.body as { curl: string };
+      if (!curl) return res.status(400).json({ error: 'curl field required' });
+      const parsed = parseCurl(curl);
+      res.json({ request: parsed });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/codegen', (req, res) => {
+    try {
+      const { request, target } = req.body as { request: any; target: 'curl' | 'fetch' | 'axios' };
+      if (!request || !target) return res.status(400).json({ error: 'request and target fields required' });
+      const code = generateCode(request, target);
+      res.json({ code });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
     }
   });
 

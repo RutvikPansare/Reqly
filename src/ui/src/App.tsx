@@ -20,6 +20,7 @@ import { SplitPane } from './components/SplitPane';
 
 interface TabData {
   id: string;
+  tabName?: string;
   request: any;
   savedRequest: any;
   response: any;
@@ -53,17 +54,18 @@ const ACTIVE_PANEL_KEY = 'reqly.activePanel';
 const sanitizeTab = (tab: TabData) => {
   const req = { ...tab.request };
   if (req.auth?.credentials) req.auth = { ...req.auth, credentials: undefined };
-  return { id: tab.id, request: req };
+  return { id: tab.id, tabName: tab.tabName, request: req };
 };
 
 const rehydrateTabs = (): TabData[] => {
   try {
     const raw = localStorage.getItem(TABS_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as Array<{ id: string; request: any }>;
+    const parsed = JSON.parse(raw) as Array<{ id: string; tabName?: string; request: any }>;
     return parsed.map(t => {
       const tab = makeTab(t.request);
       tab.id = t.id;
+      if (t.tabName) tab.tabName = t.tabName;
       return tab;
     });
   } catch {
@@ -98,6 +100,22 @@ function App() {
   const [runningCollection, setRunningCollection] = useState<string | null>(null);
   const [saveModal, setSaveModal] = useState<{ tabId: string; request: any } | null>(null);
   const tabBarRef = useRef<HTMLDivElement>(null);
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameTabValue, setRenameTabValue] = useState('');
+
+  const startTabRename = (id: string, currentName: string) => {
+    setRenamingTabId(id);
+    setRenameTabValue(currentName);
+  };
+
+  const commitTabRename = (id: string) => {
+    const name = renameTabValue.trim();
+    if (name) {
+      setTabs(prev => prev.map(t => t.id === id ? { ...t, tabName: name } : t));
+    }
+    setRenamingTabId(null);
+    setRenameTabValue('');
+  };
 
   // Compact header env selector state
   const [headerEnvs, setHeaderEnvs] = useState<any[]>([]);
@@ -358,10 +376,12 @@ function App() {
                   {tabs.map(tab => {
                     const isActive = activeTabId === tab.id;
                     const dirty = isDirty(tab);
+                    const isRenaming = renamingTabId === tab.id;
+                    const displayName = tab.tabName ?? tab.request.name ?? 'Untitled';
                     return (
                       <div
                         key={tab.id}
-                        onClick={() => setActiveTabId(tab.id)}
+                        onClick={() => !isRenaming && setActiveTabId(tab.id)}
                         className="relative flex items-center gap-2 px-3 cursor-pointer min-w-32 max-w-44 group transition-colors h-full"
                         style={{
                           borderRight: '1px solid var(--border)',
@@ -371,12 +391,40 @@ function App() {
                         {isActive && (
                           <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500" aria-hidden="true" />
                         )}
-                        <span className={`text-[10px] font-bold shrink-0 ${methodColorClass(tab.request.method)}`}>
-                          {tab.request.method}
-                        </span>
-                        <span className="text-xs truncate flex-1" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                          {tab.request.name || 'Untitled'}
-                        </span>
+                        {tab.isSending ? (
+                          <span className="relative flex shrink-0 items-center justify-center w-4 h-4">
+                            <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-blue-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500" />
+                          </span>
+                        ) : (
+                          <span className={`text-[10px] font-bold shrink-0 ${methodColorClass(tab.request.method)}`}>
+                            {tab.request.method}
+                          </span>
+                        )}
+                        {isRenaming ? (
+                          <input
+                            autoFocus
+                            className="text-xs flex-1 bg-transparent outline-none border-b"
+                            style={{ borderColor: 'var(--accent)', color: 'var(--text-primary)', minWidth: 0 }}
+                            value={renameTabValue}
+                            onChange={e => setRenameTabValue(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') commitTabRename(tab.id);
+                              if (e.key === 'Escape') { setRenamingTabId(null); setRenameTabValue(''); }
+                            }}
+                            onBlur={() => commitTabRename(tab.id)}
+                            onClick={e => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span
+                            className="text-xs truncate flex-1"
+                            style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+                            onDoubleClick={e => { e.stopPropagation(); startTabRename(tab.id, displayName); }}
+                            title="Double-click to rename"
+                          >
+                            {displayName}
+                          </span>
+                        )}
                         <div className="w-4 h-4 flex items-center justify-center shrink-0 relative">
                           {dirty && (
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:hidden" title="Unsaved changes" />
@@ -421,6 +469,7 @@ function App() {
                     <SplitPane
                       top={
                         <RequestEditor
+                          isActive={activeTabId === tab.id}
                           request={tab.request}
                           onFire={(req) => handleFire(req, tab.id)}
                           onChange={(req) => updateTab(tab.id, { request: { ...req, _collection: tab.request._collection } })}

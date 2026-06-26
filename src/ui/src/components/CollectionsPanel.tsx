@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, FolderInput } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection } from '../api';
+import { ChevronRight, Play, Plus, FolderInput, Search } from 'lucide-react';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection, exportCollection } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
@@ -29,6 +29,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [contextMenu, setContextMenu] = useState<
@@ -177,6 +178,24 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         </button>
       </div>
 
+      {/* Sidebar search */}
+      {collections.length > 0 && (
+        <div className="flex items-center gap-1.5 px-2 rounded shrink-0" style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', height: '28px' }}>
+          <Search size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search requests..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="flex-1 bg-transparent outline-none text-xs"
+            style={{ color: 'var(--text-secondary)' }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{ color: 'var(--text-muted)' }} className="text-xs">×</button>
+          )}
+        </div>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
@@ -201,11 +220,52 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           />
         )}
 
-        {collections.length === 0 && !creatingCol && (
-          <p className="text-xs italic px-1" style={{ color: 'var(--text-muted)' }}>No collections yet</p>
+        {/* Search results */}
+        {search.trim() && (() => {
+          const q = search.toLowerCase();
+          const matches = collections.flatMap(col =>
+            col.requests
+              .filter((r: any) => r.name?.toLowerCase().includes(q) || r.url?.toLowerCase().includes(q))
+              .map((r: any) => ({ req: r, col: col.name }))
+          );
+          if (matches.length === 0) return (
+            <p className="text-xs italic px-1 py-2" style={{ color: 'var(--text-muted)' }}>No results for "{search}"</p>
+          );
+          return matches.map(({ req, col }) => (
+            <div
+              key={`${col}-${req.name}`}
+              className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors"
+              style={{ background: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              onClick={() => { onSelectRequest(req, col); setSearch(''); }}
+            >
+              <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{req.name}</span>
+                <span className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{col}</span>
+              </div>
+            </div>
+          ));
+        })()}
+
+        {/* Normal tree view (hidden when searching) */}
+        {!search.trim() && collections.length === 0 && !creatingCol && (
+          <div className="flex flex-col items-center justify-center py-8 gap-3" style={{ color: 'var(--text-muted)' }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.35">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No collections yet</p>
+            <button
+              onClick={() => setCreatingCol(true)}
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              + Create one
+            </button>
+          </div>
         )}
 
-        {collections.map(col => {
+        {!search.trim() && collections.map(col => {
           const isExpanded = expandedCols[col.name] !== false;
           return (
             <div key={col.name} className="select-none">
@@ -348,6 +408,24 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                 onClick={() => { startRenameCol(contextMenu.col); setContextMenu(null); }}
               >
                 Rename
+              </button>
+              <button
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { exportCollection(contextMenu.col, 'postman').catch(console.error); setContextMenu(null); }}
+              >
+                Export as Postman
+              </button>
+              <button
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { exportCollection(contextMenu.col, 'openapi').catch(console.error); setContextMenu(null); }}
+              >
+                Export as OpenAPI
               </button>
               <button
                 className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"

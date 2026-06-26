@@ -22,6 +22,7 @@ import * as getResponseFull from './tools/get-response-full.js';
 import * as execWithProxy from './tools/exec-with-proxy.js';
 import * as installMiddleware from './tools/install-middleware.js';
 import * as importCollection from './tools/import-collection.js';
+import * as exportCollection from './tools/export-collection.js';
 
 const tools = [
   runRequest,
@@ -40,7 +41,8 @@ const tools = [
   getResponseFull,
   execWithProxy,
   installMiddleware,
-  importCollection
+  importCollection,
+  exportCollection
 ];
 
 import { z } from 'zod';

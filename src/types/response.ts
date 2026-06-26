@@ -6,4 +6,5 @@ export interface HttpResponse {
   latency: number;
   requestId?: string;
   timestamp: string;
+  consoleLogs?: string[];
 }

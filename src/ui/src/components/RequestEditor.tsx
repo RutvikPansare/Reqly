@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Send as SendIcon, Save as SaveIcon } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send as SendIcon, Save as SaveIcon, Terminal, Code2 } from 'lucide-react';
 import { fetchAuthProfiles, createAuthProfile, fetchEnvironments } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
 import { ScriptEditor } from './ScriptEditor';
+import { CurlImportModal } from './CurlImportModal';
+import { CodeGenModal } from './CodeGenModal';
 
 interface RequestEditorProps {
   request: any;
+  isActive?: boolean;
   onFire: (req: any) => void;
   onSave: (req: any) => void;
   onChange?: (req: any) => void;
@@ -24,7 +27,7 @@ function methodColor(method: string): string {
   }
 }
 
-export function RequestEditor({ request, onFire, onSave, onChange }: RequestEditorProps) {
+export function RequestEditor({ request, isActive, onFire, onSave, onChange }: RequestEditorProps) {
   const tabs = ['params', 'headers', 'body', 'auth', 'assertions', 'variables', 'pre-script', 'post-script'];
 
   const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
@@ -53,6 +56,8 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
   const [bodyText, setBodyText] = useState('');
   const [preScript, setPreScript] = useState('');
   const [postScript, setPostScript] = useState('');
+  const [showCurlImport, setShowCurlImport] = useState(false);
+  const [showCodeGen, setShowCodeGen] = useState(false);
 
   const parseParams = (urlStr: string): KeyValuePair[] => {
     const qIndex = urlStr.indexOf('?');
@@ -181,6 +186,29 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
       onSave(buildRequest());
     };
 
+    // Keyboard shortcuts: ⌘↵ = Send, ⌘S = Save (only when this tab is active)
+    const handleFireRef = useRef(handleFireWithAuth);
+    const handleSaveRef = useRef(handleSaveWithAuth);
+    handleFireRef.current = handleFireWithAuth;
+    handleSaveRef.current = handleSaveWithAuth;
+
+    useEffect(() => {
+      if (!isActive) return;
+      const onKey = (e: KeyboardEvent) => {
+        if (!(e.metaKey || e.ctrlKey)) return;
+        if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) {
+          e.preventDefault();
+          handleFireRef.current();
+        }
+        if (e.key === 's') {
+          e.preventDefault();
+          handleSaveRef.current();
+        }
+      };
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+    }, [isActive]);
+
     // Report live edits so the parent can track dirty state.
     useEffect(() => {
       if (!onChange) return;
@@ -205,20 +233,58 @@ export function RequestEditor({ request, onFire, onSave, onChange }: RequestEdit
           <option>PATCH</option>
           <option>DELETE</option>
         </select>
-        <VariableInput 
+        <VariableInput
           variables={availableVariables}
           className="input flex-1"
           value={url}
           onChange={val => handleUrlChange(val)}
           placeholder="https://api.example.com/v1/users"
         />
-        <button className="btn btn-primary rounded gap-1.5" onClick={handleFireWithAuth}>
-          <SendIcon size={13} />Send
+        <button
+          className="btn btn-ghost rounded"
+          onClick={() => setShowCurlImport(true)}
+          title="Import from cURL"
+          style={{ padding: '0 8px' }}
+        >
+          <Terminal size={14} />
         </button>
-        <button className="btn btn-secondary rounded gap-1.5" onClick={handleSaveWithAuth}>
+        <button
+          className="btn btn-ghost rounded"
+          onClick={() => setShowCodeGen(true)}
+          title="Generate code snippet"
+          style={{ padding: '0 8px' }}
+        >
+          <Code2 size={14} />
+        </button>
+        <button className="btn btn-primary rounded gap-1.5" onClick={handleFireWithAuth} title="Send request (⌘↵)">
+          <SendIcon size={13} />Send
+          <span className="text-[10px] opacity-50 ml-0.5">⌘↵</span>
+        </button>
+        <button className="btn btn-secondary rounded gap-1.5" onClick={handleSaveWithAuth} title="Save request (⌘S)">
           <SaveIcon size={13} />Save
+          <span className="text-[10px] opacity-50 ml-0.5">⌘S</span>
         </button>
       </div>
+
+      {showCurlImport && (
+        <CurlImportModal
+          onClose={() => setShowCurlImport(false)}
+          onImport={parsed => {
+            setMethod(parsed.method as any);
+            handleUrlChange(parsed.url);
+            const newHeaders: KeyValuePair[] = Object.entries(parsed.headers || {}).map(([k, v]) => ({ key: k, value: v, enabled: true }));
+            setHeadersList(newHeaders);
+            if (parsed.body) setBodyText(parsed.body);
+          }}
+        />
+      )}
+
+      {showCodeGen && (
+        <CodeGenModal
+          request={buildRequest()}
+          onClose={() => setShowCodeGen(false)}
+        />
+      )}
 
       {/* Tab bar */}
       <div className="tab-bar overflow-x-auto">
