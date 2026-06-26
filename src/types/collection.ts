@@ -19,5 +19,11 @@ export interface CollectionRequest extends RequestConfig {
 export interface Collection {
   name: string;
   description?: string;
+  variables?: Record<string, string>;
   requests: CollectionRequest[];
+}
+
+export interface CollectionMeta {
+  description?: string;
+  variables?: Record<string, string>;
 }

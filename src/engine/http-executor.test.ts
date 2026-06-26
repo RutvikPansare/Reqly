@@ -195,4 +195,37 @@ describe('http-executor', () => {
       expect(calledHeaders['Content-Type']).toBe('application/graphql');
     });
   });
+
+  describe('collection variables', () => {
+    const mockOkResponse = () => {
+      vi.mocked(fetch).mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('ok').buffer),
+      } as any);
+    };
+
+    it('substitutes collection variables when no env is given', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'https://{{host}}/ping' };
+      await execute(config, undefined, undefined, true, 50 * 1024, { host: 'collection.example.com' });
+      expect(fetch).toHaveBeenCalledWith('https://collection.example.com/ping', expect.anything());
+    });
+
+    it('collection variables win over env variables on collision', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'https://{{host}}/ping' };
+      const env: Environment = { id: '1', name: 'dev', variables: { host: 'env.example.com' } };
+      await execute(config, env, undefined, true, 50 * 1024, { host: 'collection.example.com' });
+      expect(fetch).toHaveBeenCalledWith('https://collection.example.com/ping', expect.anything());
+    });
+
+    it('falls back to env variables when collection lacks the key', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'https://{{host}}/{{path}}' };
+      const env: Environment = { id: '1', name: 'dev', variables: { host: 'env.example.com', path: 'users' } };
+      await execute(config, env, undefined, true, 50 * 1024, { host: 'collection.example.com' });
+      expect(fetch).toHaveBeenCalledWith('https://collection.example.com/users', expect.anything());
+    });
+  });
 });

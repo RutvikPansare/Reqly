@@ -9,17 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-- [ ] **T-088** Collection-level variables - engine + MCP
-  - Add optional `variables: Record<string, string>` to the collection metadata YAML (alongside existing `name`, `description` fields in the collection folder's `collection.yaml` or equivalent top-level file)
-  - Update `CollectionManager` to read/write collection variables: `getCollectionVariables(collection)`, `setCollectionVariable(collection, key, value)`, `deleteCollectionVariable(collection, key)`
-  - **Implement the variable resolver as a layered scope chain** - `resolveVariables(template, layers: Record<string, string>[])` where layers are applied in priority order (first wins). Today called as `[collectionVars, envVars]`. This design is required so the future flow runner (T-092+) can slot in flow-local scope at the top (`[flowLocalScope, collectionVars, envVars]`) without touching resolver internals. Do NOT hardcode a two-level merge.
-  - The resolver must handle `{{dotted.path.syntax}}` (existing request chaining) and `{{plainVarName}}` (env/collection vars) as two distinct resolution paths - they must coexist without conflict
-  - Update the variable resolver in `http-executor.ts` so substitution order is: collection vars > active env vars (collection wins on collision)
-  - Add MCP tools: `get_variables` already exists for env vars - either extend it with an optional `collection` param or add `get_collection_variables` / `set_collection_variable` / `delete_collection_variable` tools (check existing tool names in `src/mcp/tools/` before deciding - avoid naming collisions)
-  - Add Express routes: `GET /api/collections/:name/variables`, `PUT /api/collections/:name/variables/:key`, `DELETE /api/collections/:name/variables/:key`
-  - TDD: write failing tests first for the resolver merge order and CollectionManager CRUD before touching the engine
-  - Do NOT build the UI in this task - that is T-089
-
 - [ ] **T-089** Collection-level variables - UI
   - Prerequisite: T-088 must be done first
   - Add a "Variables" section in the collection right-click context menu (or a "Collection Settings" modal triggered from the context menu) - same pattern as the existing environment variable editor

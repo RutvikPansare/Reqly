@@ -238,6 +238,33 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.get('/api/collections/:name/variables', async (req, res) => {
+    try {
+      const vars = await context.collectionManager.getCollectionVariables(req.params.name);
+      res.json(vars);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/collections/:name/variables/:key', async (req, res) => {
+    try {
+      await context.collectionManager.setCollectionVariable(req.params.name, req.params.key, req.body.value);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/collections/:name/variables/:key', async (req, res) => {
+    try {
+      await context.collectionManager.deleteCollectionVariable(req.params.name, req.params.key);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/auth-profiles', async (req, res) => {
     try {
       const profiles = await context.authManager.listProfiles();

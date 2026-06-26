@@ -9,7 +9,7 @@ export class RequestError extends Error {
   }
 }
 
-import { substitute } from './variable-substitutor.js';
+import { resolveVariables } from './variable-substitutor.js';
 
 
 export async function execute(
@@ -17,23 +17,27 @@ export async function execute(
   env?: Environment,
   auth?: AuthProfile,
   truncate: boolean = true,
-  maxBodyBytes: number = 50 * 1024
+  maxBodyBytes: number = 50 * 1024,
+  collectionVars: Record<string, string> = {}
 ): Promise<HttpResponse> {
-  const vars = env?.variables || {};
+  const envVars = env?.variables || {};
+  // Layered scope chain: collection vars win over env vars on collision.
+  const layers = [collectionVars, envVars];
   const consoleLogs: string[] = [];
 
-  // Run preScript before substitution so env mutations are picked up
+  // Run preScript before substitution so env mutations are picked up.
+  // Scripts read/write the env-vars layer; collection vars are read-only inherited.
   if (config.preScript) {
-    const { consoleLogs: pre } = runScript(config.preScript, { env: vars, request: config as unknown as Record<string, unknown> });
+    const { consoleLogs: pre } = runScript(config.preScript, { env: envVars, request: config as unknown as Record<string, unknown> });
     consoleLogs.push(...pre);
   }
 
-  let url = substitute(config.url, vars);
-  
+  let url = resolveVariables(config.url, layers);
+
   if (config.params) {
     const searchParams = new URLSearchParams();
     for (const [k, v] of Object.entries(config.params)) {
-      searchParams.append(k, substitute(v, vars));
+      searchParams.append(k, resolveVariables(v, layers));
     }
     const qs = searchParams.toString();
     if (qs) {
@@ -44,7 +48,7 @@ export async function execute(
   const headers: Record<string, string> = {};
   if (config.headers) {
     for (const [k, v] of Object.entries(config.headers)) {
-      headers[k] = substitute(v, vars);
+      headers[k] = resolveVariables(v, layers);
     }
   }
 
@@ -59,10 +63,10 @@ export async function execute(
       headers['Content-Type'] = 'application/json';
     }
   } else if (typeof body === 'string') {
-    body = substitute(body, vars);
+    body = resolveVariables(body, layers);
   } else if (body && typeof body === 'object') {
     body = JSON.stringify(body);
-    body = substitute(body, vars);
+    body = resolveVariables(body, layers);
     if (!headers['Content-Type'] && !headers['content-type']) {
       headers['Content-Type'] = 'application/json';
     }
@@ -170,7 +174,7 @@ export async function execute(
   };
 
   if (config.postScript) {
-    const { consoleLogs: post } = runScript(config.postScript, { env: vars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+    const { consoleLogs: post } = runScript(config.postScript, { env: envVars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
     consoleLogs.push(...post);
   }
 

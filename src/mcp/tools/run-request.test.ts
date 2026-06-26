@@ -9,7 +9,8 @@ describe('run-request', () => {
   it('should run request and cache response', async () => {
     const mockContext: any = {
       collectionManager: {
-        getRequest: async () => ({ name: 'Req1', method: 'GET', url: 'http://foo' })
+        getRequest: async () => ({ name: 'Req1', method: 'GET', url: 'http://foo' }),
+        getCollectionVariables: async () => ({})
       },
       environmentManager: { getActiveEnvironment: async () => null },
       authManager: { getProfile: async () => null },

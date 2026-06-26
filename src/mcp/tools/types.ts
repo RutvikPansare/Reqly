@@ -15,7 +15,7 @@ export interface EngineContext {
   tunnelManager: TunnelManager;
   responseStore: ResponseStore;
   historyStore: HistoryStore;
-  executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number) => Promise<HttpResponse>;
+  executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>) => Promise<HttpResponse>;
   execChildPid?: number;
 }
 

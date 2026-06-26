@@ -25,7 +25,8 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
     }
 
     const shouldTruncate = args.truncate !== undefined ? args.truncate : true;
-    const res = await context.executeRequest(req, env || undefined, auth, shouldTruncate);
+    const collectionVars = await context.collectionManager.getCollectionVariables(args.collectionName);
+    const res = await context.executeRequest(req, env || undefined, auth, shouldTruncate, undefined, collectionVars);
 
     let assertionsResult = undefined;
     if (req.assertions && req.assertions.length > 0) {

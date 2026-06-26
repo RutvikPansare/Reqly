@@ -1,8 +1,50 @@
 import { describe, it, expect } from 'vitest';
-import { substitute, substituteConfig } from './variable-substitutor.js';
+import { substitute, substituteConfig, resolveVariables } from './variable-substitutor.js';
 import { RequestConfig } from '../types/index.js';
 
 describe('variable-substitutor', () => {
+  describe('resolveVariables (layered scope chain)', () => {
+    it('resolves a plain variable from a single layer', () => {
+      expect(resolveVariables('Hi {{name}}', [{ name: 'World' }])).toBe('Hi World');
+    });
+
+    it('applies layers in priority order - first layer wins on collision', () => {
+      const collectionVars = { token: 'collection-token' };
+      const envVars = { token: 'env-token' };
+      expect(resolveVariables('{{token}}', [collectionVars, envVars])).toBe('collection-token');
+    });
+
+    it('falls through to a later layer when an earlier layer lacks the key', () => {
+      const collectionVars = { baseUrl: 'http://collection' };
+      const envVars = { token: 'env-token' };
+      expect(resolveVariables('{{baseUrl}}/{{token}}', [collectionVars, envVars]))
+        .toBe('http://collection/env-token');
+    });
+
+    it('leaves unknown variables untouched', () => {
+      expect(resolveVariables('{{a}} {{b}}', [{ a: '1' }])).toBe('1 {{b}}');
+    });
+
+    it('handles dotted response-chaining and plain vars in the same template', () => {
+      const responseStore: any = {
+        getValue: (key: string) => (key === 'login.response.token' ? 'chained-tok' : undefined),
+      };
+      const layers = [{ host: 'api.example.com' }];
+      const out = resolveVariables(
+        'https://{{host}}/me?t={{login.response.token}}',
+        layers,
+        responseStore,
+      );
+      expect(out).toBe('https://api.example.com/me?t=chained-tok');
+    });
+
+    it('prefers a plain layer var over response-store for a non-dotted key', () => {
+      const responseStore: any = { getValue: () => 'should-not-be-used' };
+      expect(resolveVariables('{{token}}', [{ token: 'layer-wins' }], responseStore))
+        .toBe('layer-wins');
+    });
+  });
+
   describe('substitute', () => {
     it('should replace known variables', () => {
       const res = substitute('Hello {{name}}', { name: 'World' });

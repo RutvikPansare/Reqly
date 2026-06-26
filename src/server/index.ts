@@ -95,10 +95,10 @@ async function main() {
     tunnelManager,
     responseStore,
     historyStore,
-    executeRequest: async (req, env, auth, truncate) => {
+    executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;
-      return executeRequest(req, env, auth, truncate, maxBytes);
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars);
     }
   };
 

@@ -2,7 +2,12 @@ import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { load, dump } from 'js-yaml';
-import { Collection, CollectionRequest, ExampleResponse } from '../types/index.js';
+import { Collection, CollectionRequest, ExampleResponse, CollectionMeta } from '../types/index.js';
+
+// Reserved filename for collection-level metadata (variables, description).
+// It lives alongside request files inside the collection folder but is never
+// treated as a request.
+const META_FILE = 'collection.yaml';
 
 export class CollectionNotFoundError extends Error {
   constructor(message: string) {
@@ -49,6 +54,7 @@ export class CollectionManager {
     const requests: CollectionRequest[] = [];
     const files = await fs.readdir(colPath);
     for (const file of files) {
+      if (file === META_FILE) continue; // metadata, not a request
       if (file.endsWith('.yaml')) {
         const filePath = path.join(colPath, file);
         const content = await fs.readFile(filePath, 'utf8');
@@ -61,7 +67,47 @@ export class CollectionManager {
       }
     }
 
-    return { name, requests };
+    const meta = await this.readMeta(name);
+    return { name, requests, ...(meta.variables ? { variables: meta.variables } : {}), ...(meta.description ? { description: meta.description } : {}) };
+  }
+
+  private async readMeta(collectionName: string): Promise<CollectionMeta> {
+    const metaPath = path.join(this.baseDir, collectionName, META_FILE);
+    if (!existsSync(metaPath)) return {};
+    try {
+      const content = await fs.readFile(metaPath, 'utf8');
+      return (load(content) as CollectionMeta) || {};
+    } catch {
+      return {};
+    }
+  }
+
+  private async writeMeta(collectionName: string, meta: CollectionMeta): Promise<void> {
+    const colPath = path.join(this.baseDir, collectionName);
+    if (!existsSync(colPath)) {
+      throw new CollectionNotFoundError(`Collection ${collectionName} not found`);
+    }
+    const metaPath = path.join(colPath, META_FILE);
+    await fs.writeFile(metaPath, dump(meta), 'utf8');
+  }
+
+  async getCollectionVariables(collectionName: string): Promise<Record<string, string>> {
+    const meta = await this.readMeta(collectionName);
+    return meta.variables || {};
+  }
+
+  async setCollectionVariable(collectionName: string, key: string, value: string): Promise<void> {
+    const meta = await this.readMeta(collectionName);
+    meta.variables = { ...(meta.variables || {}), [key]: value };
+    await this.writeMeta(collectionName, meta);
+  }
+
+  async deleteCollectionVariable(collectionName: string, key: string): Promise<void> {
+    const meta = await this.readMeta(collectionName);
+    if (meta.variables) {
+      delete meta.variables[key];
+    }
+    await this.writeMeta(collectionName, meta);
   }
 
   async listCollections(): Promise<Collection[]> {
@@ -81,6 +127,10 @@ export class CollectionManager {
     const colPath = path.join(this.baseDir, collectionName);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${collectionName} not found`);
+    }
+
+    if (`${req.name}.yaml` === META_FILE) {
+      throw new Error(`"${req.name}" is a reserved collection metadata name; choose a different request name`);
     }
 
     const filePath = path.join(colPath, `${req.name}.yaml`);

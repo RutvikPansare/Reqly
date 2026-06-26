@@ -238,4 +238,64 @@ describe('CollectionManager', () => {
       await expect(manager.listExamples('API', 'NonExistent')).rejects.toThrow(RequestNotFoundError);
     });
   });
+
+  describe('collection variables', () => {
+    it('returns an empty object when no variables are set', async () => {
+      await manager.createCollection('API');
+      const vars = await manager.getCollectionVariables('API');
+      expect(vars).toEqual({});
+    });
+
+    it('sets and reads back a collection variable', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'baseUrl', 'https://api.example.com');
+      const vars = await manager.getCollectionVariables('API');
+      expect(vars).toEqual({ baseUrl: 'https://api.example.com' });
+    });
+
+    it('updates an existing variable and keeps the others', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'a', '1');
+      await manager.setCollectionVariable('API', 'b', '2');
+      await manager.setCollectionVariable('API', 'a', '99');
+      const vars = await manager.getCollectionVariables('API');
+      expect(vars).toEqual({ a: '99', b: '2' });
+    });
+
+    it('deletes a collection variable', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'a', '1');
+      await manager.setCollectionVariable('API', 'b', '2');
+      await manager.deleteCollectionVariable('API', 'a');
+      const vars = await manager.getCollectionVariables('API');
+      expect(vars).toEqual({ b: '2' });
+    });
+
+    it('persists variables in a collection.yaml metadata file', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'baseUrl', 'https://x');
+      const metaPath = path.join(tmpDir, 'API', 'collection.yaml');
+      expect(fs.existsSync(metaPath)).toBe(true);
+    });
+
+    it('does not treat collection.yaml as a request', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'baseUrl', 'https://x');
+      await manager.addRequest('API', { id: 'r1', name: 'Ping', method: 'GET', url: '/ping' });
+      const col = await manager.getCollection('API');
+      expect(col.requests).toHaveLength(1);
+      expect(col.requests[0].name).toBe('Ping');
+    });
+
+    it('surfaces variables on the returned collection', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'baseUrl', 'https://x');
+      const col = await manager.getCollection('API');
+      expect(col.variables).toEqual({ baseUrl: 'https://x' });
+    });
+
+    it('throws when setting a variable on a missing collection', async () => {
+      await expect(manager.setCollectionVariable('Nope', 'a', '1')).rejects.toThrow(CollectionNotFoundError);
+    });
+  });
 });

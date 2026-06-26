@@ -35,7 +35,8 @@ export class CollectionRunner {
 
   public async run(collectionName: string, options: RunOptions = {}): Promise<CollectionRunResult> {
     const collection = await this.context.collectionManager.getCollection(collectionName);
-    
+    const collectionVars = collection.variables || {};
+
     const results: RequestRunResult[] = [];
     let passedCount = 0;
     let failedCount = 0;
@@ -54,10 +55,11 @@ export class CollectionRunner {
         }
 
         const { substituteConfig } = await import('./variable-substitutor.js');
-        const vars = options.environment ? options.environment.variables : {};
-        const config = substituteConfig(request, vars, this.context.responseStore);
+        const envVars = options.environment ? options.environment.variables : {};
+        // Layered scope: collection vars win over env vars on collision.
+        const config = substituteConfig(request, [collectionVars, envVars], this.context.responseStore);
 
-        response = await this.context.executeRequest(config, options.environment, auth);
+        response = await this.context.executeRequest(config, options.environment, auth, undefined, undefined, collectionVars);
         this.context.responseStore.set(request.name, response);
         this.context.historyStore.append(request, response, { collectionName: collectionName });
 

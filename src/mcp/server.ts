@@ -30,6 +30,9 @@ import * as listExamples from './tools/list-examples.js';
 import * as generateCode from './tools/generate-code.js';
 import * as getInheritedHeaders from './tools/get-inherited-headers.js';
 import * as refreshOAuth2Token from './tools/refresh-oauth2-token.js';
+import * as getCollectionVariables from './tools/get-collection-variables.js';
+import * as setCollectionVariable from './tools/set-collection-variable.js';
+import * as deleteCollectionVariable from './tools/delete-collection-variable.js';
 
 const tools = [
   runRequest,
@@ -57,6 +60,9 @@ const tools = [
   generateCode,
   getInheritedHeaders,
   refreshOAuth2Token,
+  getCollectionVariables,
+  setCollectionVariable,
+  deleteCollectionVariable,
 ];
 
 import { z } from 'zod';
