@@ -508,7 +508,7 @@ function App() {
                           }}
                         />
                       }
-                      bottom={<ResponseViewer response={tab.response} isSending={tab.isSending} />}
+                      bottom={<ResponseViewer response={tab.response} isSending={tab.isSending} request={tab.request} />}
                     />
                   </div>
                 ))}

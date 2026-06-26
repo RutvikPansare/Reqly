@@ -172,4 +172,70 @@ describe('CollectionManager', () => {
     expect(retrieved.graphql?.query).toBe('query { health }');
     expect(retrieved.graphql?.variables).toBeUndefined();
   });
+
+  describe('saveExample / listExamples', () => {
+    const makeExample = (overrides: Partial<any> = {}) => ({
+      name: 'Success 200',
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: { id: 1, email: 'test@example.com' },
+      latency: 142,
+      ...overrides,
+    });
+
+    it('should save an example and retrieve it via listExamples', async () => {
+      await manager.createCollection('API');
+      await manager.addRequest('API', { id: 'r1', name: 'GetUser', method: 'GET', url: 'https://api.example.com/user' });
+
+      const saved = await manager.saveExample('API', 'GetUser', makeExample());
+      expect(saved.id).toBeDefined();
+      expect(saved.name).toBe('Success 200');
+      expect(saved.savedAt).toBeDefined();
+
+      const examples = await manager.listExamples('API', 'GetUser');
+      expect(examples).toHaveLength(1);
+      expect(examples[0].status).toBe(200);
+    });
+
+    it('should append multiple examples without overwriting', async () => {
+      await manager.createCollection('API');
+      await manager.addRequest('API', { id: 'r2', name: 'GetItems', method: 'GET', url: 'https://api.example.com/items' });
+
+      await manager.saveExample('API', 'GetItems', makeExample({ name: 'Empty list', status: 200, body: [] }));
+      await manager.saveExample('API', 'GetItems', makeExample({ name: 'Not found', status: 404, body: { error: 'not found' } }));
+
+      const examples = await manager.listExamples('API', 'GetItems');
+      expect(examples).toHaveLength(2);
+      expect(examples.map((e: any) => e.name)).toEqual(['Empty list', 'Not found']);
+    });
+
+    it('should persist examples in YAML alongside the request', async () => {
+      await manager.createCollection('API');
+      await manager.addRequest('API', { id: 'r3', name: 'CreateUser', method: 'POST', url: 'https://api.example.com/users' });
+      await manager.saveExample('API', 'CreateUser', makeExample({ status: 201, name: 'Created' }));
+
+      // Re-read via getRequest to confirm YAML persistence
+      const req = await manager.getRequest('API', 'CreateUser');
+      expect(req.examples).toHaveLength(1);
+      expect(req.examples![0].status).toBe(201);
+    });
+
+    it('should return empty array when no examples exist', async () => {
+      await manager.createCollection('API');
+      await manager.addRequest('API', { id: 'r4', name: 'Ping', method: 'GET', url: '/ping' });
+
+      const examples = await manager.listExamples('API', 'Ping');
+      expect(examples).toEqual([]);
+    });
+
+    it('should throw when saving to a missing request', async () => {
+      await manager.createCollection('API');
+      await expect(manager.saveExample('API', 'NonExistent', makeExample())).rejects.toThrow(RequestNotFoundError);
+    });
+
+    it('should throw when listing examples for a missing request', async () => {
+      await manager.createCollection('API');
+      await expect(manager.listExamples('API', 'NonExistent')).rejects.toThrow(RequestNotFoundError);
+    });
+  });
 });

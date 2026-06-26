@@ -461,6 +461,32 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  // Collection example responses
+  app.post('/api/collections/:col/requests/:req/examples', async (req, res) => {
+    try {
+      const { exampleName, status, body, headers, latency } = req.body;
+      const saved = await context.collectionManager.saveExample(req.params.col, req.params.req, {
+        name: exampleName,
+        status,
+        body: body ?? null,
+        headers: headers || {},
+        latency: latency || 0,
+      });
+      res.json(saved);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/collections/:col/requests/:req/examples', async (req, res) => {
+    try {
+      const examples = await context.collectionManager.listExamples(req.params.col, req.params.req);
+      res.json(examples);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post('/api/switch-project', async (req, res) => {
     try {
       const projectDir: string = req.body.projectDir;

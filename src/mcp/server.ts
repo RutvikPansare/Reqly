@@ -25,6 +25,8 @@ import * as importCollection from './tools/import-collection.js';
 import * as exportCollection from './tools/export-collection.js';
 import * as importEnvironment from './tools/import-environment.js';
 import * as exportEnvironment from './tools/export-environment.js';
+import * as saveExample from './tools/save-example.js';
+import * as listExamples from './tools/list-examples.js';
 
 const tools = [
   runRequest,
@@ -47,6 +49,8 @@ const tools = [
   exportCollection,
   importEnvironment,
   exportEnvironment,
+  saveExample,
+  listExamples,
 ];
 
 import { z } from 'zod';

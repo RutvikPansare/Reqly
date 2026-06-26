@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { load, dump } from 'js-yaml';
-import { Collection, CollectionRequest } from '../types/index.js';
+import { Collection, CollectionRequest, ExampleResponse } from '../types/index.js';
 
 export class CollectionNotFoundError extends Error {
   constructor(message: string) {
@@ -139,5 +139,26 @@ export class CollectionManager {
     const original = await this.getRequest(collectionName, requestName);
     const copy: CollectionRequest = { ...original, name: newName };
     await this.addRequest(collectionName, copy);
+  }
+
+  async saveExample(
+    collectionName: string,
+    requestName: string,
+    example: Omit<ExampleResponse, 'id' | 'savedAt'>,
+  ): Promise<ExampleResponse> {
+    const req = await this.getRequest(collectionName, requestName);
+    const newExample: ExampleResponse = {
+      ...example,
+      id: `ex-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      savedAt: new Date().toISOString(),
+    };
+    req.examples = [...(req.examples || []), newExample];
+    await this.addRequest(collectionName, req);
+    return newExample;
+  }
+
+  async listExamples(collectionName: string, requestName: string): Promise<ExampleResponse[]> {
+    const req = await this.getRequest(collectionName, requestName);
+    return req.examples || [];
   }
 }

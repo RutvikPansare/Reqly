@@ -233,3 +233,24 @@ export async function exportCollection(name: string, format: 'postman' | 'openap
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export async function saveExample(
+  collectionName: string,
+  requestName: string,
+  example: { exampleName: string; status: number; body: any; headers: Record<string, string>; latency: number },
+) {
+  const res = await fetch(
+    `/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}/examples`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(example) },
+  );
+  if (!res.ok) throw new Error('Failed to save example');
+  return res.json();
+}
+
+export async function listExamples(collectionName: string, requestName: string) {
+  const res = await fetch(
+    `/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}/examples`,
+  );
+  if (!res.ok) throw new Error('Failed to list examples');
+  return res.json();
+}

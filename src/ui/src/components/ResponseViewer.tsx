@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Loader2, Copy, Check, Search, Braces } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Loader2, Copy, Check, Search, Braces, BookMarked } from 'lucide-react';
 import { statusBadgeClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
+import { saveExample, listExamples } from '../api';
 
 interface ResponseViewerProps {
   response: any;
   isSending?: boolean;
+  request?: any;
 }
 
 function formatSize(bytes: number): string {
@@ -37,11 +39,60 @@ function syntaxHighlight(jsonStr: string): string {
   );
 }
 
-export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
+export function ResponseViewer({ response, isSending, request }: ResponseViewerProps) {
   const [activeTab, setActiveTab] = useState('body');
   const [copied, setCopied] = useState(false);
   const [bodyFilter, setBodyFilter] = useState('');
   const [showTsInterface, setShowTsInterface] = useState(false);
+  const [savingExample, setSavingExample] = useState(false);
+  const [savedExampleMsg, setSavedExampleMsg] = useState('');
+  const [examples, setExamples] = useState<any[]>([]);
+  const [examplesLoaded, setExamplesLoaded] = useState(false);
+
+  const collectionName = request?._collection;
+  const requestName = request?.name;
+  const canSaveExample = !!(response && collectionName && requestName);
+
+  useEffect(() => {
+    setExamples([]);
+    setExamplesLoaded(false);
+  }, [collectionName, requestName]);
+
+  const loadExamples = async () => {
+    if (!collectionName || !requestName) return;
+    try {
+      const data = await listExamples(collectionName, requestName);
+      setExamples(data);
+      setExamplesLoaded(true);
+    } catch {
+      setExamples([]);
+      setExamplesLoaded(true);
+    }
+  };
+
+  const handleSaveExample = async () => {
+    if (!canSaveExample) return;
+    const name = prompt('Name this example (e.g. "Success 200", "Not Found 404"):');
+    if (!name) return;
+    setSavingExample(true);
+    try {
+      await saveExample(collectionName, requestName, {
+        exampleName: name,
+        status: response.status,
+        body: response.body,
+        headers: response.headers || {},
+        latency: response.latency || 0,
+      });
+      setSavedExampleMsg(`Saved "${name}"`);
+      setTimeout(() => setSavedExampleMsg(''), 3000);
+      // Refresh examples if tab is already open
+      if (activeTab === 'examples') loadExamples();
+    } catch (e: any) {
+      alert(`Failed to save example: ${e.message}`);
+    } finally {
+      setSavingExample(false);
+    }
+  };
 
   const handleCopy = () => {
     if (response?.body) {
@@ -136,6 +187,18 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? 'Copied!' : 'Copy'}
             </button>
+            {canSaveExample && (
+              <button
+                onClick={handleSaveExample}
+                disabled={savingExample}
+                className="flex items-center gap-1 btn btn-secondary transition-all disabled:opacity-50"
+                style={{ fontSize: '0.75rem', padding: '0.125rem 0.625rem', color: savedExampleMsg ? '#4ade80' : undefined, borderColor: savedExampleMsg ? 'rgba(74,222,128,0.3)' : undefined }}
+                title="Save as example response"
+              >
+                <BookMarked size={12} />
+                {savedExampleMsg || 'Save Example'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -186,6 +249,14 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
             onClick={() => setActiveTab('diff')}
           >
             Diff
+          </button>
+        )}
+        {canSaveExample && (
+          <button
+            className={`tab-btn disabled:opacity-40 ${activeTab === 'examples' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('examples'); if (!examplesLoaded) loadExamples(); }}
+          >
+            Examples
           </button>
         )}
         {activeTab === 'body' && body != null && (
@@ -274,6 +345,46 @@ export function ResponseViewer({ response, isSending }: ResponseViewerProps) {
                 {line}
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'examples' && (
+          <div className="p-4">
+            {!examplesLoaded ? (
+              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                <Loader2 size={14} className="animate-spin" /> Loading examples...
+              </div>
+            ) : examples.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: 'var(--text-muted)' }}>
+                <BookMarked size={32} strokeWidth={1.2} opacity={0.35} />
+                <p className="text-sm">No saved examples yet.</p>
+                <p className="text-xs opacity-60">Click "Save Example" in the header after firing a request.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {examples.map((ex: any) => (
+                  <div key={ex.id} className="rounded overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                    <div className="flex items-center justify-between px-3 py-2" style={{ background: 'var(--surface-3)', borderBottom: '1px solid var(--border)' }}>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{ex.name}</span>
+                      <div className="flex items-center gap-3 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                        <span className={`status-badge ${statusBadgeClass(ex.status)}`}>{ex.status}</span>
+                        <span>{ex.latency} ms</span>
+                        <span>{new Date(ex.savedAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <pre
+                      className="p-3 text-xs font-mono overflow-x-auto"
+                      style={{ color: 'var(--text-secondary)', background: 'var(--surface-1)', maxHeight: '200px', overflowY: 'auto' }}
+                      dangerouslySetInnerHTML={{
+                        __html: ex.body != null
+                          ? syntaxHighlight(typeof ex.body === 'object' ? JSON.stringify(ex.body, null, 2) : String(ex.body))
+                          : '<span style="color:var(--text-muted);font-style:italic">(empty body)</span>',
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
