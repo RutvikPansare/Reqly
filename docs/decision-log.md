@@ -8,6 +8,9 @@ Newest entries at the top.
 
 ## 2026-06-26
 
+**Decision:** Added a build step (`tsc`, new `packages/reqly-middleware/tsconfig.json`) to `reqly-middleware` and repointed its `main`/`exports`/`files` at compiled `dist/` output instead of raw `src/*.ts`.
+**Why:** The package as originally written had no compiled output - `main: "src/index.ts"` and `exports` pointing straight at TypeScript source. That's unusable by a plain Node consumer with no TS loader, which is exactly who this middleware targets (any Express/Fastify/Next.js app). Caught this while publishing `reqly-middleware@0.1.0` to npm as part of T-086 - fixed before publishing rather than shipping a broken package.
+
 **Decision:** Replaced `.npmignore`-based exclusion with an explicit `files` allowlist in `package.json` for npm publishing, and moved `tsx`/`typescript`/`vitest` from `dependencies` to `devDependencies`.
 **Why:** `npm pack --dry-run` (T-086 pre-publish check) revealed `.npmignore`'s `src/` rule was not reliably excluding nested content - `src/ui/node_modules` alone leaked in 8516 files, ballooning the tarball to 149.7MB unpacked. An explicit `files` allowlist (`dist`, `packages/reqly-middleware/src/*.ts`, `packages/reqly-middleware/package.json`, `README.md`, `llms.txt`) is unambiguous regardless of ignore-pattern quirks. `tsx`/`typescript`/`vitest` are only used by dev scripts and the test suite - the built CLI (`dist/server/index.js`) runs under plain `node` per its shebang, so they don't belong in runtime `dependencies` for end users installing the package.
 

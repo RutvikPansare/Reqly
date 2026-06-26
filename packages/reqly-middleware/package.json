@@ -3,10 +3,20 @@
   "version": "0.1.0",
   "description": "Inbound request capture middleware for Reqly - Express, Fastify, and Next.js.",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./next": "./src/next.ts"
+    ".": "./dist/index.js",
+    "./next": "./dist/next.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   },
   "license": "ISC"
 }

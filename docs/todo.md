@@ -12,6 +12,8 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 - [ ] **T-088** Collection-level variables - engine + MCP
   - Add optional `variables: Record<string, string>` to the collection metadata YAML (alongside existing `name`, `description` fields in the collection folder's `collection.yaml` or equivalent top-level file)
   - Update `CollectionManager` to read/write collection variables: `getCollectionVariables(collection)`, `setCollectionVariable(collection, key, value)`, `deleteCollectionVariable(collection, key)`
+  - **Implement the variable resolver as a layered scope chain** - `resolveVariables(template, layers: Record<string, string>[])` where layers are applied in priority order (first wins). Today called as `[collectionVars, envVars]`. This design is required so the future flow runner (T-092+) can slot in flow-local scope at the top (`[flowLocalScope, collectionVars, envVars]`) without touching resolver internals. Do NOT hardcode a two-level merge.
+  - The resolver must handle `{{dotted.path.syntax}}` (existing request chaining) and `{{plainVarName}}` (env/collection vars) as two distinct resolution paths - they must coexist without conflict
   - Update the variable resolver in `http-executor.ts` so substitution order is: collection vars > active env vars (collection wins on collision)
   - Add MCP tools: `get_variables` already exists for env vars - either extend it with an optional `collection` param or add `get_collection_variables` / `set_collection_variable` / `delete_collection_variable` tools (check existing tool names in `src/mcp/tools/` before deciding - avoid naming collisions)
   - Add Express routes: `GET /api/collections/:name/variables`, `PUT /api/collections/:name/variables/:key`, `DELETE /api/collections/:name/variables/:key`
@@ -42,24 +44,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
   - Auth editor mirrors the request-level Auth tab: type selector (None / Bearer / API Key / Basic / OAuth2), inline credential fields or profile picker
   - Distinguish clearly in copy: "Auth set here applies to all requests in this collection unless a request overrides it"
   - Inherited headers panel (already built) reads collection auth as a source - extend it to show collection-auth-injected headers with source = "collection" instead of "profile"
-
-- [ ] **T-086** Publish Reqly to npm
-  - _in progress: full pre-publish checklist done. `npm test` (308/308 pass), root build verified (dist/ + shebang), `npm pack --dry-run` checked. Fixed a packaging bug: `.npmignore`'s `src/` rule wasn't excluding `src/ui/node_modules` (8516 files, 149.7MB unpacked) - replaced with a `files` allowlist in package.json (`dist`, `packages/reqly-middleware/src/{core,index,next}.ts`, `packages/reqly-middleware/package.json`, `README.md`, `llms.txt`), fixed `main` to point at `dist/server/index.js` (was `src/server/index.ts`), moved `tsx`/`typescript`/`vitest` to `devDependencies`. Tarball: 368.7kB / 155 files. Smoke test done via the existing global `reqly` link (already symlinked into this repo's `dist/`): `reqly --version` -> `1.0.5` matches package.json; `reqly start --project-dir <dir>` correctly binds 4242 and serves that dir's collections (verified against a temp empty dir); `reqly setup cursor` writes `~/.cursor/mcp.json` with `args: ["start", "--project-dir", "${workspaceFolder}"]` - correct. Noted separately (not fixed): `reqly status` reports `activeProject` from config.json rather than the live instance's actual served project dir - cosmetic, doesn't affect the MCP config or server behavior. Still needed: `npm login` + `npm publish --access public` - deferred, needs Rutvik's npm credentials and explicit go-ahead._
-  - **Pre-publish checklist (do all before `npm publish`):**
-    - Run `npm test` - all tests must pass
-    - Run `npm run build` from the root - verify `dist/` is populated and `dist/server/index.js` has the `#!/usr/bin/env node` shebang
-    - Run `cd src/ui && npm run build` - verify `dist/ui/` exists and is copied/referenced correctly by Express
-    - Run `npm pack --dry-run` - inspect the file list. Must include `dist/`, `packages/reqly-middleware/`, `README.md`, `llms.txt`. Must NOT include `src/`, `example/`, `docs/`, `*.test.*`
-    - Smoke test the packed binary: `npm install -g .` then `reqly --version`, `reqly status`, `reqly start` in a temp project dir
-    - Verify `reqly setup cursor` writes the correct config with `--project-dir ${workspaceFolder}`
-  - **Publish:**
-    - `npm login` (as the reqly npm account)
-    - `npm publish --access public`
-    - Verify on `npmjs.com/package/reqly` that the page looks correct and version is right
-  - **Post-publish:**
-    - Test cold install on a clean machine or temp dir: `npm install -g reqly && reqly --version`
-    - Tag the git commit: `git tag v<version> && git push --tags`
-    - Note: `packages/reqly-middleware` is a separate npm package - publish it separately with `cd packages/reqly-middleware && npm publish --access public` after the main package
 
 - [ ] **T-087** Homebrew tap for `brew install reqly`
   - **What:** a Homebrew tap lets Mac developers install Reqly without needing Node.js pre-installed, using the familiar `brew install` command. Requires the npm package (T-086) to be published first.
