@@ -739,7 +739,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
       // Resolve variables before generating code (same logic as /api/run)
       const { substituteConfig } = await import('../engine/variable-substitutor.js');
-      const env = await context.environmentManager.getActive().catch(() => undefined);
+      const env = await context.environmentManager.getActiveEnvironment().catch(() => undefined);
       const envVars = env ? env.variables : {};
       const collectionName = request._collection;
       const collectionVars = collectionName
