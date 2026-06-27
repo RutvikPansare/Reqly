@@ -78,6 +78,18 @@ describe('cli-parser', () => {
     expect(parsed.flags.envFiles).toBeUndefined();
   });
 
+  it('parses --validate-spec as a boolean flag on run', () => {
+    const parsed = parseArgs(['node', 'script.js', 'run', 'API', '--validate-spec']);
+    expect(parsed.command).toBe('run');
+    expect(parsed.args).toEqual(['API']);
+    expect(parsed.flags.validateSpec).toBe(true);
+  });
+
+  it('leaves validateSpec undefined when --validate-spec is not passed', () => {
+    const parsed = parseArgs(['node', 'script.js', 'run', 'API']);
+    expect(parsed.flags.validateSpec).toBeUndefined();
+  });
+
   it('parses flags before and after command', () => {
     const parsed = parseArgs(['node', 'script.js', '--env', 'production', 'run', 'myCol', '--reporter', 'json', '--project-dir', '/tmp']);
     expect(parsed.command).toBe('run');

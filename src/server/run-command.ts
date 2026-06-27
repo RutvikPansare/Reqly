@@ -128,16 +128,50 @@ export async function handleRunCommand(
       const runner = new CollectionRunner(context);
       const results = await runner.run(collectionName, { environment: env || undefined });
 
+      // --validate-spec: check every fired response against the collection's
+      // configured spec (no-op if none is configured).
+      let hasContractViolations = false;
+      const violationsByRequest = new Map<string, import('../types/index.js').ContractViolation[]>();
+      if (parsed.flags.validateSpec) {
+        const spec = await collectionManager.getCollectionSpec(collectionName);
+        if (spec) {
+          const { checkContract } = await import('../mcp/tools/contract-helper.js');
+          for (const r of results.results) {
+            if (!r.response) continue;
+            const reqDef = await collectionManager.getRequest(collectionName, r.requestName);
+            const contractResult = await checkContract(context, collectionName, reqDef, r.response);
+            if (contractResult) {
+              violationsByRequest.set(r.requestName, contractResult.violations);
+              if (contractResult.violations.length > 0) hasContractViolations = true;
+            }
+          }
+        }
+      }
+
       if (parsed.flags.reporter === 'json') {
-        console.log(JSON.stringify(results, null, 2));
+        const resultsWithViolations = {
+          ...results,
+          results: results.results.map((r: any) => ({
+            ...r,
+            ...(violationsByRequest.has(r.requestName) ? { contractViolations: violationsByRequest.get(r.requestName) } : {}),
+          })),
+        };
+        console.log(JSON.stringify(resultsWithViolations, null, 2));
       } else if (parsed.flags.reporter === 'tap') {
         console.log('TAP version 13');
         console.log(`1..${results.results.length}`);
         results.results.forEach((r: any, i: number) => {
-          console.log(`${r.passed ? 'ok' : 'not ok'} ${i + 1} - ${r.requestName}`);
+          const violations = violationsByRequest.get(r.requestName) || [];
+          const ok = r.passed && violations.length === 0;
+          console.log(`${ok ? 'ok' : 'not ok'} ${i + 1} - ${r.requestName}`);
           if (!r.passed && r.error) {
             console.log(`  ---`);
             console.log(`  error: ${r.error}`);
+            console.log(`  ...`);
+          }
+          for (const v of violations) {
+            console.log(`  ---`);
+            console.log(`  contract: [${v.severity}] ${v.field}: ${v.message}`);
             console.log(`  ...`);
           }
         });
@@ -152,11 +186,19 @@ export async function handleRunCommand(
           if (!r.passed && r.error) {
             console.log(`        ${r.error}`);
           }
+          const violations = violationsByRequest.get(r.requestName) || [];
+          for (const v of violations) {
+            console.log(`        [contract:${v.severity}] ${v.field}: ${v.message}`);
+          }
         }
         console.log(`\nResults: ${results.passed} passed, ${results.failed} failed`);
+        if (parsed.flags.validateSpec) {
+          const totalViolations = [...violationsByRequest.values()].reduce((sum, v) => sum + v.length, 0);
+          console.log(`Contract violations: ${totalViolations}`);
+        }
       }
 
-      return results.failed === 0 ? 0 : 1;
+      return (results.failed === 0 && !hasContractViolations) ? 0 : 1;
     } catch (e: any) {
       console.error(`Error running collection: ${e.message}`);
       return 1;

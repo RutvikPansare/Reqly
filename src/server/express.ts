@@ -294,6 +294,99 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.get('/api/collections/:name/spec', async (req, res) => {
+    try {
+      const spec = await context.collectionManager.getCollectionSpec(req.params.name);
+      if (!spec) {
+        res.json({ loaded: false, operationCount: 0 });
+        return;
+      }
+      const source = spec.specPath || spec.specUrl;
+      const cached = source ? context.specLoader.get(source) : undefined;
+      const { listOperations } = await import('../engine/contract-validator.js');
+      res.json({
+        specPath: spec.specPath,
+        specUrl: spec.specUrl,
+        operationCount: cached ? listOperations(cached).length : 0,
+        loaded: !!cached,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/collections/:name/spec', async (req, res) => {
+    try {
+      const spec = { ...(req.body.specPath ? { specPath: req.body.specPath } : {}), ...(req.body.specUrl ? { specUrl: req.body.specUrl } : {}) };
+      await context.collectionManager.setCollectionSpec(req.params.name, spec);
+      const source = spec.specPath || spec.specUrl;
+      const loaded = await context.specLoader.load(source);
+      const { listOperations } = await import('../engine/contract-validator.js');
+      res.json({ ...spec, operationCount: listOperations(loaded).length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/collections/:name/spec', async (req, res) => {
+    try {
+      const spec = await context.collectionManager.getCollectionSpec(req.params.name);
+      await context.collectionManager.deleteCollectionSpec(req.params.name);
+      const source = spec?.specPath || spec?.specUrl;
+      if (source) context.specLoader.clear(source);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/collections/:name/spec/operations', async (req, res) => {
+    try {
+      const spec = await context.collectionManager.getCollectionSpec(req.params.name);
+      if (!spec) {
+        res.status(400).json({ error: 'No spec configured on this collection.' });
+        return;
+      }
+      const source = spec.specPath || spec.specUrl;
+      const loaded = await context.specLoader.load(source!);
+      const { listOperations } = await import('../engine/contract-validator.js');
+      res.json(listOperations(loaded));
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/collections/:name/requests/:req/validate', async (req, res) => {
+    try {
+      const spec = await context.collectionManager.getCollectionSpec(req.params.name);
+      if (!spec) {
+        res.status(400).json({ error: 'No spec configured on this collection.' });
+        return;
+      }
+      const response = context.responseStore.get(req.params.req);
+      if (!response) {
+        res.status(400).json({ error: `No stored response for "${req.params.req}". Run it first.` });
+        return;
+      }
+      const reqDef = await context.collectionManager.getRequest(req.params.name, req.params.req);
+      const { findOperation, validate } = await import('../engine/contract-validator.js');
+      const { resolveVariables } = await import('../engine/variable-substitutor.js');
+      const collectionVars = await context.collectionManager.getCollectionVariables(req.params.name);
+      const resolvedUrl = resolveVariables(reqDef.url, [collectionVars]);
+      const baseUrl = collectionVars.baseUrl || '';
+      const source = spec.specPath || spec.specUrl;
+      const loadedSpec = await context.specLoader.load(source!);
+      const matched = findOperation(loadedSpec, reqDef.method, resolvedUrl, baseUrl, reqDef.specOperationId);
+      if (!matched) {
+        res.json({ violations: [], matched: false });
+        return;
+      }
+      res.json({ violations: validate(matched.operation, response), operation: matched.operationId, matched: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/flows', async (req, res) => {
     try {
       const flows = await context.flowManager.listFlows();
@@ -772,7 +865,14 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         assertions = runAssertions(response, req.body.request.assertions);
       }
 
-      res.json({ response, assertions, diff });
+      let contractViolations = null;
+      if (collectionName) {
+        const { checkContract } = await import('../mcp/tools/contract-helper.js');
+        const contractResult = await checkContract(context, collectionName, req.body.request, response);
+        contractViolations = contractResult ? contractResult.violations : null;
+      }
+
+      res.json({ response, assertions, diff, contractViolations });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

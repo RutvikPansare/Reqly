@@ -8,6 +8,9 @@ Newest entries at the top.
 
 ## 2026-06-27
 
+**Decision:** Added a `delete_collection_spec` MCP tool even though T-106's spec only listed four tools (`set_collection_spec`, `get_collection_spec`, `list_spec_operations`, `validate_response`). The Express route list already included `DELETE /api/collections/:name/spec`.
+**Why:** CLAUDE.md's tool-first principle: "If it can't be called via MCP, it doesn't exist as a feature." A DELETE route with no MCP equivalent would mean an agent could configure a spec but never remove one - a real gap, not scope creep, since the capability was already implied by the route list.
+
 **Decision:** OpenAPI contract validation (T-105) lives in a standalone `ContractValidator` (`src/engine/contract-validator.ts`) that callers run AFTER `execute()`, not "wired into `http-executor.ts`" as the task spec literally said. The executor keeps its existing signature and stays free of any spec/filesystem dependency.
 **Why:** `http-executor.ts` is the engine-pure HTTP layer - it deliberately knows nothing about assertions or response diffing either; both are computed by the callers (the express adhoc route, the collection runner) after the response comes back. Pushing spec loading + ajv validation into the executor would drag `swagger-parser`/`ajv`/`fs` into the one module that must stay a thin request-firer, and would diverge from the established assertion/diff pattern that T-106's `run_request`/route/CLI wiring already mirrors. `ContractValidator.validate(operation, response)` is pure and unit-tested in isolation; T-106 composes `specLoader.load()` + `findOperation()` + `validate()` at each call site, exactly where assertions are computed today.
 

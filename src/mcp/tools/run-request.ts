@@ -1,4 +1,5 @@
 import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
+import { checkContract } from './contract-helper.js';
 
 export const definition: ToolDefinition = {
   name: 'run_request',
@@ -56,7 +57,10 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
     const agentResponse = { ...res };
     delete agentResponse.fullBody;
 
-    return { content: [{ type: 'text', text: JSON.stringify({ response: agentResponse, assertions: assertionsResult, diff }) }] };
+    const contractResult = await checkContract(context, args.collectionName, req, res);
+    const contractViolations = contractResult ? contractResult.violations : null;
+
+    return { content: [{ type: 'text', text: JSON.stringify({ response: agentResponse, assertions: assertionsResult, diff, contractViolations }) }] };
   } catch (e: any) {
     return { content: [{ type: 'text', text: e.message }], isError: true };
   }

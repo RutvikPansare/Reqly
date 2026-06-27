@@ -50,6 +50,11 @@ import * as stopMock from './tools/stop-mock.js';
 import * as getMockStatus from './tools/get-mock-status.js';
 import * as setDotenvFiles from './tools/set-dotenv-files.js';
 import * as getDotenvFiles from './tools/get-dotenv-files.js';
+import * as setCollectionSpec from './tools/set-collection-spec.js';
+import * as getCollectionSpec from './tools/get-collection-spec.js';
+import * as deleteCollectionSpec from './tools/delete-collection-spec.js';
+import * as listSpecOperations from './tools/list-spec-operations.js';
+import * as validateResponse from './tools/validate-response.js';
 
 const tools = [
   runRequest,
@@ -96,6 +101,11 @@ const tools = [
   getMockStatus,
   setDotenvFiles,
   getDotenvFiles,
+  setCollectionSpec,
+  getCollectionSpec,
+  deleteCollectionSpec,
+  listSpecOperations,
+  validateResponse,
 ];
 
 import { z } from 'zod';
