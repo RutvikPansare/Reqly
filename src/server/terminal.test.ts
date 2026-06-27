@@ -19,21 +19,31 @@ import { LOCK_PATH } from './lock.js';
 const PROJECT_DIR = '/tmp/reqly-test-terminal';
 const PORT = 5003;
 
-function waitForMessages(ws: WebSocket, count: number, timeoutMs = 3000): Promise<any[]> {
+// Attaches the message listener immediately so nothing the PTY writes right
+// after `connection` (e.g. the shell's own startup banner/prompt) is lost.
+function collectMessages(ws: WebSocket) {
+  const messages: any[] = [];
+  ws.on('message', (raw) => messages.push(JSON.parse(raw.toString())));
+  return messages;
+}
+
+function allData(messages: any[]): string {
+  return messages.filter(m => m.type === 'data').map(m => m.data).join('');
+}
+
+function waitUntil(check: () => boolean, timeoutMs = 5000): Promise<void> {
   return new Promise((resolve, reject) => {
-    const messages: any[] = [];
-    const timer = setTimeout(() => reject(new Error(`Timed out waiting for ${count} messages, got ${messages.length}`)), timeoutMs);
-    ws.on('message', (raw) => {
-      messages.push(JSON.parse(raw.toString()));
-      if (messages.length >= count) {
-        clearTimeout(timer);
-        resolve(messages);
-      }
-    });
+    const start = Date.now();
+    const tick = () => {
+      if (check()) return resolve();
+      if (Date.now() - start > timeoutMs) return reject(new Error('Timed out waiting for condition'));
+      setTimeout(tick, 20);
+    };
+    tick();
   });
 }
 
-describe('/terminal WebSocket', () => {
+describe('/terminal WebSocket (PTY)', () => {
   let server: ReturnType<typeof startExpressServer>;
   let collectionManager: CollectionManager;
 
@@ -65,58 +75,68 @@ describe('/terminal WebSocket', () => {
     fs.rmSync(PROJECT_DIR, { recursive: true, force: true });
   });
 
-  it('accepts a connection and streams stdout + exit for a simple command', async () => {
+  it('streams PTY output for a command typed via input', async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
 
-    const messagesPromise = waitForMessages(ws, 2);
-    ws.send(JSON.stringify({ type: 'run', command: 'echo hello-terminal' }));
-    const messages = await messagesPromise;
+    ws.send(JSON.stringify({ type: 'input', data: 'echo hello-pty\n' }));
+    await waitUntil(() => allData(messages).includes('hello-pty'));
 
-    expect(messages.find(m => m.type === 'stdout')?.data).toContain('hello-terminal');
-    expect(messages.find(m => m.type === 'exit')?.code).toBe(0);
+    expect(allData(messages)).toContain('hello-pty');
     ws.close();
   });
 
-  it('runs the command with cwd derived from the current collectionManager base dir', async () => {
+  it('starts the shell at the current collectionManager base dir', async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
 
-    const messagesPromise = waitForMessages(ws, 2);
-    ws.send(JSON.stringify({ type: 'run', command: 'pwd' }));
-    const messages = await messagesPromise;
+    ws.send(JSON.stringify({ type: 'input', data: 'pwd\n' }));
 
     const path = await import('path');
-    const expectedRoot = fs.realpathSync(path.dirname(collectionManager.getBaseDir()));
-    expect(messages.find(m => m.type === 'stdout')?.data.trim()).toBe(expectedRoot);
+    const expectedRoot = path.dirname(collectionManager.getBaseDir());
+    await waitUntil(() => allData(messages).includes(expectedRoot));
     ws.close();
   });
 
-  it('rejects a second run while one is already in progress', async () => {
+  it('persists cwd across commands so cd carries forward (real shell, not per-command spawn)', async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
 
-    ws.send(JSON.stringify({ type: 'run', command: 'sleep 0.3' }));
-    const errorPromise = waitForMessages(ws, 1);
-    ws.send(JSON.stringify({ type: 'run', command: 'echo too-fast' }));
-    const messages = await errorPromise;
+    const path = await import('path');
+    const projectRoot = path.dirname(collectionManager.getBaseDir());
+    fs.mkdirSync(path.join(projectRoot, 'subdir'), { recursive: true });
 
-    expect(messages[0].type).toBe('error');
-    expect(messages[0].message).toMatch(/already running/i);
+    ws.send(JSON.stringify({ type: 'input', data: 'cd subdir\n' }));
+    ws.send(JSON.stringify({ type: 'input', data: 'pwd\n' }));
+
+    const expected = path.join(projectRoot, 'subdir');
+    await waitUntil(() => allData(messages).includes(expected));
     ws.close();
   });
 
-  it('kills a running command on kill message', async () => {
+  it('resizes the PTY without erroring', async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
 
-    const exitPromise = waitForMessages(ws, 1);
-    ws.send(JSON.stringify({ type: 'run', command: 'sleep 5' }));
+    expect(() => ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }))).not.toThrow();
+    ws.close();
+  });
+
+  it('sends SIGINT to the foreground job on kill', async () => {
+    const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const messages = collectMessages(ws);
+    await new Promise<void>((resolve) => ws.on('open', resolve));
+
+    ws.send(JSON.stringify({ type: 'input', data: 'sleep 30\n' }));
+    await new Promise((r) => setTimeout(r, 300));
     ws.send(JSON.stringify({ type: 'kill' }));
-    const messages = await exitPromise;
 
-    expect(messages[0].type).toBe('exit');
-    expect(messages[0].code).not.toBe(0);
+    // Ctrl+C interrupts `sleep` and returns control to the shell, which prints a fresh prompt.
+    await waitUntil(() => allData(messages).includes('$') || allData(messages).includes('%'));
     ws.close();
   });
 });

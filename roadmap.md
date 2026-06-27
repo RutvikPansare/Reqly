@@ -94,7 +94,40 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M5 - Later: Inbound Capture
+## M5 - Post-Launch: Windows Support + Desktop App
+
+**Goal:** Remove the two biggest friction points for non-Mac developers and non-CLI-comfortable users. Sequencing: Windows support first (2 weeks), then Electron desktop app (3-4 weeks). Both are prerequisite to meaningful adoption outside the Mac/CLI niche.
+
+### Windows Support
+
+**Current limitations for Windows users:**
+- **`reqly setup`** writes MCP config to hardcoded Mac paths (`~/Library/Application Support/...`). On Windows the correct paths are `%APPDATA%\Claude\claude_desktop_config.json`, `%APPDATA%\Cursor\User\settings.json` etc. Setup silently writes to the wrong location - Cursor/Claude Desktop never sees the config.
+- **Terminal (T-112)** uses `process.kill(-pid, 'SIGTERM')` for process group kill - negative PIDs don't exist on Windows. The kill button silently fails.
+- **`exec_with_proxy` and `stop_proxy`** use the same negative-pid process group kill - same failure on Windows.
+- **Shell detection** - several places assume `bash`. The `cmd /c` fallback exists in the terminal but `exec_with_proxy` and `exec-command.ts` may assume Unix shell behaviour.
+- **File path separators** - `path.join()` is used throughout which is correct, but any hardcoded `/` separators in config resolution or file watching will break.
+- **`fs.watch` edge cases** - less reliable on Windows than Mac/Linux, can miss rapid successive changes (`.env` hot-reload may be flaky).
+
+- [ ] **`reqly setup` Windows paths** - detect `process.platform === 'win32'`, resolve config paths via `%APPDATA%` / `LOCALAPPDATA`. Test against Claude Desktop and Cursor on Windows.
+- [ ] **Process kill cross-platform** - replace negative-pid SIGTERM/SIGKILL with a cross-platform kill helper: on Windows use `taskkill /PID <pid> /T /F` for tree kill; on Unix keep the existing `process.kill(-pid)` group kill.
+- [ ] **Shell detection** - `process.platform === 'win32'` uses `cmd.exe` or `powershell.exe` (prefer PowerShell for better scripting); Unix uses `bash` falling back to `sh`.
+- [ ] **File path audit** - grep for hardcoded `/` path separators outside `path.join()` calls and fix. Audit `.env` file watching reliability on Windows.
+- [ ] **CI matrix** - add a Windows runner to the GitHub Actions test matrix so regressions are caught automatically.
+
+### Desktop App (Electron)
+
+**Why Electron over Tauri for V1:** the Reqly server is already Node.js - it runs naturally inside Electron's main process with no language boundary. Tauri requires Rust and gives a smaller bundle (5-15MB vs 150MB) but adds 4-6 weeks of complexity. Ship Electron now, consider Tauri for V2.
+
+- [ ] **Electron wrapper** - Reqly server spawns as a child process from Electron's main process. `BrowserWindow` opens pointing at `http://localhost:4242`. On close: minimise to tray rather than quit (server keeps running).
+- [ ] **System tray** - tray icon with menu: "Open Reqly", "Active project: \<path\>", "Stop Reqly", "Quit". On double-click: open/focus the browser window.
+- [ ] **Auto-start on login** - opt-in toggle in Settings. Uses `app.setLoginItemSettings()` on Mac, registry key on Windows.
+- [ ] **Auto-updater** - `electron-updater` checks GitHub Releases on startup, prompts to install in the background. Required for users who installed via DMG/EXE rather than npm.
+- [ ] **Installers** - DMG for Mac (via `electron-builder`), NSIS installer for Windows. Code-signed on both platforms - Apple Developer account ($99/year) for Mac notarization; EV certificate (~$400/year) for Windows SmartScreen clearance. Without signing, users see security warnings on first run.
+- [ ] **`reqly app` CLI command** - opens the Electron window if running, launches it if not. Bridges the CLI and desktop app workflows.
+
+---
+
+## M6 - Later: Inbound Capture
 
 **Goal:** Capture calls coming INTO the user's own app (not outbound). The current proxy captures what the app sends to external APIs. This milestone captures what clients (browsers, mobile, other servers) send to the user's own endpoints.
 
@@ -108,11 +141,47 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
+## Later: Multi-Project Workspace
+
+**Why post-launch:** the single-project model works well for the initial target user. This becomes important when microservices developers start using Reqly across 5+ services and need to see everything simultaneously without switching.
+
+**Competitive context:** Bruno partially solves this today - it lets you open multiple collection directories and they appear together in the sidebar. Postman and Insomnia solve it differently by abandoning project-directory scoping entirely (cloud workspace, all collections flat). The design target is Bruno parity as the floor (multi-directory sidebar) plus Reqly's agent-native layer on top (per-project MCP scoping, cross-project flows). No other tool has the full picture: local-first + git-native + multi-project + MCP server.
+
+**Current workaround for microservices developers:** use `reqly use <path>` for instant project switching, and point multiple projects at a shared `.env` file via `set_dotenv_files` to share secrets across services without switching. Agents can also coordinate across projects by holding extracted values in their context window and calling `switch-project` between steps.
+
+**Goal:** add multiple project roots to one Reqly instance. Sidebar shows all projects grouped by name (project → collections → requests). Each project retains its own environment context, history, and flows. No cross-project request chaining - environment variables are the bridge. The MCP stdio transport stays per-project (already correct).
+
+- [ ] **Workspace model** - `reqly workspace add <path>` registers a project root. `reqly workspace list` shows all registered roots. The UI sidebar gets a project-level grouping layer above collections. Switching the "active project" (for MCP stdio sessions and the mock server) still uses the existing `switch-project` mechanism - workspace is a UI concept, not an engine change.
+- [ ] **Per-project environment context** - when multiple projects are loaded, each project's requests resolve variables against that project's own environments. No cross-contamination.
+- [ ] **Unified history** - the history panel shows requests across all workspace projects, tagged with the project name.
+- [ ] **Cross-project flows** - a flow step can reference `project/collection/request` instead of just `collection/request`. The flow runner switches project context per step. This is the only cross-project feature worth building - agents can write e2e flows spanning a full microservices stack.
+
+---
+
 ## Later: Team Secrets Layer
 
-**Why not M4:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). A secrets layer syncs those across teammates' machines. This is a harder product (encryption at rest, access controls, SOC 2 territory) and a real paid tier - but only worth building once the core tool has users. Not "cloud sync of collections" - that's redundant with git.
+**Why post-launch:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). A secrets layer solves that.
 
-- [ ] **Team Secrets Vault** - Sync auth profiles and environment variable secret values across a team. Encrypted at rest. Access-controlled per team member. First true cloud infrastructure Reqly needs.
+**V1 approach - integrate with existing secret managers, no custom cloud:** Build on tools teams already have rather than building a full vault from scratch. This is 4-6 weeks of integration work vs 3-6 months of cloud infrastructure. Custom vault comes later once there's revenue to justify it.
+
+- [ ] **1Password integration** - read secret values from a 1Password vault via the 1Password SDK (`@1password/sdk`). Developers reference `{{op://vault/item/field}}` in collection variables. Reqly resolves it at request time. MCP tool `get_secret` returns the resolved value. Zero custom cloud required.
+- [ ] **HashiCorp Vault / AWS Secrets Manager integration** - same pattern for enterprise teams. Read-only access, key referenced in collection YAML, resolved at request time. Priority driven by user demand.
+- [ ] **Team Secrets Vault (V2)** - Reqly-hosted encrypted vault for teams who don't have a dedicated secret manager. Encrypted at rest, access-controlled per team member. First true cloud infrastructure Reqly builds. Gated on having a paid user base to justify the infrastructure cost.
+
+---
+
+## Later: VS Code Extension
+
+**Why post-M5:** Cursor (the primary Reqly user's tool) is VS Code-compatible, so this extension reaches them automatically. But it's a polish milestone - it doesn't unlock new capability, it just surfaces existing capability natively inside the editor. Worth building once there are users to justify the extension marketplace maintenance overhead.
+
+**What makes it worth building over just using localhost:4242:** the native VS Code integrations (CodeLens, command palette, status bar, YAML validation) put Reqly exactly where the developer is writing code. Embedding the full web UI as a webview is not the goal - that's what Thunder Client does and it just feels like a browser inside VS Code.
+
+- [ ] **CodeLens provider** - detect `fetch()`, `axios()`, `got()`, and similar HTTP calls in JS/TS files. Show "Run with Reqly" inline above each call. On click: fire the matching saved request (or offer to create one) and show the response status + body inline below the line, similar to how VS Code shows test results inline.
+- [ ] **Collection tree view** - activity bar icon opens a sidebar panel with the collection tree: collection folders, requests, environments. Click a request to preview its config. Right-click context menu: Run, Duplicate, Delete. Talks to the running Reqly server at `localhost:4242` via the existing REST API.
+- [ ] **Status bar environment switcher** - persistent item in the VS Code status bar showing the active environment (e.g. "Reqly: dev"). Click to open a quick-pick dropdown and switch environment without leaving VS Code.
+- [ ] **Command palette** - register commands: `Reqly: Run request`, `Reqly: Run collection`, `Reqly: Switch environment`, `Reqly: Start proxy`, `Reqly: Open UI`. All keyboard-accessible via Cmd+Shift+P.
+- [ ] **YAML schema validation** - contribute a JSON schema for `.reqly/**/*.yaml` files. Red squiggles on wrong field names (e.g. `type:` instead of `field:` in assertions), autocomplete for operators and step types, hover documentation on each field.
+- [ ] **Marketplace publication** - publish to VS Code Marketplace as `reqly.reqly`. Works in Cursor, Windsurf, and any VS Code-compatible editor automatically.
 
 ---
 

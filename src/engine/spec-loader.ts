@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import SwaggerParser from 'swagger-parser';
+import chokidar, { FSWatcher } from 'chokidar';
 
 // Loads and dereferences OpenAPI 3.0 / Swagger 2.0 specs from a local file path
 // or a remote URL, caching the result in memory keyed by the source. Local
@@ -7,7 +8,7 @@ import SwaggerParser from 'swagger-parser';
 // reload() is called.
 export class SpecLoader {
   private cache: Map<string, any> = new Map();
-  private watchers: Map<string, fs.FSWatcher> = new Map();
+  private watchers: Map<string, FSWatcher> = new Map();
 
   async load(source: string): Promise<any> {
     const cached = this.cache.get(source);
@@ -32,7 +33,7 @@ export class SpecLoader {
   watch(source: string, onChange?: () => void): void {
     if (this.watchers.has(source)) return;
     if (!isLocalPath(source) || !fs.existsSync(source)) return;
-    const watcher = fs.watch(source, () => {
+    const watcher = chokidar.watch(source, { persistent: false }).on('change', () => {
       this.reload(source).then(() => onChange?.()).catch(() => {});
     });
     this.watchers.set(source, watcher);

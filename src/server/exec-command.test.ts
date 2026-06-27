@@ -45,6 +45,7 @@ describe('handleExecCommand', () => {
     expect(cmd).toBe('npm');
     expect(cmdArgs).toEqual(['run', 'dev']);
     expect(opts.stdio).toBe('inherit');
+    expect(opts.shell).toBe(true);
     expect(opts.env.HTTP_PROXY).toBe('http://localhost:8888');
     expect(opts.env.HTTPS_PROXY).toBe('http://localhost:8888');
 
@@ -65,6 +66,26 @@ describe('handleExecCommand', () => {
     expect(proxyServer.start).toHaveBeenCalledWith({ port: 8080, collectionName: 'Captured' });
     child.emit('exit', 0);
     await promise;
+  });
+
+  it('always uses shell:true regardless of platform (no hardcoded Unix shell string)', async () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+      const child = fakeChild();
+      spawnMock.mockReturnValue(child);
+      const proxyServer: any = { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined), capturedRequests: [] };
+
+      const promise = handleExecCommand(buildParsed(['npm', 'run', 'dev']), proxyServer);
+      await vi.waitFor(() => expect(spawnMock).toHaveBeenCalled());
+      const [, , opts] = spawnMock.mock.calls[0];
+      expect(opts.shell).toBe(true);
+
+      child.emit('exit', 0);
+      await promise;
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    }
   });
 
   it('propagates the child process exit code', async () => {

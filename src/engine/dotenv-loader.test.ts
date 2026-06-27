@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -88,5 +88,28 @@ describe('DotEnvLoader', () => {
   it('getFiles returns the current active file list', () => {
     const loader = new DotEnvLoader(tmpDir, ['.env', '.env.local']);
     expect(loader.getFiles()).toEqual(['.env', '.env.local']);
+  });
+
+  it('watch() picks up file changes via chokidar and reloads', async () => {
+    const envPath = path.join(tmpDir, '.env');
+    fs.writeFileSync(envPath, 'TOKEN=old\n');
+    const loader = new DotEnvLoader(tmpDir, ['.env']);
+    await loader.load();
+
+    let changeCount = 0;
+    loader.watch(() => { changeCount++; });
+
+    try {
+      await vi.waitFor(() => {
+        fs.writeFileSync(envPath, 'TOKEN=new\n');
+        if (changeCount === 0) throw new Error('not yet');
+      }, { timeout: 5000, interval: 100 });
+
+      await vi.waitFor(() => {
+        if (loader.getVariablesRecord().TOKEN !== 'new') throw new Error('not yet');
+      }, { timeout: 2000, interval: 50 });
+    } finally {
+      loader.stopWatching();
+    }
   });
 });

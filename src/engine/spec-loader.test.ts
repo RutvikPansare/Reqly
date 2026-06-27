@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -79,5 +79,36 @@ describe('SpecLoader', () => {
     expect(loader.get(specPath)).toBeUndefined();
     await loader.load(specPath);
     expect(loader.get(specPath)?.paths['/users/{id}'].get.operationId).toBe('getUser');
+  });
+
+  it('watch() picks up file changes via chokidar and reloads the spec', async () => {
+    const specPath = path.join(tmpDir, 'openapi.json');
+    fs.writeFileSync(specPath, JSON.stringify(SPEC_V3));
+    await loader.load(specPath);
+
+    let changeCount = 0;
+    loader.watch(specPath, () => { changeCount++; });
+
+    try {
+      await vi.waitFor(() => {
+        const updated = JSON.parse(JSON.stringify(SPEC_V3));
+        updated.paths['/users/{id}'].get.operationId = 'watchedUser';
+        fs.writeFileSync(specPath, JSON.stringify(updated));
+        if (changeCount === 0) throw new Error('not yet');
+      }, { timeout: 5000, interval: 100 });
+
+      await vi.waitFor(() => {
+        if (loader.get(specPath)?.paths['/users/{id}'].get.operationId !== 'watchedUser') {
+          throw new Error('not yet');
+        }
+      }, { timeout: 2000, interval: 50 });
+    } finally {
+      loader.stopWatching(specPath);
+    }
+  });
+
+  it('watch() is a no-op for a non-existent file', () => {
+    loader.watch(path.join(tmpDir, 'missing.json'));
+    // No error thrown, no watcher registered
   });
 });

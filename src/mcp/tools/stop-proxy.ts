@@ -1,4 +1,5 @@
 import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
+import { killProcessTree } from '../../engine/process-utils.js';
 
 export const definition: ToolDefinition = {
   name: 'stop_proxy',
@@ -14,15 +15,7 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
     await context.proxyServer.stop();
 
     if (context.execChildPid) {
-      try {
-        process.kill(-context.execChildPid);
-      } catch {
-        try {
-          process.kill(context.execChildPid);
-        } catch {
-          // process already gone
-        }
-      }
+      killProcessTree(context.execChildPid);
       context.execChildPid = undefined;
     }
 

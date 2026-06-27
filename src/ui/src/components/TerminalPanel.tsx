@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { Trash2, Square, Plus, X } from 'lucide-react';
 
-const HISTORY_LIMIT = 50;
+const RECONNECT_MAX_DELAY = 5000;
 
 interface TerminalSessionProps {
   active: boolean;
@@ -12,69 +13,126 @@ interface TerminalSessionProps {
 function TerminalSession({ active }: TerminalSessionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const historyRef = useRef<string[]>([]);
-  const historyIndexRef = useRef<number>(-1);
 
-  const [command, setCommand] = useState('');
-  const [running, setRunning] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const term = new XTerm({
-      theme: { background: '#0f0f0f', foreground: '#e8e8e6' },
+      theme: {
+        background: '#0a0a0a',
+        foreground: '#d4d4d4',
+        cursor: '#60a5fa',
+        selectionBackground: 'rgba(96,165,250,0.25)',
+        black: '#0a0a0a',
+        red: '#f87171',
+        green: '#4ade80',
+        yellow: '#fbbf24',
+        blue: '#60a5fa',
+        magenta: '#c084fc',
+        cyan: '#22d3ee',
+        white: '#e5e5e5',
+      },
       fontSize: 13,
-      cursorBlink: false,
-      disableStdin: true,
-      convertEol: true,
+      fontFamily: "'SF Mono', 'Menlo', 'Consolas', monospace",
+      lineHeight: 1.4,
+      cursorBlink: true,
+      disableStdin: false,
+      convertEol: false,
+      scrollback: 5000,
     });
+    const fitAddon = new FitAddon();
+    fitAddonRef.current = fitAddon;
+    term.loadAddon(fitAddon);
     term.open(containerRef.current);
+    fitAddon.fit();
     termRef.current = term;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/terminal`);
-    wsRef.current = ws;
-
-    ws.onopen = () => setConnected(true);
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'stdout' || msg.type === 'stderr') {
-        term.write(msg.data);
-      } else if (msg.type === 'exit') {
-        term.write(`\r\n\x1b[90m[exited with code ${msg.code}${msg.signal ? ` (${msg.signal})` : ''}]\x1b[0m\r\n`);
-        setRunning(false);
-      } else if (msg.type === 'error') {
-        term.write(`\r\n\x1b[31m[error] ${msg.message}\x1b[0m\r\n`);
+    const sendResize = () => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
       }
     };
 
-    ws.onclose = () => {
-      setConnected(false);
-      setRunning(false);
-      term.write('\r\n\x1b[33m[disconnected - reload to reconnect]\x1b[0m\r\n');
+    const resizeObserver = new ResizeObserver(() => {
+      fitAddon.fit();
+      sendResize();
+    });
+    resizeObserver.observe(containerRef.current);
+
+    // Keystrokes go straight to the PTY - the shell itself echoes input and
+    // renders its own prompt, so the terminal behaves like a real one.
+    const dataSub = term.onData((data) => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'input', data }));
+    });
+
+    let destroyed = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempt = 0;
+
+    const connect = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/terminal`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        const wasReconnect = attempt > 0;
+        attempt = 0;
+        setConnected(true);
+        setRunning(true);
+        if (wasReconnect) term.write('\r\n\x1b[32m[reconnected]\x1b[0m\r\n');
+        sendResize();
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'data') {
+          term.write(msg.data);
+        } else if (msg.type === 'exit') {
+          term.write(`\r\n\x1b[90m[shell exited${msg.signal ? ` (${msg.signal})` : ` with code ${msg.code}`}]\x1b[0m\r\n`);
+          setRunning(false);
+        } else if (msg.type === 'error') {
+          term.write(`\r\n\x1b[31m[error] ${msg.message}\x1b[0m\r\n`);
+        }
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        setRunning(false);
+        if (destroyed) return;
+        attempt += 1;
+        term.write('\r\n\x1b[33m[disconnected - reconnecting...]\x1b[0m\r\n');
+        const delay = Math.min(RECONNECT_MAX_DELAY, 500 * attempt);
+        reconnectTimer = setTimeout(connect, delay);
+      };
     };
 
+    connect();
+
     return () => {
-      ws.close();
+      destroyed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      resizeObserver.disconnect();
+      dataSub.dispose();
+      wsRef.current?.close();
       term.dispose();
     };
   }, []);
 
-  const runCommand = () => {
-    const cmd = command.trim();
-    if (!cmd || running || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-
-    termRef.current?.write(`\x1b[36m$ ${cmd}\x1b[0m\r\n`);
-    wsRef.current.send(JSON.stringify({ type: 'run', command: cmd }));
-    setRunning(true);
-
-    historyRef.current = [cmd, ...historyRef.current].slice(0, HISTORY_LIMIT);
-    historyIndexRef.current = -1;
-    setCommand('');
-  };
+  useEffect(() => {
+    if (active) {
+      requestAnimationFrame(() => {
+        fitAddonRef.current?.fit();
+        termRef.current?.focus();
+      });
+    }
+  }, [active]);
 
   const handleKill = () => {
     wsRef.current?.send(JSON.stringify({ type: 'kill' }));
@@ -84,53 +142,33 @@ function TerminalSession({ active }: TerminalSessionProps) {
     termRef.current?.clear();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      runCommand();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const next = Math.min(historyIndexRef.current + 1, historyRef.current.length - 1);
-      if (next >= 0) {
-        historyIndexRef.current = next;
-        setCommand(historyRef.current[next]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      const next = historyIndexRef.current - 1;
-      historyIndexRef.current = next;
-      setCommand(next >= 0 ? historyRef.current[next] : '');
-    }
-  };
-
   return (
-    <div className="flex flex-col h-full" style={{ background: '#0f0f0f', display: active ? 'flex' : 'none' }}>
-      <div ref={containerRef} className="flex-1 overflow-hidden p-2 min-h-0" />
+    <div className="flex flex-col h-full" style={{ background: '#0a0a0a', display: active ? 'flex' : 'none' }}>
+      <div ref={containerRef} className="flex-1 overflow-hidden p-3 min-h-0" onClick={() => termRef.current?.focus()} />
 
-      <div className="shrink-0 flex items-center px-3 gap-2" style={{ height: 36, borderTop: '1px solid var(--border)', background: 'var(--surface-1)' }}>
-        <span className="text-sm font-mono" style={{ color: 'var(--text-muted)' }}>$</span>
-        <input
-          autoFocus={active}
-          value={command}
-          onChange={e => setCommand(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={running || !connected}
-          placeholder={running ? 'Running...' : !connected ? 'Disconnected — reload to reconnect' : 'Run a command...'}
-          className="flex-1 bg-transparent outline-none text-sm font-mono"
-          style={{ color: 'var(--text-primary)' }}
+      <div className="shrink-0 flex items-center px-3 gap-2" style={{ height: 32, borderTop: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+        <span
+          className="shrink-0 rounded-full"
+          style={{ width: 6, height: 6, background: connected ? '#4ade80' : '#f59e0b' }}
+          title={connected ? 'Connected' : 'Reconnecting…'}
         />
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          {connected ? 'bash/zsh - click terminal to type' : 'Reconnecting…'}
+        </span>
+        <div className="flex-1" />
         {running && (
           <button
             onClick={handleKill}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors"
             style={{ color: '#f87171', background: 'var(--surface-3)' }}
-            title="Kill running command"
+            title="Send Ctrl+C"
           >
-            <Square size={12} /> Kill
+            <Square size={12} /> Ctrl+C
           </button>
         )}
         <button
           onClick={handleClear}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors"
           style={{ color: 'var(--text-muted)' }}
           title="Clear terminal"
         >
@@ -173,27 +211,27 @@ export function TerminalSessionsPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0" style={{ background: '#0f0f0f' }}>
+    <div className="flex-1 flex flex-col h-full min-h-0 min-w-0" style={{ background: '#0a0a0a' }}>
       <div className="flex items-center shrink-0 px-2 gap-1" style={{ height: 34, borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
         {sessions.map(s => (
           <div
             key={s.id}
             onClick={() => setActiveId(s.id)}
-            className="flex items-center gap-1.5 cursor-pointer rounded-t"
+            className="flex items-center gap-1.5 cursor-pointer rounded-md transition-colors"
             style={{
               height: 26,
-              padding: '0 8px',
+              padding: '0 6px 0 10px',
               fontSize: '11px',
+              fontWeight: s.id === activeId ? 500 : 400,
               color: s.id === activeId ? 'var(--text-primary)' : 'var(--text-muted)',
               background: s.id === activeId ? 'var(--surface-0)' : 'transparent',
               border: s.id === activeId ? '1px solid var(--border)' : '1px solid transparent',
-              borderBottom: 'none',
             }}
           >
             {s.name}
             <button
               onClick={e => { e.stopPropagation(); closeSession(s.id); }}
-              className="flex items-center justify-center rounded transition-colors"
+              className="flex items-center justify-center rounded-sm transition-colors"
               style={{ color: 'var(--text-muted)', width: 14, height: 14 }}
               title="Close session"
             >
@@ -203,7 +241,7 @@ export function TerminalSessionsPanel() {
         ))}
         <button
           onClick={addSession}
-          className="flex items-center justify-center rounded transition-colors"
+          className="flex items-center justify-center rounded-md transition-colors"
           style={{ color: 'var(--text-muted)', width: 22, height: 22 }}
           title="New terminal session"
         >

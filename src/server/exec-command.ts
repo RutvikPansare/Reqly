@@ -17,7 +17,8 @@ export async function handleExecCommand(parsed: ParsedArgs, proxyServer: ProxySe
 
   const child = spawn(command, commandArgs, {
     env: { ...process.env, HTTP_PROXY: `http://localhost:${port}`, HTTPS_PROXY: `http://localhost:${port}` },
-    stdio: 'inherit'
+    stdio: 'inherit',
+    shell: true
   });
 
   const forwardSigint = () => {

@@ -23,8 +23,15 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
   const geminiConfigPath = path.join(os.homedir(), '.gemini', 'config', 'mcp.json');
   const codexConfigPath = path.join(os.homedir(), '.codex', 'config.toml');
   const claudeDesktopConfigPathMac = path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
-  const claudeDesktopConfigPathWin = path.join(process.env.APPDATA || '', 'Claude', 'claude_desktop_config.json');
-  const claudeDesktopConfigPath = process.platform === 'win32' ? claudeDesktopConfigPathWin : claudeDesktopConfigPathMac;
+  const getClaudeDesktopConfigPath = () => {
+    if (process.platform !== 'win32') return claudeDesktopConfigPathMac;
+    if (!process.env.APPDATA) {
+      throw new Error(
+        'APPDATA environment variable is not set. Cannot determine the Claude Desktop config path on Windows.'
+      );
+    }
+    return path.join(process.env.APPDATA, 'Claude', 'claude_desktop_config.json');
+  };
 
   const setupJsonMcp = async (configPath: string, name: string, args: string[] = mcpArgs) => {
     try {
@@ -43,6 +50,17 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
     } catch (e: any) {
       console.error(`❌ Failed to configure ${name}:`, e.message);
     }
+  };
+
+  const setupClaudeDesktop = async () => {
+    let configPath: string;
+    try {
+      configPath = getClaudeDesktopConfigPath();
+    } catch (e: any) {
+      console.error('❌ Failed to configure Claude Desktop:', e.message);
+      return;
+    }
+    await setupJsonMcp(configPath, 'Claude Desktop', desktopMcpArgs);
   };
 
   const printDesktopUseHint = () => {
@@ -85,7 +103,7 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
   if (target === 'cursor') {
     await setupJsonMcp(cursorConfigPath, 'Cursor');
   } else if (target === 'claude') {
-    await setupJsonMcp(claudeDesktopConfigPath, 'Claude Desktop', desktopMcpArgs);
+    await setupClaudeDesktop();
     printDesktopUseHint();
   } else if (target === 'gemini') {
     await setupJsonMcp(geminiConfigPath, 'Gemini');
@@ -96,7 +114,7 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
   } else {
     // All
     await setupJsonMcp(cursorConfigPath, 'Cursor');
-    await setupJsonMcp(claudeDesktopConfigPath, 'Claude Desktop', desktopMcpArgs);
+    await setupClaudeDesktop();
     printDesktopUseHint();
     await setupJsonMcp(geminiConfigPath, 'Gemini');
     await setupCodex();
