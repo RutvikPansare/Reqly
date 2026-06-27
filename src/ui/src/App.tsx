@@ -351,7 +351,7 @@ function App() {
                 className="w-1.5 h-1.5 rounded-full shrink-0"
                 style={{ background: headerActiveEnv ? '#4ade80' : 'var(--border-strong)' }}
               />
-              <span className="max-w-28 truncate">{headerActiveEnv || 'No env'}</span>
+              <span className="max-w-28 truncate font-mono" style={{ fontSize: '0.8rem', color: headerActiveEnv ? 'var(--text-primary)' : 'var(--text-muted)' }}>{headerActiveEnv || 'No env'}</span>
               <ChevronDown size={12} style={{ transform: headerEnvOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
             </button>
             {headerEnvOpen && (

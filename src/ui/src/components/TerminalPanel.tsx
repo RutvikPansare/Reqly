@@ -130,10 +130,13 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
           } else {
             // Existing session re-attached.
             if (!hasReplayedRef.current && msg.replay) {
-              // Reset before replay so the % partial-line marker from zsh's
-              // startup doesn't appear stranded at the top of the viewport.
               term.reset();
-              term.write(msg.replay);
+              // Strip zsh's PROMPT_SP sequence from the replay buffer start.
+              // PROMPT_SP = '%' + spaces + '\r' - renders as an invisible line
+              // fill on a live terminal but leaves a stray '%' when replayed
+              // into a fresh xterm at position 0,0.
+              const cleaned = msg.replay.replace(/^%[^\r]*\r/, '');
+              term.write(cleaned);
             } else if (wasReconnect) {
               term.write('\r\n\x1b[32m[reconnected]\x1b[0m\r\n');
             }

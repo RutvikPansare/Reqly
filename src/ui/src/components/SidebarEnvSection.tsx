@@ -68,7 +68,7 @@ export function SidebarEnvSection() {
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: isActive ? '#4ade80' : 'var(--border-strong)' }}
                 />
-                <span className="truncate flex-1">{env.name}</span>
+                <span className="truncate flex-1 font-mono" style={{ fontSize: '0.8rem' }}>{env.name}</span>
                 {isActive && (
                   <span className="text-[10px] font-medium shrink-0" style={{ color: '#4ade80' }}>active</span>
                 )}

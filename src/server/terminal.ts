@@ -135,7 +135,10 @@ export function attachTerminal(server: Server, getProjectRoot: () => string): We
           const sid    = sessionId;
 
           ptyProcess.onData((data) => {
-            sess.buffer = trimBuffer(sess.buffer + data);
+            const raw = sess.buffer + data;
+            // Strip zsh PROMPT_SP ('%' + spaces + '\r') from the very start of
+            // the accumulated buffer so it is never replayed to re-attaching clients.
+            sess.buffer = trimBuffer(raw.replace(/^%[^\r]*\r/, ''));
             for (const client of sess.clients) {
               if (client.readyState === WebSocket.OPEN)
                 client.send(JSON.stringify({ type: 'data', data }));
