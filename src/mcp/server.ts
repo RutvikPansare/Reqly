@@ -48,6 +48,8 @@ import * as runFlow from './tools/run-flow.js';
 import * as startMock from './tools/start-mock.js';
 import * as stopMock from './tools/stop-mock.js';
 import * as getMockStatus from './tools/get-mock-status.js';
+import * as setDotenvFiles from './tools/set-dotenv-files.js';
+import * as getDotenvFiles from './tools/get-dotenv-files.js';
 
 const tools = [
   runRequest,
@@ -92,6 +94,8 @@ const tools = [
   startMock,
   stopMock,
   getMockStatus,
+  setDotenvFiles,
+  getDotenvFiles,
 ];
 
 import { z } from 'zod';

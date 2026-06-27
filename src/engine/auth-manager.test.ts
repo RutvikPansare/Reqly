@@ -83,6 +83,15 @@ describe('AuthManager', () => {
     expect(await manager.listProfiles()).toHaveLength(1);
   });
 
+  it('defaults to [".env"] when dotenv files were never set', async () => {
+    expect(await manager.getDotenvFiles()).toEqual(['.env']);
+  });
+
+  it('sets and gets the dotenv file list', async () => {
+    await manager.setDotenvFiles(['.env', '.env.local']);
+    expect(await manager.getDotenvFiles()).toEqual(['.env', '.env.local']);
+  });
+
   describe('OAuth2', () => {
     it('should create an oauth2 profile with all credential fields', async () => {
       const profile = await manager.createProfile({

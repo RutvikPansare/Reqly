@@ -6,6 +6,8 @@ import { execute as executeRequest } from '../engine/http-executor.js';
 import { runAssertions } from '../engine/assertion-runner.js';
 import { CollectionRunner } from '../engine/collection-runner.js';
 import { FlowManager } from '../engine/flow-manager.js';
+import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import * as path from 'path';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
 import { ResponseStore } from '../engine/response-store.js';
@@ -24,6 +26,12 @@ export async function handleRunCommand(
     console.error('Error: Collection name is required for "reqly run"');
     return 1;
   }
+
+  const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
+  // .reqly/ is a subfolder of the project root - .env files live one level up.
+  const dotEnvLoader = new DotEnvLoader(path.dirname(collectionManager.getBaseDir()), dotenvFiles);
+  await dotEnvLoader.load();
+  const dotEnvVars = dotEnvLoader.getVariablesRecord();
 
   // Load environment
   let env = await environmentManager.getActiveEnvironment();
@@ -44,7 +52,7 @@ export async function handleRunCommand(
         auth = await authManager.getProfile(req.authProfileId);
       }
 
-      const res = await executeRequest(req, env || undefined, auth);
+      const res = await executeRequest(req, env || undefined, auth, undefined, undefined, undefined, undefined, dotEnvVars);
       let assertionsResult: AssertionResult[] | undefined = undefined;
       let passed = true;
 
@@ -110,7 +118,9 @@ export async function handleRunCommand(
         responseStore,
         historyStore,
         flowManager: new FlowManager(collectionManager.getBaseDir()),
-        executeRequest
+        dotEnvLoader,
+        executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
+          executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars)
       };
 
       const runner = new CollectionRunner(context);

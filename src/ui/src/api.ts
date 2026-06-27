@@ -397,3 +397,19 @@ export async function runFlow(name: string, dataRow?: Record<string, string>) {
   if (!res.ok) throw new Error('Failed to run flow');
   return res.json();
 }
+
+export async function fetchDotenvFiles(): Promise<{ files: string[]; variables: { key: string; source: string }[] }> {
+  const res = await fetch('/api/dotenv');
+  if (!res.ok) throw new Error('Failed to fetch dotenv files');
+  return res.json();
+}
+
+export async function updateDotenvFiles(files: string[]) {
+  const res = await fetch('/api/dotenv', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files }),
+  });
+  if (!res.ok) throw new Error('Failed to update dotenv files');
+  return res.json();
+}

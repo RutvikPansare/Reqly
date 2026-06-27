@@ -14,6 +14,7 @@ export class AuthProfileNotFoundError extends Error {
 interface ConfigFile {
   authProfiles?: AuthProfile[];
   activeProject?: string;
+  dotenvFiles?: string[];
   [key: string]: any;
 }
 
@@ -106,6 +107,17 @@ export class AuthManager {
   async setActiveProject(projectDir: string): Promise<void> {
     const config = await this.loadConfig();
     config.activeProject = projectDir;
+    await this.saveConfig(config);
+  }
+
+  async getDotenvFiles(): Promise<string[]> {
+    const config = await this.loadConfig();
+    return config.dotenvFiles || ['.env'];
+  }
+
+  async setDotenvFiles(files: string[]): Promise<void> {
+    const config = await this.loadConfig();
+    config.dotenvFiles = files;
     await this.saveConfig(config);
   }
 

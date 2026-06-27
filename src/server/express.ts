@@ -10,6 +10,7 @@ import { EngineContext } from '../mcp/tools/types.js';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
+import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { writeLock, readLock } from './lock.js';
 import { fileURLToPath } from 'url';
 import { parseCurl } from '../engine/curl-parser.js';
@@ -659,6 +660,12 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       context.environmentManager = new EnvironmentManager(environmentsPath);
       context.flowManager = new FlowManager(collectionsDir);
 
+      context.dotEnvLoader.stopWatching();
+      const dotenvFiles = await context.authManager.getDotenvFiles();
+      context.dotEnvLoader = new DotEnvLoader(projectDir, dotenvFiles);
+      await context.dotEnvLoader.load();
+      context.dotEnvLoader.watch();
+
       const lock = await readLock();
       await writeLock(projectDir, lock?.port || port);
 
@@ -851,6 +858,28 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
   app.get('/api/mock/status', (_req, res) => {
     res.json(context.mockServer!.getStatus());
+  });
+
+  app.get('/api/dotenv', (_req, res) => {
+    res.json({
+      files: context.dotEnvLoader.getFiles(),
+      variables: context.dotEnvLoader.getVariables().map(v => ({ key: v.key, source: v.source })),
+    });
+  });
+
+  app.put('/api/dotenv', async (req, res) => {
+    try {
+      const files: string[] = req.body.files || [];
+      await context.authManager.setDotenvFiles(files);
+      context.dotEnvLoader.setFiles(files);
+      await context.dotEnvLoader.load();
+      res.json({
+        files: context.dotEnvLoader.getFiles(),
+        variables: context.dotEnvLoader.getVariables().map(v => ({ key: v.key, source: v.source })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.post('/api/codegen', async (req, res) => {

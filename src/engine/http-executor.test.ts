@@ -227,6 +227,22 @@ describe('http-executor', () => {
       await execute(config, env, undefined, true, 50 * 1024, { host: 'collection.example.com' });
       expect(fetch).toHaveBeenCalledWith('https://collection.example.com/users', expect.anything());
     });
+
+    it('falls back to dotenv variables when neither collection nor env define the key', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'https://{{host}}/{{key}}' };
+      const env: Environment = { id: '1', name: 'dev', variables: { host: 'env.example.com' } };
+      await execute(config, env, undefined, true, 50 * 1024, {}, undefined, { key: 'from-dotenv' });
+      expect(fetch).toHaveBeenCalledWith('https://env.example.com/from-dotenv', expect.anything());
+    });
+
+    it('collection and env variables both win over dotenv on collision', async () => {
+      mockOkResponse();
+      const config: RequestConfig = { method: 'GET', url: 'https://{{host}}/ping' };
+      const env: Environment = { id: '1', name: 'dev', variables: { host: 'env.example.com' } };
+      await execute(config, env, undefined, true, 50 * 1024, {}, undefined, { host: 'dotenv.example.com' });
+      expect(fetch).toHaveBeenCalledWith('https://env.example.com/ping', expect.anything());
+    });
   });
 
   describe('collection auth precedence', () => {

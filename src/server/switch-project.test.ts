@@ -11,6 +11,7 @@ import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
+import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { LOCK_PATH, writeLock, readLock, clearLock } from './lock.js';
 
 function buildContext(projectDir: string): EngineContext {
@@ -24,6 +25,7 @@ function buildContext(projectDir: string): EngineContext {
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
     flowManager: new FlowManager(projectDir),
+    dotEnvLoader: new DotEnvLoader(projectDir),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),
   };
 }
@@ -59,5 +61,19 @@ describe('POST /api/switch-project', () => {
 
     const lock = await readLock();
     expect(lock!.projectDir).toBe('/tmp/reqly-test-new');
+  });
+
+  it('re-points dotEnvLoader to the new project dir and reloads it', async () => {
+    fs.mkdirSync('/tmp/reqly-test-new', { recursive: true });
+    fs.writeFileSync('/tmp/reqly-test-new/.env', 'FOO=fromNewProject\n');
+    const oldDotEnvLoader = context.dotEnvLoader;
+
+    const res = await request(server).post('/api/switch-project').send({ projectDir: '/tmp/reqly-test-new' });
+
+    expect(res.status).toBe(200);
+    expect(context.dotEnvLoader).not.toBe(oldDotEnvLoader);
+    expect(context.dotEnvLoader.getVariablesRecord()).toEqual({ FOO: 'fromNewProject' });
+
+    fs.rmSync('/tmp/reqly-test-new', { recursive: true, force: true });
   });
 });

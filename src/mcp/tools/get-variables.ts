@@ -23,8 +23,9 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
       }
     }
     
-    const vars = Object.entries(env.variables).map(([key, value]) => ({ key, value }));
-    return { content: [{ type: 'text', text: JSON.stringify(vars) }] };
+    const vars = Object.entries(env.variables).map(([key, value]) => ({ key, value, source: env.name }));
+    const dotenvVars = (context.dotEnvLoader?.getVariables() || []).map(v => ({ key: v.key, value: v.value, source: v.source }));
+    return { content: [{ type: 'text', text: JSON.stringify([...vars, ...dotenvVars]) }] };
   } catch (e: any) {
     return { content: [{ type: 'text', text: e.message }], isError: true };
   }

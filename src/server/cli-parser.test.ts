@@ -68,6 +68,16 @@ describe('cli-parser', () => {
     expect(parsed.flags.reporter).toBe('json');
   });
 
+  it('collects repeated --env-file flags into an ordered array', () => {
+    const parsed = parseArgs(['node', 'script.js', 'start', '--env-file', '.env', '--env-file', '.env.local']);
+    expect(parsed.flags.envFiles).toEqual(['.env', '.env.local']);
+  });
+
+  it('leaves envFiles undefined when --env-file is not passed', () => {
+    const parsed = parseArgs(['node', 'script.js', 'start']);
+    expect(parsed.flags.envFiles).toBeUndefined();
+  });
+
   it('parses flags before and after command', () => {
     const parsed = parseArgs(['node', 'script.js', '--env', 'production', 'run', 'myCol', '--reporter', 'json', '--project-dir', '/tmp']);
     expect(parsed.command).toBe('run');

@@ -11,6 +11,7 @@ import { ResponseStore } from '../../engine/response-store.js';
 import { HistoryStore } from '../../engine/history-store.js';
 import { TunnelManager } from '../../engine/tunnel-manager.js';
 import { FlowManager } from '../../engine/flow-manager.js';
+import { DotEnvLoader } from '../../engine/dotenv-loader.js';
 import { EngineContext } from './types.js';
 
 function makeContext(collectionManager: CollectionManager): EngineContext {
@@ -23,6 +24,7 @@ function makeContext(collectionManager: CollectionManager): EngineContext {
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
     flowManager: new FlowManager(collectionManager.getBaseDir()),
+    dotEnvLoader: new DotEnvLoader(collectionManager.getBaseDir()),
     executeRequest: async () => ({ status: 200, body: '', headers: {}, latency: 0, timestamp: new Date().toISOString() }),
   };
 }

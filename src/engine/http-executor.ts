@@ -19,11 +19,12 @@ export async function execute(
   truncate: boolean = true,
   maxBodyBytes: number = 50 * 1024,
   collectionVars: Record<string, string> = {},
-  collectionAuth?: AuthProfile
+  collectionAuth?: AuthProfile,
+  dotEnvVars: Record<string, string> = {}
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
-  // Layered scope chain: collection vars win over env vars on collision.
-  const layers = [collectionVars, envVars];
+  // Layered scope chain: collection vars > env vars > .env-file vars.
+  const layers = [collectionVars, envVars, dotEnvVars];
   const consoleLogs: string[] = [];
 
   // Run preScript before substitution so env mutations are picked up.

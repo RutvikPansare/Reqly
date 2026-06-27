@@ -14,6 +14,7 @@ function makeContext(overrides: Partial<EngineContext> = {}): EngineContext {
     responseStore: {} as any,
     historyStore: {} as any,
     flowManager: {} as any,
+    dotEnvLoader: {} as any,
     mockServer: {
       start: vi.fn().mockResolvedValue(undefined),
       stop: vi.fn().mockResolvedValue(undefined),

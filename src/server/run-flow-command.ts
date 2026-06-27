@@ -5,6 +5,8 @@ import { AuthManager } from '../engine/auth-manager.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { FlowRunner } from '../engine/flow-runner.js';
+import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import * as path from 'path';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
 import { ResponseStore } from '../engine/response-store.js';
@@ -79,6 +81,12 @@ export async function handleRunFlowCommand(
     const flowManager = new FlowManager(collectionManager.getBaseDir());
     const flow = await flowManager.getFlow(flowName);
 
+    const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
+    // .reqly/ is a subfolder of the project root - .env files live one level up.
+    const dotEnvLoader = new DotEnvLoader(path.dirname(collectionManager.getBaseDir()), dotenvFiles);
+    await dotEnvLoader.load();
+    const dotEnvVars = dotEnvLoader.getVariablesRecord();
+
     const responseStore = new ResponseStore();
     const historyStore = new HistoryStore();
     const proxyServer = new ProxyServer(collectionManager);
@@ -93,7 +101,9 @@ export async function handleRunFlowCommand(
       responseStore,
       historyStore,
       flowManager,
-      executeRequest
+      dotEnvLoader,
+      executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
+        executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars)
     };
 
     const runner = new FlowRunner(context);

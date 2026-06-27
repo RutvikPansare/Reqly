@@ -8,6 +8,12 @@ Newest entries at the top.
 
 ## 2026-06-26
 
+**Decision:** `DotEnvLoader` resolves `.env` files relative to the project root (`cwd`/`path.dirname(collectionManager.getBaseDir())`), not `CollectionManager.getBaseDir()` as T-104's spec text literally said.
+**Why:** `getBaseDir()` returns `<project>/.reqly`, not the project root - a `.env` file lives at the project root by universal convention (and the roadmap's own "Later" entry for this feature explicitly says "a `.env` file in the project root"). Following the literal spec text would have looked for `.env` inside `.reqly/`, which no developer would ever put there. Caught before shipping by cross-checking the roadmap wording against the todo.md task text.
+
+**Decision:** The Settings panel's "Environment files" reorder control uses up/down arrow buttons instead of the spec's literal "drag-to-reorder".
+**Why:** No drag-and-drop library exists in the project yet, and order only needs to move one position at a time for the realistic case (one or two files). Arrow buttons give the same reordering capability with far less code and no new dependency; full DnD can be added later if a real need for reordering many files shows up.
+
 **Decision:** T-100's reference mockup (`docs/tasks/T-100-flows-ui-reference.html`) uses the Tabler icon webfont via a CDN `<link>`. The real implementation uses `lucide-react`'s `GitBranch` icon instead, with no new icon dependency added.
 **Why:** An earlier decision (2026-06-24) standardized the entire UI on `lucide-react` as the single icon library, specifically to avoid the kind of inconsistency a second icon system (font-based, CDN-loaded) would reintroduce. The mockup is a static visual reference for pixel-matching colors/spacing/layout, not a literal instruction to add a webfont dependency - `GitBranch` is visually equivalent to `ti-git-branch` and keeps the one-import-path rule intact.
 

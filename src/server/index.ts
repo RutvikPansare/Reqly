@@ -9,6 +9,7 @@ import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { MockServer } from '../engine/mock-server.js';
+import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -103,6 +104,12 @@ async function main() {
   const historyStore = new HistoryStore();
   const mockServer = new MockServer(collectionManager);
 
+  // --env-file overrides the persisted file list for this session only (not saved to config).
+  const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
+  const dotEnvLoader = new DotEnvLoader(cwd, dotenvFiles);
+  await dotEnvLoader.load();
+  dotEnvLoader.watch();
+
   const context: EngineContext = {
     collectionManager,
     environmentManager,
@@ -113,10 +120,13 @@ async function main() {
     historyStore,
     flowManager,
     mockServer,
+    dotEnvLoader,
     executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;
-      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth);
+      // Read context.dotEnvLoader (not the closed-over local) - switch-project
+      // reassigns it to a new instance scoped to the new project dir.
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord());
     }
   };
 

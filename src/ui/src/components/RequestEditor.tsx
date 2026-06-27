@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, ExternalLink } from 'lucide-react';
-import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables, getCollectionAuth } from '../api';
+import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables, getCollectionAuth, fetchDotenvFiles } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
@@ -36,6 +36,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
   const [activeEnvName, setActiveEnvName] = useState<string>('');
   const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
   const [collectionAuthConfig, setCollectionAuthConfig] = useState<{ type: string; profileId?: string; credentials?: Record<string, string> } | null>(null);
+  const [dotenvVars, setDotenvVars] = useState<{ key: string; source: string }[]>([]);
 
   useEffect(() => {
     const loadEnv = () => {
@@ -45,6 +46,9 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
           setActiveEnvName(active?.name || '');
           setActiveEnvVars(active?.variables || {});
         })
+        .catch(console.error);
+      fetchDotenvFiles()
+        .then((data: any) => setDotenvVars(data.variables || []))
         .catch(console.error);
     };
     loadEnv();
@@ -248,6 +252,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         sourceType: 'env',
         sourceName: activeEnvName || 'env',
         value: v,
+      })),
+    ...dotenvVars
+      .filter(v => !(v.key in collectionVars) && !(v.key in activeEnvVars))
+      .map(v => ({
+        name: v.key,
+        sourceType: 'dotenv',
+        sourceName: v.source,
+        value: '',
       })),
   ];
 
@@ -762,7 +774,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <p className="text-xs text-gray-500 mb-3">
               Variables in scope: collection variables{request?._collection ? ` (${request._collection})` : ''} take priority over the active environment{activeEnvName ? ` (${activeEnvName})` : ''} on name collisions. Edit collection variables via the collection's right-click Settings menu, environment variables in the Environments panel.
             </p>
-            {Object.keys(collectionVars).length === 0 && Object.keys(activeEnvVars).length === 0 ? (
+            {Object.keys(collectionVars).length === 0 && Object.keys(activeEnvVars).length === 0 && dotenvVars.length === 0 ? (
               <p className="text-sm text-gray-600 italic">No variables in scope.</p>
             ) : (
               <div className="border border-gray-800 rounded overflow-hidden">
@@ -785,6 +797,15 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                       <span className="text-gray-300 font-mono truncate">{`{{${k}}}`}</span>
                       <span className="text-gray-400 font-mono truncate">{String(v)}</span>
                       <span className="text-gray-500 truncate">{activeEnvName || 'env'}</span>
+                    </div>
+                  ))}
+                {dotenvVars
+                  .filter(v => collectionVars[v.key] === undefined && activeEnvVars[v.key] === undefined)
+                  .map(v => (
+                    <div key={`dotenv-${v.key}`} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
+                      <span className="text-gray-300 font-mono truncate">{`{{${v.key}}}`}</span>
+                      <span className="text-gray-600 font-mono truncate italic">hidden</span>
+                      <span className="text-gray-500 truncate">{v.source}</span>
                     </div>
                   ))}
               </div>

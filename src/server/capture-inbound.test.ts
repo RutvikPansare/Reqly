@@ -11,6 +11,7 @@ import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
+import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { LOCK_PATH } from './lock.js';
 
 const PROJECT_DIR = '/tmp/reqly-test-capture-inbound';
@@ -26,6 +27,7 @@ function buildContext(): EngineContext {
     responseStore: new ResponseStore(),
     historyStore: new HistoryStore(),
     flowManager: new FlowManager(PROJECT_DIR),
+    dotEnvLoader: new DotEnvLoader(PROJECT_DIR),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),
   };
 }
