@@ -106,6 +106,7 @@ Thumbs.db
 # UI static build
 src/ui/dist
 
-example/
+example/hoppscotch/
+example/insomnia/
 .claude/
 test-spec.yaml

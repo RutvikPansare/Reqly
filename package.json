@@ -13,6 +13,7 @@
     "packages/reqly-middleware/src/index.ts",
     "packages/reqly-middleware/src/next.ts",
     "packages/reqly-middleware/package.json",
+    "example/reqly-starter",
     "README.md",
     "llms.txt"
   ],

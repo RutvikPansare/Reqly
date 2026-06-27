@@ -1,0 +1,7 @@
+name: get-todo
+method: GET
+url: '{{baseUrl}}/todos/1'
+assertions:
+  - field: status
+    operator: eq
+    value: 200

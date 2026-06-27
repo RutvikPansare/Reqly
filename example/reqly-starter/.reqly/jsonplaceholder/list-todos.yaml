@@ -1,0 +1,9 @@
+name: list-todos
+method: GET
+url: '{{baseUrl}}/todos'
+params:
+  userId: '{{userId}}'
+assertions:
+  - field: status
+    operator: eq
+    value: 200

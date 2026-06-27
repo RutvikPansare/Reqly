@@ -162,6 +162,25 @@ export function createServer(context: EngineContext) {
     })
   );
 
+  server.registerResource(
+    'getting-started',
+    'reqly://getting-started',
+    {
+      title: 'Reqly getting started guide',
+      description: 'Patterns demonstrated by the bundled starter collection (reqly init): collection variables, postScript extraction, request chaining, and flows.',
+      mimeType: 'text/plain'
+    },
+    async (uri: URL) => ({
+      contents: [
+        {
+          uri: uri.toString(),
+          mimeType: 'text/plain',
+          text: GETTING_STARTED_GUIDE
+        }
+      ]
+    })
+  );
+
   return server;
 }
 
@@ -207,6 +226,12 @@ PROACTIVE SUGGESTIONS
 - User asks "what can Reqly do?" → list REQLY FEATURES above
 - User wants to test endpoints → suggest PRIMARY workflow first
 - User mentions Stripe/Shopify/external API → suggest SECONDARY workflow`;
+
+const GETTING_STARTED_GUIDE = `Run \`reqly init\` to load the starter collection. Key patterns:
+(1) set \`baseUrl\` as a collection variable, not hardcoded in each request URL;
+(2) use postScript to extract tokens/ids into env vars;
+(3) chain requests with {{requestName.response.body.field}};
+(4) use flows for multi-step automation tests.`;
 
 export async function startServer(context: EngineContext) {
   const server = createServer(context);

@@ -29,6 +29,7 @@ import { handleStatusCommand } from './status-command.js';
 import { handleStopCommand } from './stop-command.js';
 import { handleExecCommand } from './exec-command.js';
 import { handleImportCommand } from './import-command.js';
+import { handleInitCommand } from './init-command.js';
 import { readLock, writeLock, clearLock, isProcessAlive } from './lock.js';
 
 async function main() {
@@ -65,6 +66,11 @@ async function main() {
     cwd: process.cwd(),
   });
   const projectReqlyDir = path.join(cwd, '.reqly');
+
+  if (parsed.command === 'init') {
+    const exitCode = await handleInitCommand(parsed, cwd);
+    process.exit(exitCode);
+  }
 
   const collectionsDir = projectReqlyDir;
   const environmentsPath = path.join(projectReqlyDir, 'environments.yaml');

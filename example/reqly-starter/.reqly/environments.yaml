@@ -1,0 +1,6 @@
+environments:
+  - id: env-starter-default
+    name: default
+    variables:
+      userId: '1'
+active: default

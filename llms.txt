@@ -23,6 +23,13 @@ Don't wait for traffic capture - if the agent can read the project's source, tel
 ```
 The agent should call `create_collection` then `create_request` for each route it finds in the code. No proxy or traffic capture needed.
 
+To explore Reqly's patterns first, run `reqly init` to copy a working starter collection (JSONPlaceholder, no auth) into `.reqly/`.
+
+## MCP Resources
+
+- `reqly://workflow`: The recommended order of MCP tool calls for building a collection from code vs capturing traffic.
+- `reqly://getting-started`: Patterns demonstrated by the bundled starter collection (`reqly init`) - collection variables, postScript extraction, request chaining, flows.
+
 ## MCP Tools
 
 Reqly exposes the following MCP tools for AI agents:
@@ -62,7 +69,7 @@ Reqly exposes the following MCP tools for AI agents:
 - Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI
 - Flow CI export: `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml`. Full MCP parity via `export_flow_ci`.
 - Mock server: `reqly mock <collection> [--port <n>]` serves saved example responses on a real HTTP port. `X-Reqly-Example: <name>` header selects a specific example; falls back to first. Full MCP parity via `start_mock`/`stop_mock`/`get_mock_status`.
-- CLI: `reqly run`, `reqly run-flow`, `reqly export-flow`, `reqly mock`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
+- CLI: `reqly run`, `reqly run-flow`, `reqly export-flow`, `reqly mock`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`, `reqly init`
 
 ## TERTIARY: Capture inbound traffic (calls coming into your app)
 

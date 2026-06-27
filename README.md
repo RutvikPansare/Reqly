@@ -1,9 +1,18 @@
 # Reqly
 
-Reqly is a prompt-first, agent-native API client. A local background service that exposes two interfaces from the same engine:
+Your AI agent builds and tests your APIs. Reqly is the execution engine.
 
-1. **MCP server (stdio)** - AI coding agents (Cursor, Claude Code, Windsurf) call Reqly's tools directly to fire requests, manage collections, and verify API behaviour. Zero UI, zero LLM cost on our side.
-2. **Localhost web UI** - Humans open `localhost:4242` to browse collections, run requests visually, and use a prompt bar (BYOK) to describe what they want.
+Tell your agent in Cursor or Claude Code:
+
+> "Read my Express routes and build a Reqly collection for every endpoint. Add assertions and run them."
+
+The agent reads your codebase, calls Reqly's MCP tools to create requests, fires them, and reports results - no UI required, no manual collection writing.
+
+Reqly runs locally as a background service with two interfaces from the same engine:
+- **MCP server (stdio)** - AI agents call tools directly to fire requests, chain responses, run flows, validate contracts, and serve mocks. Zero UI, zero LLM cost on our side.
+- **Localhost web UI** - open `localhost:4242` to browse collections, fire requests visually, and watch your agent's work in real time.
+
+Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable, directly writable by agents.
 
 ## Why Reqly beats Postman, Insomnia, and Bruno for AI-native developers
 
@@ -14,6 +23,14 @@ Reqly is a prompt-first, agent-native API client. A local background service tha
 **Auto-capture, zero manual work.** Reqly can capture outbound traffic from your dev server via a proxy (`reqly exec npm run dev`), inbound traffic via a one-line middleware, and inbound webhooks via a public tunnel - then save everything into collections automatically. No other tool does all three.
 
 **BYOK, no cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. The prompt bar in the UI uses your own API key. Nothing is sent to Reqly's servers.
+
+## What an agent session looks like
+
+```
+1. "Read my routes and build a collection" → agent calls create_collection + create_request for each endpoint
+2. "Run the collection and check for failures" → agent calls run_collection, assertions pass/fail
+3. "Write an e2e flow for the login → checkout path" → agent calls create_flow + add_flow_step, runs it
+```
 
 ## Quick Setup
 
@@ -43,6 +60,16 @@ Don't capture traffic, don't write YAML by hand - just tell your agent to read y
 ```
 
 The agent reads your codebase and calls `create_collection` + `create_request` for each route it finds. No traffic capture needed - it already knows your API from the code.
+
+## Starter collection
+
+Want to try Reqly before pointing it at your own API? Run:
+
+```bash
+reqly init
+```
+
+This copies a working example collection (against the free [JSONPlaceholder](https://jsonplaceholder.typicode.com) API, no auth needed) into `.reqly/` in your current project - collection variables, request chaining, a postScript that extracts a response value, and a flow. It won't overwrite any collections you already have. See `example/reqly-starter/README.md` for what each request demonstrates.
 
 ## What Reqly does
 

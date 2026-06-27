@@ -1,0 +1,21 @@
+name: starter-flow
+description: Run get-todo, extract its id, then create a new todo and assert success
+steps:
+  - type: run
+    id: s1
+    collection: jsonplaceholder
+    request: get-todo
+  - type: extract
+    id: s2
+    from: s1.response.body.id
+    into: todoId
+  - type: run
+    id: s3
+    collection: jsonplaceholder
+    request: create-todo
+  - type: assert
+    id: s4
+    assertions:
+      - field: status
+        operator: eq
+        value: 201
