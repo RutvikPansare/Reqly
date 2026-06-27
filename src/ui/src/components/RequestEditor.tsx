@@ -9,6 +9,8 @@ import { ScriptEditor } from './ScriptEditor';
 import { CurlImportModal } from './CurlImportModal';
 import { CodeGenModal } from './CodeGenModal';
 import { AssertionEditor } from './AssertionEditor';
+import { MultipartEditor } from './MultipartEditor';
+import type { MultipartPartState } from './MultipartEditor';
 
 interface RequestEditorProps {
   request: any;
@@ -83,6 +85,8 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
   const [headersList, setHeadersList] = useState<KeyValuePair[]>([]);
   const [assertions, setAssertions] = useState<any[]>([]);
   const [bodyText, setBodyText] = useState('');
+  const [bodyType, setBodyType] = useState<'none' | 'json' | 'raw' | 'multipart'>('none');
+  const [multipartParts, setMultipartParts] = useState<MultipartPartState[]>([]);
   const [preScript, setPreScript] = useState('');
   const [postScript, setPostScript] = useState('');
   const [showCurlImport, setShowCurlImport] = useState(false);
@@ -114,10 +118,19 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       setHeadersList(hl);
       setAssertions(request.assertions || []);
 
-      if (request.body) {
-        setBodyText(typeof request.body === 'object' ? JSON.stringify(request.body, null, 2) : String(request.body));
-      } else {
+      if (request.body && typeof request.body === 'object' && request.body.type === 'multipart') {
+        setBodyType('multipart');
+        // Strip ephemeral _file objects (they don't survive serialization).
+        setMultipartParts((request.body.parts || []).map((p: any) => ({ ...p, _file: undefined })));
         setBodyText('');
+      } else if (request.body) {
+        setBodyType(typeof request.body === 'string' ? 'raw' : 'json');
+        setBodyText(typeof request.body === 'object' ? JSON.stringify(request.body, null, 2) : String(request.body));
+        setMultipartParts([]);
+      } else {
+        setBodyType('none');
+        setBodyText('');
+        setMultipartParts([]);
       }
       setPreScript(request.preScript || '');
       setPostScript(request.postScript || '');
@@ -181,12 +194,25 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     };
 
     const getParsedBody = () => {
-      if (!bodyText.trim()) return undefined;
-      try {
-        return JSON.parse(bodyText);
-      } catch {
-        return bodyText;
+      if (bodyType === 'multipart') {
+        // Strip ephemeral _file objects from the persisted config shape.
+        const cleanParts = multipartParts.map(({ _file: _f, ...rest }) => rest);
+        return cleanParts.length > 0 ? { type: 'multipart', parts: cleanParts } : undefined;
       }
+      if (!bodyText.trim()) return undefined;
+      if (bodyType === 'json') {
+        try { return JSON.parse(bodyText); } catch { return bodyText; }
+      }
+      return bodyText;
+    };
+
+    // Build multipart files map for fire (ephemeral - not included in saved config).
+    const getMultipartFiles = (): Record<string, File> => {
+      const files: Record<string, File> = {};
+      for (const part of multipartParts) {
+        if (part.type === 'file' && part._file) files[part.name] = part._file;
+      }
+      return files;
     };
 
     const buildRequest = () => {
@@ -201,8 +227,16 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       return req;
     };
 
+    const buildRequestForFire = () => {
+      const req = buildRequest();
+      // Attach ephemeral file objects so the fire handler can send them via FormData.
+      const files = getMultipartFiles();
+      if (Object.keys(files).length > 0) req._multipartFiles = files;
+      return req;
+    };
+
     const handleFireWithAuth = () => {
-      onFire(buildRequest());
+      onFire(buildRequestForFire());
     };
 
     const handleSaveWithAuth = () => {
@@ -236,7 +270,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     useEffect(() => {
       if (!onChange) return;
       onChange(buildRequest());
-    }, [method, url, assertions, headersList, bodyText, authType, authProfileId, authCreds, preScript, postScript]);
+    }, [method, url, assertions, headersList, bodyText, bodyType, multipartParts, authType, authProfileId, authCreds, preScript, postScript]);
 
   const availableVariables: VariableItem[] = [
     ...Object.entries(collectionVars).map(([k, v]) => ({
@@ -355,31 +389,67 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <KeyValueEditor pairs={headersList} onChange={setHeadersList} variables={availableVariables} />
           </div>
         ) : activeTab === 'body' ? (
-          <div className="flex flex-col h-full gap-2">
-            <div className="flex justify-between items-center px-1">
-              <span className="text-sm font-semibold text-gray-400">Raw Body</span>
-              <button
-                onClick={() => {
-                  try {
-                    setBodyText(JSON.stringify(JSON.parse(bodyText), null, 2));
-                  } catch {
-                    alert('Invalid JSON - could not format.');
-                  }
-                }}
-                className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
-              >
-                Format JSON
-              </button>
+          <div className="flex flex-col gap-3">
+            {/* Body type selector */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {(['none', 'json', 'raw', 'multipart'] as const).map(t => (
+                <button
+                  key={t}
+                  className="px-3 py-1 rounded text-sm capitalize transition-colors"
+                  style={{
+                    background: bodyType === t ? 'var(--accent)' : 'var(--surface-3)',
+                    color: bodyType === t ? '#fff' : 'var(--text-muted)',
+                    border: bodyType === t ? 'none' : '1px solid var(--border)',
+                  }}
+                  onClick={() => setBodyType(t)}
+                >
+                  {t === 'json' ? 'JSON' : t}
+                </button>
+              ))}
+              {bodyType === 'json' && (
+                <button
+                  onClick={() => {
+                    try { setBodyText(JSON.stringify(JSON.parse(bodyText), null, 2)); }
+                    catch { alert('Invalid JSON - could not format.'); }
+                  }}
+                  className="ml-auto text-xs px-2 py-1 rounded transition-colors"
+                  style={{ background: 'var(--surface-3)', color: 'var(--accent)', border: '1px solid var(--border)' }}
+                >
+                  Format JSON
+                </button>
+              )}
             </div>
-            <VariableInput
-              multiline
-              variables={availableVariables}
-              className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
-              placeholder="Enter JSON, XML, or raw text here..."
-              value={bodyText}
-              onChange={val => setBodyText(val)}
-              spellCheck={false}
-            />
+
+            {bodyType === 'none' && (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No body will be sent with this request.</p>
+            )}
+
+            {(bodyType === 'json' || bodyType === 'raw') && (
+              <VariableInput
+                multiline
+                variables={availableVariables}
+                className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
+                placeholder={bodyType === 'json' ? '{"key": "value"}' : 'Enter raw text here...'}
+                value={bodyText}
+                onChange={val => setBodyText(val)}
+                spellCheck={false}
+              />
+            )}
+
+            {bodyType === 'multipart' && (
+              <>
+                <MultipartEditor
+                  parts={multipartParts}
+                  onChange={setMultipartParts}
+                  variables={availableVariables}
+                />
+                {multipartParts.some(p => p.type === 'file') && (
+                  <p className="text-xs rounded px-3 py-2" style={{ background: 'var(--surface-3)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                    File parts are saved as paths. Ensure the file exists at the saved path for CLI and MCP runs.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         ) : activeTab === 'assertions' ? (
           <AssertionEditor assertions={assertions} onChange={setAssertions} />

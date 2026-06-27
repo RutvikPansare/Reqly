@@ -23,7 +23,8 @@ export async function execute(
   collectionVars: Record<string, string> = {},
   collectionAuth?: AuthProfile,
   dotEnvVars: Record<string, string> = {},
-  baseDir?: string
+  baseDir?: string,
+  resolvedFiles?: Record<string, Buffer>
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
   // Layered scope chain: collection vars > env vars > .env-file vars.
@@ -68,23 +69,33 @@ export async function execute(
       if (part.type === 'text') {
         formData.append(part.name, part.value ?? '');
       } else {
-        // File part: resolve path relative to baseDir (or treat as absolute).
-        const resolvedPath = part.filePath && !path.isAbsolute(part.filePath) && baseDir
-          ? path.join(baseDir, part.filePath)
-          : (part.filePath ?? '');
-        if (!fs.existsSync(resolvedPath)) {
-          return {
-            status: 0,
-            body: { error: `File not found: ${part.filePath ?? resolvedPath}` },
-            headers: {},
-            latency: 0,
-            timestamp: new Date().toISOString(),
-          };
+        // File part: use a pre-resolved buffer (from multer/browser upload) if available,
+        // otherwise read from disk via filePath (relative to baseDir or absolute).
+        let fileBytes: Buffer | undefined;
+        let filename: string;
+
+        if (resolvedFiles && resolvedFiles[part.name]) {
+          fileBytes = resolvedFiles[part.name];
+          filename = part.filePath ? path.basename(part.filePath) : part.name;
+        } else {
+          const resolvedPath = part.filePath && !path.isAbsolute(part.filePath) && baseDir
+            ? path.join(baseDir, part.filePath)
+            : (part.filePath ?? '');
+          if (!fs.existsSync(resolvedPath)) {
+            return {
+              status: 0,
+              body: { error: `File not found: ${part.filePath ?? resolvedPath}` },
+              headers: {},
+              latency: 0,
+              timestamp: new Date().toISOString(),
+            };
+          }
+          fileBytes = fs.readFileSync(resolvedPath);
+          filename = path.basename(resolvedPath);
         }
-        const fileBytes = fs.readFileSync(resolvedPath);
-        const filename = path.basename(resolvedPath);
+
         const mimeType = part.contentType ?? 'application/octet-stream';
-        const blob = new File([fileBytes], filename, { type: mimeType });
+        const blob = new File([new Uint8Array(fileBytes)], filename, { type: mimeType });
         formData.append(part.name, blob, filename);
       }
     }

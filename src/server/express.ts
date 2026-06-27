@@ -6,6 +6,7 @@ import * as fsSync from 'fs';
 import * as os from 'os';
 import * as http from 'http';
 import * as crypto from 'crypto';
+import multer from 'multer';
 import { EngineContext } from '../mcp/tools/types.js';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
@@ -16,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { parseCurl } from '../engine/curl-parser.js';
 import { generateCode } from '../engine/code-generator.js';
 import { exportToPostman, exportToOpenApi } from '../engine/exporter.js';
+import { execute as executeHttp } from '../engine/http-executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -870,6 +872,112 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       if (collectionName) {
         const { checkContract } = await import('../mcp/tools/contract-helper.js');
         const contractResult = await checkContract(context, collectionName, req.body.request, response);
+        if (contractResult) {
+          contractViolations = contractResult.violations;
+          contractMatch = {
+            matched: contractResult.matched,
+            operationId: contractResult.operationId,
+            path: contractResult.path,
+            method: contractResult.method,
+            inferredPath: contractResult.inferredPath,
+          };
+        }
+      }
+
+      res.json({ response, assertions, diff, contractViolations, contractMatch });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Dedicated multipart ad-hoc run route. Uses multer (memStorage) so the browser
+  // can upload real File objects for file parts. The _config field carries the full
+  // RequestConfig as a JSON string; uploaded files are passed as resolvedFiles to
+  // the executor so it skips disk reads for those parts.
+  const multerUpload = multer({ storage: multer.memoryStorage() });
+  app.post('/api/run/adhoc/multipart', multerUpload.any(), async (req, res) => {
+    try {
+      const configJson = (req.body as any)._config;
+      if (!configJson) {
+        res.status(400).json({ error: 'Missing _config field' });
+        return;
+      }
+      const { request: requestConfig } = JSON.parse(configJson);
+
+      let env = undefined;
+      if (requestConfig.environmentName) {
+        const envs = await context.environmentManager.listEnvironments();
+        env = envs.find((e: any) => e.name === requestConfig.environmentName);
+      } else {
+        env = await context.environmentManager.getActiveEnvironment() || undefined;
+      }
+
+      let auth = undefined;
+      if (requestConfig.authProfileId) {
+        auth = await context.authManager.getProfile(requestConfig.authProfileId);
+        if (auth.type === 'oauth2' && auth.credentials.refreshToken) {
+          const expiresAt = Number(auth.credentials.expiresAt || 0);
+          if (!expiresAt || Date.now() > expiresAt - 60_000) {
+            try { auth = await context.authManager.refreshOAuth2Token(auth.id); } catch { /* ignore */ }
+          }
+        }
+      }
+
+      const { substituteConfig } = await import('../engine/variable-substitutor.js');
+      const envVars = env ? env.variables : {};
+      const collectionName = requestConfig._collection;
+      const collectionVars = collectionName
+        ? await context.collectionManager.getCollectionVariables(collectionName).catch(() => ({}))
+        : {};
+      let collectionAuth = undefined;
+      if (collectionName) {
+        const { resolveCollectionAuth } = await import('../engine/collection-auth.js');
+        const colAuthCfg = await context.collectionManager.getCollectionAuth(collectionName).catch(() => undefined);
+        collectionAuth = await resolveCollectionAuth(colAuthCfg, context.authManager);
+      }
+      const config = substituteConfig(requestConfig, [collectionVars, envVars], context.responseStore);
+
+      // Build resolvedFiles map from multer uploads (keyed by part name field).
+      const resolvedFiles: Record<string, Buffer> = {};
+      if (Array.isArray(req.files)) {
+        for (const file of req.files as Express.Multer.File[]) {
+          resolvedFiles[file.fieldname] = file.buffer;
+        }
+      }
+
+      const dotEnvVars = context.dotEnvLoader.getVariablesRecord();
+      const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+      let maxBodyBytes = 50 * 1024;
+      try {
+        const cfg = JSON.parse(await fs.readFile(globalConfigPath, 'utf-8'));
+        if (cfg.maxBodyBytes) maxBodyBytes = cfg.maxBodyBytes;
+      } catch { /* use default */ }
+
+      const response = await executeHttp(
+        config, env, auth, undefined, maxBodyBytes,
+        collectionVars, collectionAuth, dotEnvVars, projectRoot, resolvedFiles
+      );
+      context.responseStore.set(requestConfig.name, response);
+      context.historyStore.append(requestConfig, response);
+
+      let diff = undefined;
+      const lastTwo = context.historyStore.getLastTwo(requestConfig.name);
+      if (lastTwo.length === 2) {
+        const { diffResponses } = await import('../engine/response-differ.js');
+        diff = diffResponses(lastTwo[1], lastTwo[0]);
+      }
+
+      const { runAssertions } = await import('../engine/assertion-runner.js');
+      let assertions: any[] = [];
+      if (requestConfig.assertions) {
+        assertions = runAssertions(response, requestConfig.assertions);
+      }
+
+      let contractViolations = null;
+      let contractMatch = null;
+      if (collectionName) {
+        const { checkContract } = await import('../mcp/tools/contract-helper.js');
+        const contractResult = await checkContract(context, collectionName, requestConfig, response);
         if (contractResult) {
           contractViolations = contractResult.violations;
           contractMatch = {

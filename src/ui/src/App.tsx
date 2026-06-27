@@ -220,12 +220,34 @@ function App() {
   const handleFire = async (req: any, tabId: string) => {
     updateTab(tabId, { isSending: true });
     try {
-      const res = await fetch('/api/run/adhoc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request: req })
-      });
-      const data = await res.json();
+      let data: any;
+
+      const multipartFiles: Record<string, File> = req._multipartFiles || {};
+      const hasFileUploads = req.body?.type === 'multipart' && Object.keys(multipartFiles).length > 0;
+
+      if (hasFileUploads) {
+        // Multipart request with browser File objects: send via the dedicated route.
+        const form = new FormData();
+        const configForServer = { ...req };
+        delete configForServer._multipartFiles;
+        form.append('_config', JSON.stringify({ request: configForServer }));
+        for (const [name, file] of Object.entries(multipartFiles)) {
+          form.append(name, file, file.name);
+        }
+        const res = await fetch('/api/run/adhoc/multipart', { method: 'POST', body: form });
+        data = await res.json();
+      } else {
+        // Standard JSON route for all other body types.
+        const configForServer = { ...req };
+        delete configForServer._multipartFiles;
+        const res = await fetch('/api/run/adhoc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ request: configForServer })
+        });
+        data = await res.json();
+      }
+
       if (data.response) {
         updateTab(tabId, { response: { ...data.response, assertions: data.assertions, diff: data.diff, contractViolations: data.contractViolations, contractMatch: data.contractMatch } });
       } else {
