@@ -44,6 +44,7 @@ import * as addFlowStep from './tools/add-flow-step.js';
 import * as updateFlowStep from './tools/update-flow-step.js';
 import * as deleteFlowStep from './tools/delete-flow-step.js';
 import * as runFlow from './tools/run-flow.js';
+import * as exportFlowCi from './tools/export-flow-ci.js';
 
 import * as startMock from './tools/start-mock.js';
 import * as stopMock from './tools/stop-mock.js';
@@ -96,6 +97,7 @@ const tools = [
   updateFlowStep,
   deleteFlowStep,
   runFlow,
+  exportFlowCi,
   startMock,
   stopMock,
   getMockStatus,

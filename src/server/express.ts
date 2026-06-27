@@ -483,6 +483,22 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.post('/api/flows/:name/export-ci', async (req, res) => {
+    try {
+      await context.flowManager.getFlow(req.params.name); // throws if the flow doesn't exist
+      const format = req.body?.format || 'github-actions';
+      if (format !== 'github-actions') {
+        res.status(400).json({ error: `Unsupported format "${format}". Supported formats: github-actions` });
+        return;
+      }
+      const { generateGithubActionsWorkflow } = await import('../engine/github-actions-export.js');
+      const yaml = generateGithubActionsWorkflow(req.params.name);
+      res.json({ yaml });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/auth-profiles', async (req, res) => {
     try {
       const profiles = await context.authManager.listProfiles();

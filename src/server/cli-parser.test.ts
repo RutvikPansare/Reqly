@@ -90,6 +90,13 @@ describe('cli-parser', () => {
     expect(parsed.flags.validateSpec).toBeUndefined();
   });
 
+  it('parses export-flow command with a flow name and --format flag', () => {
+    const parsed = parseArgs(['node', 'script.js', 'export-flow', 'checkout-e2e', '--format', 'github-actions']);
+    expect(parsed.command).toBe('export-flow');
+    expect(parsed.args).toEqual(['checkout-e2e']);
+    expect(parsed.flags.format).toBe('github-actions');
+  });
+
   it('parses flags before and after command', () => {
     const parsed = parseArgs(['node', 'script.js', '--env', 'production', 'run', 'myCol', '--reporter', 'json', '--project-dir', '/tmp']);
     expect(parsed.command).toBe('run');

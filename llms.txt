@@ -45,6 +45,7 @@ Reqly exposes the following MCP tools for AI agents:
 - `create_flow`, `get_flow`, `list_flows`, `delete_flow`: Manage flows (multi-step automation tests, separate from collections).
 - `add_flow_step`, `update_flow_step`, `delete_flow_step`: Edit a flow's step sequence (run/extract/assert/poll/conditional).
 - `run_flow`: Run a flow end to end, optionally with a `dataRow` override for an ad-hoc run.
+- `export_flow_ci`: Generate a GitHub Actions workflow for a flow, write it to `.github/workflows/<flow>.yml`, return the path.
 - `start_mock`: Start a mock HTTP server for a collection on a given port (default 4243). Returns active routes.
 - `stop_mock`: Stop the running mock server.
 - `get_mock_status`: Get running state, collection, port, and route list of the mock server.
@@ -59,8 +60,9 @@ Reqly exposes the following MCP tools for AI agents:
 - Inbound middleware: capture requests coming INTO your app (`reqly-middleware`)
 - GraphQL: dedicated workspace, schema introspection, autocomplete
 - Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI
+- Flow CI export: `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml`. Full MCP parity via `export_flow_ci`.
 - Mock server: `reqly mock <collection> [--port <n>]` serves saved example responses on a real HTTP port. `X-Reqly-Example: <name>` header selects a specific example; falls back to first. Full MCP parity via `start_mock`/`stop_mock`/`get_mock_status`.
-- CLI: `reqly run`, `reqly run-flow`, `reqly mock`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
+- CLI: `reqly run`, `reqly run-flow`, `reqly export-flow`, `reqly mock`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
 
 ## TERTIARY: Capture inbound traffic (calls coming into your app)
 
@@ -111,3 +113,4 @@ requests:
 - **UI:** The visual UI is available at `http://localhost:4242`.
 - **CLI Runner:** Run tests with `reqly run <collection> [request] --reporter pretty`. Supports `--reporter json` and `--reporter tap` for CI/CD.
 - **Flow CLI Runner:** Run a flow with `reqly run-flow <name> --reporter pretty`. Same `json`/`tap` reporters. `--data-row '{"key":"value"}'` runs a single ad-hoc row instead of iterating the flow's saved data table. Exit code 0 if every step passes, 1 otherwise.
+- **Flow CI Export:** `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml` (creates the directory if needed) - a workflow that installs Reqly, starts it, and runs the flow on push/pull_request. Add a manual "Start server" step before "Run flow" if the flow hits a local API. MCP tool `export_flow_ci` does the same and returns the written path.

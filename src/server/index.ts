@@ -22,6 +22,7 @@ import { parseArgs, resolveProjectDir } from './cli-parser.js';
 import { handleRunCommand } from './run-command.js';
 import { handleRunFlowCommand } from './run-flow-command.js';
 import { handleMockCommand } from './mock-command.js';
+import { handleExportFlowCommand } from './export-flow-command.js';
 import { handleSetupCommand } from './setup-command.js';
 import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
@@ -84,6 +85,11 @@ async function main() {
 
   if (parsed.command === 'mock') {
     const exitCode = await handleMockCommand(parsed, collectionManager);
+    process.exit(exitCode);
+  }
+
+  if (parsed.command === 'export-flow') {
+    const exitCode = await handleExportFlowCommand(parsed, collectionManager);
     process.exit(exitCode);
   }
 

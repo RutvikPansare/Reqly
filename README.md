@@ -111,6 +111,7 @@ Reqly exposes these tools directly to your AI agent:
 | `update_flow_step` | Replaces a step in place |
 | `delete_flow_step` | Removes a step |
 | `run_flow` | Executes a flow and returns per-step results |
+| `export_flow_ci` | Generates a GitHub Actions workflow for a flow, writes it to `.github/workflows/`, and returns the path |
 
 **Capture and Proxy**
 
@@ -159,6 +160,15 @@ reqly run-flow "my-flow"
 reqly run-flow "my-flow" --reporter json
 reqly run-flow "my-flow" --data-row '{"userId":"42"}'
 ```
+
+Generate a GitHub Actions workflow that installs Reqly and runs a flow in CI:
+
+```bash
+reqly export-flow "my-flow" --format github-actions
+# Written to .github/workflows/my-flow.yml
+```
+
+Add a "Start server" step before "Run flow" in the generated workflow if the flow hits a local API. Agents can do the same via the `export_flow_ci` MCP tool.
 
 ## Capture Inbound Requests (Middleware)
 
@@ -259,6 +269,14 @@ reqly run-flow "Login Flow" --reporter json
 reqly run-flow "Login Flow" --reporter tap
 reqly run-flow "Signup Flow" --data-row '{"email":"test@example.com"}'
 ```
+
+### Exporting flows to CI
+
+```bash
+reqly export-flow "Login Flow" --format github-actions
+```
+
+Writes `.github/workflows/Login Flow.yml` (creates the directory if needed) that installs Reqly, starts it, and runs the flow on push and pull request. Add a "Start server" step before "Run flow" if the flow hits a local API.
 
 ### Mock server
 
