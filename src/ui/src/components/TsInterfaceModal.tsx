@@ -27,21 +27,19 @@ export function TsInterfaceModal({ body, onClose }: TsInterfaceModalProps) {
   };
 
   return (
-    <Modal title="TypeScript Interface" onClose={onClose} icon={<Braces size={16} style={{ color: 'var(--accent)' }} />}>
-      <div className="flex flex-col gap-0" style={{ minWidth: '480px' }}>
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1.5 btn btn-secondary text-xs"
-            style={{ color: copied ? '#4ade80' : undefined, borderColor: copied ? 'rgba(74,222,128,0.3)' : undefined }}
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
+    <Modal title="TypeScript Interface" onClose={onClose} icon={<Braces size={16} style={{ color: 'var(--accent)' }} />} width="w-[560px]">
+      <div className="relative">
+        <button
+          onClick={handleCopy}
+          className="absolute top-2 right-2 z-10 flex items-center gap-1.5 btn btn-secondary text-xs"
+          style={{ color: copied ? '#4ade80' : undefined, borderColor: copied ? 'rgba(74,222,128,0.3)' : undefined }}
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
         <pre
-          className="p-4 rounded overflow-x-auto text-sm font-mono leading-relaxed"
-          style={{ background: 'var(--surface-0)', border: '1px solid var(--border)', color: '#7dd3fc', maxHeight: '360px', overflowY: 'auto' }}
+          className="p-4 pt-10 rounded overflow-x-auto text-sm font-mono leading-relaxed"
+          style={{ background: 'var(--surface-0)', border: '1px solid var(--border)', color: '#7dd3fc', maxHeight: '420px', overflowY: 'auto' }}
         >
           {tsCode}
         </pre>

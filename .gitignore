@@ -108,3 +108,4 @@ src/ui/dist
 
 example/
 .claude/
+test-spec.yaml

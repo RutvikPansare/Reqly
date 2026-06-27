@@ -79,8 +79,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
       else if (spec.specUrl) { setSpecSource('url'); setSpecValue(spec.specUrl); setSpecConfigured(true); }
       else { setSpecConfigured(false); setSpecValue(''); }
       setSpecOperationCount(spec.loaded ? spec.operationCount : null);
-      setSpecLoaded(true);
-    }).catch(console.error);
+    }).catch(console.error).finally(() => setSpecLoaded(true));
   }, [collectionName]);
 
   const handleSaveVars = async () => {
