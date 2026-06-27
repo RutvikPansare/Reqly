@@ -130,6 +130,9 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
           } else {
             // Existing session re-attached.
             if (!hasReplayedRef.current && msg.replay) {
+              // Reset before replay so the % partial-line marker from zsh's
+              // startup doesn't appear stranded at the top of the viewport.
+              term.reset();
               term.write(msg.replay);
             } else if (wasReconnect) {
               term.write('\r\n\x1b[32m[reconnected]\x1b[0m\r\n');
