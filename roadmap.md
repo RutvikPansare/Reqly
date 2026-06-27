@@ -94,25 +94,19 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M5 - Post-Launch: Windows Support + Desktop App
+## M5 - Now: Windows Support + Desktop App
 
 **Goal:** Remove the two biggest friction points for non-Mac developers and non-CLI-comfortable users. Sequencing: Windows support first (2 weeks), then Electron desktop app (3-4 weeks). Both are prerequisite to meaningful adoption outside the Mac/CLI niche.
 
-### Windows Support
+### Windows Support - Done
 
-**Current limitations for Windows users:**
-- **`reqly setup`** writes MCP config to hardcoded Mac paths (`~/Library/Application Support/...`). On Windows the correct paths are `%APPDATA%\Claude\claude_desktop_config.json`, `%APPDATA%\Cursor\User\settings.json` etc. Setup silently writes to the wrong location - Cursor/Claude Desktop never sees the config.
-- **Terminal (T-112)** uses `process.kill(-pid, 'SIGTERM')` for process group kill - negative PIDs don't exist on Windows. The kill button silently fails.
-- **`exec_with_proxy` and `stop_proxy`** use the same negative-pid process group kill - same failure on Windows.
-- **Shell detection** - several places assume `bash`. The `cmd /c` fallback exists in the terminal but `exec_with_proxy` and `exec-command.ts` may assume Unix shell behaviour.
-- **File path separators** - `path.join()` is used throughout which is correct, but any hardcoded `/` separators in config resolution or file watching will break.
-- **`fs.watch` edge cases** - less reliable on Windows than Mac/Linux, can miss rapid successive changes (`.env` hot-reload may be flaky).
+All Windows Support items shipped (T-115 through T-119).
 
-- [ ] **`reqly setup` Windows paths** - detect `process.platform === 'win32'`, resolve config paths via `%APPDATA%` / `LOCALAPPDATA`. Test against Claude Desktop and Cursor on Windows.
-- [ ] **Process kill cross-platform** - replace negative-pid SIGTERM/SIGKILL with a cross-platform kill helper: on Windows use `taskkill /PID <pid> /T /F` for tree kill; on Unix keep the existing `process.kill(-pid)` group kill.
-- [ ] **Shell detection** - `process.platform === 'win32'` uses `cmd.exe` or `powershell.exe` (prefer PowerShell for better scripting); Unix uses `bash` falling back to `sh`.
-- [ ] **File path audit** - grep for hardcoded `/` path separators outside `path.join()` calls and fix. Audit `.env` file watching reliability on Windows.
-- [ ] **CI matrix** - add a Windows runner to the GitHub Actions test matrix so regressions are caught automatically.
+- [x] **`reqly setup` Windows paths** - `APPDATA`-aware config path resolution; clear error if env var unset (T-115)
+- [x] **Process kill cross-platform** - `killProcessTree(pid)`: `taskkill /T /F` on Windows, `process.kill(-pid)` on Unix (T-116)
+- [x] **Shell detection** - `exec-command.ts` now passes `shell: true`; `terminal.ts` already used `cmd /c` on Windows (T-117)
+- [x] **File path audit + fs.watch** - no hardcoded `/` separators found; `spec-loader.ts` migrated from `fs.watch` to chokidar (T-118)
+- [x] **CI matrix** - `.github/workflows/ci.yml` runs ubuntu-latest + windows-latest; README and llms.txt updated with platform + Homebrew caveat (T-119)
 
 ### Desktop App (Electron)
 
