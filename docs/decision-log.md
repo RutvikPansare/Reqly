@@ -8,6 +8,9 @@ Newest entries at the top.
 
 ## 2026-06-27
 
+**Decision:** `ContractCheckResult` (shared `checkContract` helper) carries `path`/`method` (the matched spec operation's path template) separately from `inferredPath` (the request's actual resolved path, only set when unmatched).
+**Why:** The UI spec wants "All checks passed · `GET /users/{id}` · `getUser`" on a match (the spec's path template + operationId) but "No matching operation found... inferred path: /orders/9" on a miss (what the request actually resolved to). These are different strings serving different purposes - conflating them into one field would make one of the two UI states wrong.
+
 **Decision:** Added a `delete_collection_spec` MCP tool even though T-106's spec only listed four tools (`set_collection_spec`, `get_collection_spec`, `list_spec_operations`, `validate_response`). The Express route list already included `DELETE /api/collections/:name/spec`.
 **Why:** CLAUDE.md's tool-first principle: "If it can't be called via MCP, it doesn't exist as a feature." A DELETE route with no MCP equivalent would mean an agent could configure a spec but never remove one - a real gap, not scope creep, since the capability was already implied by the route list.
 

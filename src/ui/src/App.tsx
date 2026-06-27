@@ -227,7 +227,7 @@ function App() {
       });
       const data = await res.json();
       if (data.response) {
-        updateTab(tabId, { response: { ...data.response, assertions: data.assertions, diff: data.diff } });
+        updateTab(tabId, { response: { ...data.response, assertions: data.assertions, diff: data.diff, contractViolations: data.contractViolations, contractMatch: data.contractMatch } });
       } else {
         updateTab(tabId, { response: { status: 500, latency: 0, body: data.error, headers: {} } });
       }

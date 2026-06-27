@@ -1,12 +1,15 @@
 import { EngineContext } from './types.js';
 import { CollectionRequest, HttpResponse, ContractViolation } from '../../types/index.js';
-import { findOperation, validate } from '../../engine/contract-validator.js';
+import { findOperation, validate, extractPath } from '../../engine/contract-validator.js';
 import { resolveVariables } from '../../engine/variable-substitutor.js';
 
 export interface ContractCheckResult {
   violations: ContractViolation[];
   matched: boolean;
   operationId?: string;
+  path?: string;
+  method?: string;
+  inferredPath?: string;
 }
 
 // Resolves contract violations for a fired request, or null if the collection
@@ -30,7 +33,13 @@ export async function checkContract(
 
   const loadedSpec = await context.specLoader.load(source);
   const matched = findOperation(loadedSpec, req.method, resolvedUrl, baseUrl, req.specOperationId);
-  if (!matched) return { violations: [], matched: false };
+  if (!matched) return { violations: [], matched: false, inferredPath: extractPath(resolvedUrl, baseUrl) };
 
-  return { violations: validate(matched.operation, response), matched: true, operationId: matched.operationId };
+  return {
+    violations: validate(matched.operation, response),
+    matched: true,
+    operationId: matched.operationId,
+    path: matched.path,
+    method: matched.method.toUpperCase(),
+  };
 }

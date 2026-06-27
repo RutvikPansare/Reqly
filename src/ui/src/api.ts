@@ -86,6 +86,30 @@ export async function deleteCollectionAuth(collectionName: string) {
   return res.json();
 }
 
+export async function getCollectionSpec(collectionName: string): Promise<{ specPath?: string; specUrl?: string; operationCount: number; loaded: boolean }> {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/spec`);
+  if (!res.ok) throw new Error('Failed to fetch collection spec');
+  return res.json();
+}
+
+export async function setCollectionSpec(collectionName: string, spec: { specPath?: string; specUrl?: string }) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/spec`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(spec)
+  });
+  if (!res.ok) throw new Error('Failed to set collection spec');
+  return res.json();
+}
+
+export async function deleteCollectionSpec(collectionName: string) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/spec`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) throw new Error('Failed to delete collection spec');
+  return res.json();
+}
+
 export async function exportEnvironment(name: string): Promise<void> {
   const res = await fetch(`/api/environments/${encodeURIComponent(name)}/export`);
   if (!res.ok) throw new Error('Failed to export environment');

@@ -142,9 +142,11 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
     );
   }
 
-  const { status, latency, body, headers, diff } = response || {};
+  const { status, latency, body, headers, diff, contractViolations, contractMatch } = response || {};
   const hasDiff = diff && (diff.statusChanged || diff.latencyDelta !== 0 || diff.bodyChanges?.length > 0);
   const isError = status >= 400;
+  const hasContract = contractMatch != null;
+  const contractViolationCount = contractViolations?.length || 0;
 
   const bodyBytes = body != null
     ? new TextEncoder().encode(typeof body === 'object' ? JSON.stringify(body) : String(body)).length
@@ -267,6 +269,17 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
             Examples
           </button>
         )}
+        {hasContract && (
+          <button
+            className={`tab-btn disabled:opacity-40 ${activeTab === 'contract' ? 'active' : ''}`}
+            style={contractViolationCount > 0 ? { color: '#f87171', borderBottomColor: activeTab === 'contract' ? '#ef4444' : undefined } : {}}
+            onClick={() => setActiveTab('contract')}
+          >
+            Contract{contractViolationCount > 0 && (
+              <span className="ml-1 px-1.5 rounded-full text-[10px]" style={{ background: '#ef4444', color: 'white' }}>{contractViolationCount}</span>
+            )}
+          </button>
+        )}
         {activeTab === 'body' && body != null && (
           <div className="ml-auto flex items-center pr-2">
             <div className="flex items-center gap-1 px-2 rounded" style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', height: '24px' }}>
@@ -336,6 +349,45 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
                 {line}
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'contract' && hasContract && (
+          <div className="p-4">
+            {!contractMatch.matched ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#fbbf24' }}>
+                  No matching operation found
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  Inferred path: <span className="font-mono">{contractMatch.inferredPath}</span>. If this request maps to a spec operation, set <span className="font-mono">specOperationId</span> on it.
+                </p>
+              </div>
+            ) : contractViolationCount === 0 ? (
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#4ade80' }}>
+                All checks passed
+                <span className="font-mono text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
+                  · {contractMatch.method} {contractMatch.path} · {contractMatch.operationId}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {contractViolations.map((v: any, i: number) => (
+                  <div key={i} className="flex items-start gap-2 p-2 rounded" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 mt-0.5"
+                      style={{ background: v.severity === 'error' ? '#ef4444' : '#f59e0b', color: 'white' }}
+                    >
+                      {v.severity}
+                    </span>
+                    <div>
+                      <div className="font-mono text-sm" style={{ color: 'var(--text-secondary)' }}>{v.field}</div>
+                      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{v.message}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

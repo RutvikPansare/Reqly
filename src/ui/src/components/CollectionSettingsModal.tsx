@@ -12,6 +12,9 @@ import {
   setCollectionAuth,
   deleteCollectionAuth,
   fetchAuthProfiles,
+  getCollectionSpec,
+  setCollectionSpec,
+  deleteCollectionSpec,
 } from '../api';
 
 interface CollectionSettingsModalProps {
@@ -23,7 +26,7 @@ const AUTH_TYPES = ['none', 'bearer', 'apiKey', 'basic', 'oauth2'] as const;
 type AuthTabType = typeof AUTH_TYPES[number];
 
 export function CollectionSettingsModal({ collectionName, onClose }: CollectionSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'variables' | 'auth'>('variables');
+  const [activeTab, setActiveTab] = useState<'variables' | 'auth' | 'contract'>('variables');
 
   // Variables tab state
   const [pairs, setPairs] = useState<KeyValuePair[]>([]);
@@ -40,6 +43,15 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
   const [authProfileId, setAuthProfileId] = useState('');
   const [authCreds, setAuthCreds] = useState<Record<string, string>>({});
   const [profiles, setProfiles] = useState<any[]>([]);
+
+  // Contract tab state
+  const [specSource, setSpecSource] = useState<'path' | 'url'>('path');
+  const [specValue, setSpecValue] = useState('');
+  const [specLoaded, setSpecLoaded] = useState(false);
+  const [specOperationCount, setSpecOperationCount] = useState<number | null>(null);
+  const [specConfigured, setSpecConfigured] = useState(false);
+  const [specSaving, setSpecSaving] = useState(false);
+  const [specError, setSpecError] = useState('');
 
   useEffect(() => {
     getCollectionVariables(collectionName).then((vars) => {
@@ -60,6 +72,14 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
         setAuthCreds(auth.credentials || {});
       }
       setAuthLoaded(true);
+    }).catch(console.error);
+
+    getCollectionSpec(collectionName).then((spec) => {
+      if (spec.specPath) { setSpecSource('path'); setSpecValue(spec.specPath); setSpecConfigured(true); }
+      else if (spec.specUrl) { setSpecSource('url'); setSpecValue(spec.specUrl); setSpecConfigured(true); }
+      else { setSpecConfigured(false); setSpecValue(''); }
+      setSpecOperationCount(spec.loaded ? spec.operationCount : null);
+      setSpecLoaded(true);
     }).catch(console.error);
   }, [collectionName]);
 
@@ -111,12 +131,44 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
     }
   };
 
+  const handleLoadSpec = async () => {
+    if (!specValue.trim()) return;
+    setSpecSaving(true);
+    setSpecError('');
+    try {
+      const payload = specSource === 'path' ? { specPath: specValue.trim() } : { specUrl: specValue.trim() };
+      const result = await setCollectionSpec(collectionName, payload);
+      setSpecOperationCount(result.operationCount);
+      setSpecConfigured(true);
+      window.dispatchEvent(new Event('reqly-reload'));
+    } catch (e: any) {
+      setSpecError(e.message || 'Failed to load spec');
+    } finally {
+      setSpecSaving(false);
+    }
+  };
+
+  const handleRemoveSpec = async () => {
+    setSpecSaving(true);
+    try {
+      await deleteCollectionSpec(collectionName);
+      setSpecConfigured(false);
+      setSpecValue('');
+      setSpecOperationCount(null);
+      window.dispatchEvent(new Event('reqly-reload'));
+    } catch (e: any) {
+      setSpecError(e.message || 'Failed to remove spec');
+    } finally {
+      setSpecSaving(false);
+    }
+  };
+
   const inputCls = 'w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none';
 
   return (
     <Modal title={`${collectionName} - Settings`} onClose={onClose} icon={<Settings size={16} />} width="w-[580px]">
       <div className="flex border-b mb-4" style={{ borderColor: 'var(--border)' }}>
-        {(['variables', 'auth'] as const).map(tab => (
+        {(['variables', 'auth', 'contract'] as const).map(tab => (
           <button
             key={tab}
             className="px-3 py-2 text-sm font-medium border-b-2 capitalize"
@@ -126,7 +178,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
             }}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === 'auth' ? 'Auth' : 'Variables'}
+            {tab === 'auth' ? 'Auth' : tab === 'contract' ? 'Contract' : 'Variables'}
           </button>
         ))}
       </div>
@@ -307,6 +359,61 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
             {authSaved && <span className="text-xs self-center mr-2" style={{ color: 'var(--accent)' }}>Saved</span>}
             <Button variant="ghost" onClick={onClose}>Close</Button>
             <Button variant="primary" onClick={handleSaveAuth} disabled={authSaving}>{authSaving ? 'Saving...' : 'Save'}</Button>
+          </ModalFooter>
+        </>
+      )}
+
+      {activeTab === 'contract' && specLoaded && (
+        <>
+          <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+            Configure an OpenAPI/Swagger spec to validate every response from this collection against it. Violations show up in the response viewer's Contract tab and in run_request's contractViolations.
+          </p>
+
+          <div className="space-y-4">
+            <div className="flex gap-4 items-center">
+              <label className="text-sm font-semibold text-gray-300 w-24 shrink-0">Source</label>
+              <div className="flex gap-2">
+                {(['path', 'url'] as const).map(s => (
+                  <button
+                    key={s}
+                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${specSource === s ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                    onClick={() => setSpecSource(s)}
+                  >
+                    {s === 'path' ? 'File path' : 'URL'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-center">
+              <label className="text-sm font-semibold text-gray-300 w-24 shrink-0">{specSource === 'path' ? 'Path' : 'URL'}</label>
+              <input
+                className={inputCls}
+                placeholder={specSource === 'path' ? './openapi.yaml' : 'https://api.example.com/openapi.json'}
+                value={specValue}
+                onChange={e => setSpecValue(e.target.value)}
+              />
+            </div>
+
+            {specConfigured && (
+              <div className="bg-gray-950 p-3 rounded border border-gray-800 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {specOperationCount !== null
+                  ? `Loaded - ${specOperationCount} operation${specOperationCount === 1 ? '' : 's'} found.`
+                  : 'Configured but not currently loaded.'}
+              </div>
+            )}
+
+            {specError && <p className="text-xs text-red-400">{specError}</p>}
+          </div>
+
+          <ModalFooter>
+            {specConfigured && (
+              <Button variant="ghost" onClick={handleRemoveSpec} disabled={specSaving}>Remove</Button>
+            )}
+            <Button variant="ghost" onClick={onClose}>Close</Button>
+            <Button variant="primary" onClick={handleLoadSpec} disabled={specSaving || !specValue.trim()}>
+              {specSaving ? 'Loading...' : 'Load spec'}
+            </Button>
           </ModalFooter>
         </>
       )}

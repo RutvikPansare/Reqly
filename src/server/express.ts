@@ -866,13 +866,23 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       }
 
       let contractViolations = null;
+      let contractMatch = null;
       if (collectionName) {
         const { checkContract } = await import('../mcp/tools/contract-helper.js');
         const contractResult = await checkContract(context, collectionName, req.body.request, response);
-        contractViolations = contractResult ? contractResult.violations : null;
+        if (contractResult) {
+          contractViolations = contractResult.violations;
+          contractMatch = {
+            matched: contractResult.matched,
+            operationId: contractResult.operationId,
+            path: contractResult.path,
+            method: contractResult.method,
+            inferredPath: contractResult.inferredPath,
+          };
+        }
       }
 
-      res.json({ response, assertions, diff, contractViolations });
+      res.json({ response, assertions, diff, contractViolations, contractMatch });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

@@ -62,7 +62,7 @@ export function findOperation(
 
 // Strip protocol+host (or a configured baseUrl prefix) and the query string,
 // leaving just the path to match against spec templates.
-function extractPath(resolvedUrl: string, baseUrl: string): string {
+export function extractPath(resolvedUrl: string, baseUrl: string): string {
   let url = resolvedUrl;
   if (baseUrl && url.startsWith(baseUrl)) {
     url = url.slice(baseUrl.length);
