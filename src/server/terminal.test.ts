@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import WebSocket from 'ws';
 import { startExpressServer } from './express.js';
+import { clearSessions } from './terminal.js';
 import { EngineContext } from '../mcp/tools/types.js';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
@@ -19,8 +20,6 @@ import { LOCK_PATH } from './lock.js';
 const PROJECT_DIR = '/tmp/reqly-test-terminal';
 const PORT = 5003;
 
-// Attaches the message listener immediately so nothing the PTY writes right
-// after `connection` (e.g. the shell's own startup banner/prompt) is lost.
 function collectMessages(ws: WebSocket) {
   const messages: any[] = [];
   ws.on('message', (raw) => messages.push(JSON.parse(raw.toString())));
@@ -43,7 +42,14 @@ function waitUntil(check: () => boolean, timeoutMs = 5000): Promise<void> {
   });
 }
 
-describe('/terminal WebSocket (PTY)', () => {
+// Performs the mandatory `attach` handshake and waits for `ready`.
+async function attach(ws: WebSocket, messages: any[], sessionId: string, cols = 80, rows = 24): Promise<any> {
+  ws.send(JSON.stringify({ type: 'attach', sessionId, cols, rows }));
+  await waitUntil(() => messages.some(m => m.type === 'ready'));
+  return messages.find(m => m.type === 'ready');
+}
+
+describe('/terminal WebSocket (PTY + session registry)', () => {
   let server: ReturnType<typeof startExpressServer>;
   let collectionManager: CollectionManager;
 
@@ -71,14 +77,28 @@ describe('/terminal WebSocket (PTY)', () => {
   });
 
   afterEach(async () => {
+    clearSessions();
     server.close();
     fs.rmSync(PROJECT_DIR, { recursive: true, force: true });
+  });
+
+  it('rejects a connection that does not send attach first', async () => {
+    const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const messages = collectMessages(ws);
+    await new Promise<void>((resolve) => ws.on('open', resolve));
+
+    ws.send(JSON.stringify({ type: 'input', data: 'echo hello\n' }));
+    await waitUntil(() => messages.some(m => m.type === 'error'));
+
+    expect(messages.find(m => m.type === 'error')?.message).toMatch(/attach/);
+    ws.close();
   });
 
   it('streams PTY output for a command typed via input', async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
     const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
+    await attach(ws, messages, 'session-input-test');
 
     ws.send(JSON.stringify({ type: 'input', data: 'echo hello-pty\n' }));
     await waitUntil(() => allData(messages).includes('hello-pty'));
@@ -91,6 +111,7 @@ describe('/terminal WebSocket (PTY)', () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
     const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
+    await attach(ws, messages, 'session-cwd-test');
 
     ws.send(JSON.stringify({ type: 'input', data: 'pwd\n' }));
 
@@ -104,6 +125,7 @@ describe('/terminal WebSocket (PTY)', () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
     const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
+    await attach(ws, messages, 'session-cd-test');
 
     const path = await import('path');
     const projectRoot = path.dirname(collectionManager.getBaseDir());
@@ -119,8 +141,9 @@ describe('/terminal WebSocket (PTY)', () => {
 
   it('resizes the PTY without erroring', async () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
-    collectMessages(ws);
+    const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
+    await attach(ws, messages, 'session-resize-test');
 
     expect(() => ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }))).not.toThrow();
     ws.close();
@@ -130,13 +153,52 @@ describe('/terminal WebSocket (PTY)', () => {
     const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
     const messages = collectMessages(ws);
     await new Promise<void>((resolve) => ws.on('open', resolve));
+    await attach(ws, messages, 'session-kill-test');
 
     ws.send(JSON.stringify({ type: 'input', data: 'sleep 30\n' }));
     await new Promise((r) => setTimeout(r, 300));
     ws.send(JSON.stringify({ type: 'kill' }));
 
-    // Ctrl+C interrupts `sleep` and returns control to the shell, which prints a fresh prompt.
     await waitUntil(() => allData(messages).includes('$') || allData(messages).includes('%'));
+    ws.close();
+  });
+
+  it('re-attaches to an existing session and replays buffered output', async () => {
+    const sid = 'session-reattach-test';
+
+    // First connection: run a command, let it complete.
+    const ws1 = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const msgs1 = collectMessages(ws1);
+    await new Promise<void>((resolve) => ws1.on('open', resolve));
+    const ready1 = await attach(ws1, msgs1, sid);
+    expect(ready1.isNew).toBe(true);
+
+    ws1.send(JSON.stringify({ type: 'input', data: 'echo session-marker-xyz\n' }));
+    await waitUntil(() => allData(msgs1).includes('session-marker-xyz'));
+
+    // Close first WS (simulates browser refresh - PTY stays alive).
+    ws1.close();
+    await new Promise((r) => setTimeout(r, 100));
+
+    // Second connection with same session ID.
+    const ws2 = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const msgs2 = collectMessages(ws2);
+    await new Promise<void>((resolve) => ws2.on('open', resolve));
+    const ready2 = await attach(ws2, msgs2, sid);
+
+    expect(ready2.isNew).toBe(false);
+    expect(ready2.replay).toContain('session-marker-xyz');
+    ws2.close();
+  });
+
+  it('returns isNew:true for an unknown session ID', async () => {
+    const ws = new WebSocket(`ws://localhost:${PORT}/terminal`);
+    const messages = collectMessages(ws);
+    await new Promise<void>((resolve) => ws.on('open', resolve));
+    const ready = await attach(ws, messages, 'brand-new-session-id');
+
+    expect(ready.isNew).toBe(true);
+    expect(ready.replay).toBe('');
     ws.close();
   });
 });

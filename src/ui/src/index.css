@@ -96,7 +96,10 @@
   }
 
   .tab-btn {
-    padding: 0.5rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.75rem;
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--text-muted);
@@ -229,6 +232,12 @@
     border-radius: var(--radius-xl);
     padding: 1.5rem;
     box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  }
+
+  /* xterm terminal - tighten internal padding */
+  .xterm-viewport,
+  .xterm-screen {
+    padding: 4px 6px !important;
   }
 }
 
