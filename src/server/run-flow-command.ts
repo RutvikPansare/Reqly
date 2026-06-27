@@ -105,7 +105,7 @@ export async function handleRunFlowCommand(
       dotEnvLoader,
       specLoader: new SpecLoader(),
       executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
-        executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars)
+        executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
     };
 
     const runner = new FlowRunner(context);

@@ -53,7 +53,7 @@ export async function handleRunCommand(
         auth = await authManager.getProfile(req.authProfileId);
       }
 
-      const res = await executeRequest(req, env || undefined, auth, undefined, undefined, undefined, undefined, dotEnvVars);
+      const res = await executeRequest(req, env || undefined, auth, undefined, undefined, undefined, undefined, dotEnvVars, path.dirname(collectionManager.getBaseDir()));
       let assertionsResult: AssertionResult[] | undefined = undefined;
       let passed = true;
 
@@ -122,7 +122,7 @@ export async function handleRunCommand(
         dotEnvLoader,
         specLoader: new SpecLoader(),
         executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
-          executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars)
+          executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
       };
 
       const runner = new CollectionRunner(context);

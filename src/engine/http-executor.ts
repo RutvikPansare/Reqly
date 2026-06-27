@@ -1,5 +1,7 @@
 import { fetch } from 'undici';
-import { RequestConfig, Environment, AuthProfile, AuthType, HttpResponse } from '../types/index.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import { RequestConfig, Environment, AuthProfile, AuthType, HttpResponse, MultipartBody } from '../types/index.js';
 import { runScript } from './script-runner.js';
 
 export class RequestError extends Error {
@@ -20,7 +22,8 @@ export async function execute(
   maxBodyBytes: number = 50 * 1024,
   collectionVars: Record<string, string> = {},
   collectionAuth?: AuthProfile,
-  dotEnvVars: Record<string, string> = {}
+  dotEnvVars: Record<string, string> = {},
+  baseDir?: string
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
   // Layered scope chain: collection vars > env vars > .env-file vars.
@@ -55,6 +58,87 @@ export async function execute(
   }
 
   let body = config.body;
+
+  // Multipart branch: build a FormData from parts. Must come before the generic
+  // object branch so that { type: 'multipart', parts: [...] } is not JSON-stringified.
+  if (body && typeof body === 'object' && (body as MultipartBody).type === 'multipart') {
+    const multipart = body as MultipartBody;
+    const formData = new FormData();
+    for (const part of multipart.parts) {
+      if (part.type === 'text') {
+        formData.append(part.name, part.value ?? '');
+      } else {
+        // File part: resolve path relative to baseDir (or treat as absolute).
+        const resolvedPath = part.filePath && !path.isAbsolute(part.filePath) && baseDir
+          ? path.join(baseDir, part.filePath)
+          : (part.filePath ?? '');
+        if (!fs.existsSync(resolvedPath)) {
+          return {
+            status: 0,
+            body: { error: `File not found: ${part.filePath ?? resolvedPath}` },
+            headers: {},
+            latency: 0,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        const fileBytes = fs.readFileSync(resolvedPath);
+        const filename = path.basename(resolvedPath);
+        const mimeType = part.contentType ?? 'application/octet-stream';
+        const blob = new File([fileBytes], filename, { type: mimeType });
+        formData.append(part.name, blob, filename);
+      }
+    }
+    // Assign FormData as the fetch body. Do NOT set Content-Type manually;
+    // undici/fetch sets multipart/form-data with the correct boundary automatically.
+    body = formData as unknown as string;
+
+    const startTime = Date.now();
+    let response;
+    try {
+      response = await fetch(url, { method: config.method, headers, body: formData as any });
+    } catch (err: any) {
+      throw new RequestError(err.message || 'Network Error');
+    }
+    const latency = Date.now() - startTime;
+    const resHeaders: Record<string, string> = {};
+    response.headers.forEach((v, k) => { resHeaders[k] = v; });
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    let finalBodyBuffer = buffer;
+    let isTruncated = false;
+    if (truncate && buffer.length > maxBodyBytes) {
+      finalBodyBuffer = buffer.subarray(0, maxBodyBytes);
+      isTruncated = true;
+    }
+    let text = '';
+    try { text = finalBodyBuffer.toString('utf8'); } catch { /* keep empty */ }
+    let parsedBody: string | Record<string, unknown> | null = text;
+    if (text) { try { parsedBody = JSON.parse(text); } catch { /* keep as text */ } }
+    else { parsedBody = null; }
+    let fullParsedBody: string | Record<string, unknown> | null = null;
+    if (isTruncated) {
+      let fullText = '';
+      try { fullText = buffer.toString('utf8'); try { fullParsedBody = JSON.parse(fullText); } catch { fullParsedBody = fullText; } } catch { /* ignore */ }
+      const sizeMb = (buffer.length / (1024 * 1024)).toFixed(2);
+      const msg = `\n\n[Response truncated: ${sizeMb}MB received, showing first 50KB. Use --full to retrieve complete response.]`;
+      if (typeof parsedBody === 'string') { parsedBody += msg; } else { parsedBody = (text || '') + msg; }
+    }
+    const multipartResult: HttpResponse = {
+      status: response.status,
+      body: parsedBody,
+      ...(isTruncated ? { fullBody: fullParsedBody } : {}),
+      headers: resHeaders,
+      latency,
+      timestamp: new Date().toISOString(),
+    };
+    if (config.postScript) {
+      const envVarsForScript = env?.variables || {};
+      const { consoleLogs: post } = runScript(config.postScript, { env: envVarsForScript, request: config as unknown as Record<string, unknown>, response: multipartResult as unknown as Record<string, unknown> });
+      if (post.length > 0) multipartResult.consoleLogs = post;
+    }
+    return multipartResult;
+  }
+
   if (config.type === 'graphql' && config.graphql) {
     const gqlBody: Record<string, unknown> = { query: config.graphql.query };
     if (config.graphql.variables !== undefined) {

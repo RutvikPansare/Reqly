@@ -16,11 +16,30 @@ export interface InlineAuth {
   credentials?: Record<string, string>;
 }
 
+// A single field in a multipart/form-data body. `text` parts carry their
+// value inline; `file` parts carry only a path (relative to the project
+// root, resolved via CollectionManager.getBaseDir()) - file contents are
+// never stored in the collection YAML.
+export interface MultipartPart {
+  name: string;
+  type: 'text' | 'file';
+  value?: string;
+  filePath?: string;
+  contentType?: string;
+}
+
+export interface MultipartBody {
+  type: 'multipart';
+  parts: MultipartPart[];
+}
+
+export type RequestBody = string | Record<string, unknown> | MultipartBody;
+
 export interface RequestConfig {
   method: HttpMethod;
   url: string;
   headers?: Record<string, string>;
-  body?: string | Record<string, unknown>;
+  body?: RequestBody;
   params?: Record<string, string>;
   authProfileId?: string;
   auth?: InlineAuth;

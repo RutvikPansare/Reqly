@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { execute, RequestError } from './http-executor.js';
 import { RequestConfig, Environment, AuthProfile, AuthType } from '../types/index.js';
 
@@ -293,6 +296,117 @@ describe('http-executor', () => {
       const noneAuth: AuthProfile = { id: 'c2', name: 'col', type: 'none' as AuthType, credentials: {} };
       await execute(config, undefined, undefined, true, 50 * 1024, {}, noneAuth);
       expect(headersOf().Authorization).toBeUndefined();
+    });
+  });
+
+  describe('multipart body', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reqly-multipart-test-'));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    const mockOkResponse = () => {
+      vi.mocked(fetch).mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('ok').buffer),
+      } as any);
+    };
+
+    const bodyOf = () => (vi.mocked(fetch).mock.calls[vi.mocked(fetch).mock.calls.length - 1][1] as any).body;
+    const headersOf = () => (vi.mocked(fetch).mock.calls[vi.mocked(fetch).mock.calls.length - 1][1] as any).headers;
+
+    it('builds a FormData with text parts', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: { type: 'multipart', parts: [{ name: 'username', type: 'text', value: 'alice' }] },
+      };
+      await execute(config);
+      const body = bodyOf();
+      expect(body).toBeInstanceOf(FormData);
+      expect(body.get('username')).toBe('alice');
+    });
+
+    it('reads a file part from disk and appends it as a Blob with filename and content type', async () => {
+      mockOkResponse();
+      const filePath = path.join(tmpDir, 'avatar.jpg');
+      fs.writeFileSync(filePath, 'fake-image-bytes');
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: { type: 'multipart', parts: [{ name: 'avatar', type: 'file', filePath, contentType: 'image/jpeg' }] },
+      };
+      await execute(config, undefined, undefined, true, undefined, undefined, undefined, undefined, tmpDir);
+      const body = bodyOf();
+      const file = body.get('avatar') as File;
+      expect(file.name).toBe('avatar.jpg');
+      expect(file.type).toBe('image/jpeg');
+      expect(await file.text()).toBe('fake-image-bytes');
+    });
+
+    it('resolves a relative filePath against the given project root', async () => {
+      mockOkResponse();
+      fs.writeFileSync(path.join(tmpDir, 'avatar.jpg'), 'bytes');
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: { type: 'multipart', parts: [{ name: 'avatar', type: 'file', filePath: 'avatar.jpg' }] },
+      };
+      await execute(config, undefined, undefined, true, undefined, undefined, undefined, undefined, tmpDir);
+      const body = bodyOf();
+      expect((body.get('avatar') as File).name).toBe('avatar.jpg');
+    });
+
+    it('returns a structured error without throwing when a file part does not exist', async () => {
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: { type: 'multipart', parts: [{ name: 'avatar', type: 'file', filePath: 'nope.jpg' }] },
+      };
+      const result = await execute(config, undefined, undefined, true, undefined, undefined, undefined, undefined, tmpDir);
+      expect(result.body).toEqual({ error: 'File not found: nope.jpg' });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('handles mixed text and file parts together', async () => {
+      mockOkResponse();
+      fs.writeFileSync(path.join(tmpDir, 'avatar.jpg'), 'bytes');
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: {
+          type: 'multipart',
+          parts: [
+            { name: 'username', type: 'text', value: 'alice' },
+            { name: 'avatar', type: 'file', filePath: 'avatar.jpg' },
+          ],
+        },
+      };
+      await execute(config, undefined, undefined, true, undefined, undefined, undefined, undefined, tmpDir);
+      const body = bodyOf();
+      expect(body.get('username')).toBe('alice');
+      expect((body.get('avatar') as File).name).toBe('avatar.jpg');
+    });
+
+    it('does not manually set a Content-Type header, letting fetch set the multipart boundary', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: { type: 'multipart', parts: [{ name: 'username', type: 'text', value: 'alice' }] },
+      };
+      await execute(config);
+      const headers = headersOf();
+      expect(headers['Content-Type']).toBeUndefined();
+      expect(headers['content-type']).toBeUndefined();
     });
   });
 });

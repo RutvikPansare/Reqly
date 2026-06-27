@@ -128,7 +128,7 @@ async function main() {
       const maxBytes = config.maxBodyBytes || 50 * 1024;
       // Read context.dotEnvLoader (not the closed-over local) - switch-project
       // reassigns it to a new instance scoped to the new project dir.
-      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord());
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), cwd);
     }
   };
 
