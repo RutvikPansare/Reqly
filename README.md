@@ -156,3 +156,24 @@ reqly run-flow "Login Flow" --reporter json
 reqly run-flow "Login Flow" --reporter tap
 reqly run-flow "Signup Flow" --data-row '{"email":"test@example.com"}'
 ```
+
+### Mock server
+
+Serve saved example responses as a real HTTP server so frontend code or agents can make calls against controlled responses without a live backend:
+
+```bash
+reqly mock <collection>           # default port 4243
+reqly mock <collection> --port 5000
+```
+
+On start, Reqly prints a table of all active routes (method, path, example count). Press Ctrl+C to stop.
+
+To select a specific example per request, set the `X-Reqly-Example: <name>` header. Without it, the first saved example is served.
+
+The mock server also exposes REST routes on the main server (port 4242) for UI and programmatic control:
+
+```
+POST /api/mock/start   { collection, port? }
+POST /api/mock/stop
+GET  /api/mock/status
+```

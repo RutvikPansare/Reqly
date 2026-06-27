@@ -45,6 +45,10 @@ import * as updateFlowStep from './tools/update-flow-step.js';
 import * as deleteFlowStep from './tools/delete-flow-step.js';
 import * as runFlow from './tools/run-flow.js';
 
+import * as startMock from './tools/start-mock.js';
+import * as stopMock from './tools/stop-mock.js';
+import * as getMockStatus from './tools/get-mock-status.js';
+
 const tools = [
   runRequest,
   createRequest,
@@ -85,6 +89,9 @@ const tools = [
   updateFlowStep,
   deleteFlowStep,
   runFlow,
+  startMock,
+  stopMock,
+  getMockStatus,
 ];
 
 import { z } from 'zod';

@@ -45,6 +45,9 @@ Reqly exposes the following MCP tools for AI agents:
 - `create_flow`, `get_flow`, `list_flows`, `delete_flow`: Manage flows (multi-step automation tests, separate from collections).
 - `add_flow_step`, `update_flow_step`, `delete_flow_step`: Edit a flow's step sequence (run/extract/assert/poll/conditional).
 - `run_flow`: Run a flow end to end, optionally with a `dataRow` override for an ad-hoc run.
+- `start_mock`: Start a mock HTTP server for a collection on a given port (default 4243). Returns active routes.
+- `stop_mock`: Stop the running mock server.
+- `get_mock_status`: Get running state, collection, port, and route list of the mock server.
 
 ## Reqly Features
 
@@ -56,7 +59,8 @@ Reqly exposes the following MCP tools for AI agents:
 - Inbound middleware: capture requests coming INTO your app (`reqly-middleware`)
 - GraphQL: dedicated workspace, schema introspection, autocomplete
 - Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI
-- CLI: `reqly run`, `reqly run-flow`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
+- Mock server: `reqly mock <collection> [--port <n>]` serves saved example responses on a real HTTP port. `X-Reqly-Example: <name>` header selects a specific example; falls back to first. Full MCP parity via `start_mock`/`stop_mock`/`get_mock_status`.
+- CLI: `reqly run`, `reqly run-flow`, `reqly mock`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`
 
 ## TERTIARY: Capture inbound traffic (calls coming into your app)
 

@@ -8,6 +8,7 @@ import { ProxyServer } from '../engine/proxy.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { FlowManager } from '../engine/flow-manager.js';
+import { MockServer } from '../engine/mock-server.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -18,6 +19,7 @@ import { startExpressServer } from './express.js';
 import { parseArgs, resolveProjectDir } from './cli-parser.js';
 import { handleRunCommand } from './run-command.js';
 import { handleRunFlowCommand } from './run-flow-command.js';
+import { handleMockCommand } from './mock-command.js';
 import { handleSetupCommand } from './setup-command.js';
 import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
@@ -78,6 +80,11 @@ async function main() {
     process.exit(exitCode);
   }
 
+  if (parsed.command === 'mock') {
+    const exitCode = await handleMockCommand(parsed, collectionManager);
+    process.exit(exitCode);
+  }
+
   if (parsed.command === 'import') {
     const exitCode = await handleImportCommand(parsed, collectionManager);
     process.exit(exitCode);
@@ -94,6 +101,7 @@ async function main() {
   const tunnelManager = new TunnelManager();
   const responseStore = new ResponseStore();
   const historyStore = new HistoryStore();
+  const mockServer = new MockServer(collectionManager);
 
   const context: EngineContext = {
     collectionManager,
@@ -104,6 +112,7 @@ async function main() {
     responseStore,
     historyStore,
     flowManager,
+    mockServer,
     executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;
@@ -145,6 +154,7 @@ async function main() {
     try {
       await context.proxyServer.stop();
       context.tunnelManager.stop();
+      await context.mockServer?.stop().catch(() => {});
     } catch (e) {
       // ignore
     }

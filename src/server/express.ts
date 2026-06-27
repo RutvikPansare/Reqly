@@ -827,6 +827,32 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  // --- Mock server routes ---
+
+  app.post('/api/mock/start', async (req, res) => {
+    try {
+      const { collection, port } = req.body as { collection: string; port?: number };
+      if (!collection) return res.status(400).json({ error: 'collection is required' });
+      await context.mockServer!.start(collection, port ?? 4243);
+      res.json(context.mockServer!.getStatus());
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/mock/stop', async (_req, res) => {
+    try {
+      await context.mockServer!.stop();
+      res.json({ stopped: true });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/mock/status', (_req, res) => {
+    res.json(context.mockServer!.getStatus());
+  });
+
   app.post('/api/codegen', async (req, res) => {
     try {
       const { request, target } = req.body as { request: any; target: 'curl' | 'fetch' | 'axios' };
