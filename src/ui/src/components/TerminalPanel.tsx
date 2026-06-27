@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
-import { Trash2, Square } from 'lucide-react';
+import { Trash2, Square, Plus, X } from 'lucide-react';
 
 const HISTORY_LIMIT = 50;
 
-export function TerminalPanel() {
+interface TerminalSessionProps {
+  active: boolean;
+}
+
+function TerminalSession({ active }: TerminalSessionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -99,50 +103,118 @@ export function TerminalPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#0f0f0f' }}>
-      <div
-        className="flex items-center justify-between shrink-0 px-3"
-        style={{ height: 40, borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}
-      >
-        <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Terminal{!connected && <span className="ml-2" style={{ color: '#f59e0b' }}>(disconnected)</span>}
-        </span>
-        <div className="flex items-center gap-2">
-          {running && (
-            <button
-              onClick={handleKill}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
-              style={{ color: '#f87171', background: 'var(--surface-3)' }}
-              title="Kill running command"
-            >
-              <Square size={12} /> Kill
-            </button>
-          )}
-          <button
-            onClick={handleClear}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            title="Clear terminal"
-          >
-            <Trash2 size={12} /> Clear
-          </button>
-        </div>
-      </div>
+    <div className="flex flex-col h-full" style={{ background: '#0f0f0f', display: active ? 'flex' : 'none' }}>
+      <div ref={containerRef} className="flex-1 overflow-hidden p-2 min-h-0" />
 
-      <div ref={containerRef} className="flex-1 overflow-hidden p-2" />
-
-      <div className="shrink-0 flex items-center px-3 gap-2" style={{ height: 40, borderTop: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+      <div className="shrink-0 flex items-center px-3 gap-2" style={{ height: 36, borderTop: '1px solid var(--border)', background: 'var(--surface-1)' }}>
         <span className="text-sm font-mono" style={{ color: 'var(--text-muted)' }}>$</span>
         <input
-          autoFocus
+          autoFocus={active}
           value={command}
           onChange={e => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={running || !connected}
-          placeholder={running ? 'Running...' : 'Run a command...'}
+          placeholder={running ? 'Running...' : !connected ? 'Disconnected — reload to reconnect' : 'Run a command...'}
           className="flex-1 bg-transparent outline-none text-sm font-mono"
           style={{ color: 'var(--text-primary)' }}
         />
+        {running && (
+          <button
+            onClick={handleKill}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
+            style={{ color: '#f87171', background: 'var(--surface-3)' }}
+            title="Kill running command"
+          >
+            <Square size={12} /> Kill
+          </button>
+        )}
+        <button
+          onClick={handleClear}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          title="Clear terminal"
+        >
+          <Trash2 size={12} /> Clear
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface Session {
+  id: number;
+  name: string;
+}
+
+let _nextSessionId = 1;
+
+export function TerminalSessionsPanel() {
+  const [sessions, setSessions] = useState<Session[]>([{ id: _nextSessionId++, name: 'Terminal 1' }]);
+  const [activeId, setActiveId] = useState<number>(sessions[0].id);
+
+  const addSession = () => {
+    const id = _nextSessionId++;
+    setSessions(prev => [...prev, { id, name: `Terminal ${prev.length + 1}` }]);
+    setActiveId(id);
+  };
+
+  const closeSession = (id: number) => {
+    setSessions(prev => {
+      const next = prev.filter(s => s.id !== id);
+      if (next.length === 0) {
+        const freshId = _nextSessionId++;
+        const fresh = [{ id: freshId, name: 'Terminal 1' }];
+        setActiveId(freshId);
+        return fresh;
+      }
+      if (id === activeId) setActiveId(next[next.length - 1].id);
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex flex-col h-full min-h-0" style={{ background: '#0f0f0f' }}>
+      <div className="flex items-center shrink-0 px-2 gap-1" style={{ height: 34, borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+        {sessions.map(s => (
+          <div
+            key={s.id}
+            onClick={() => setActiveId(s.id)}
+            className="flex items-center gap-1.5 cursor-pointer rounded-t"
+            style={{
+              height: 26,
+              padding: '0 8px',
+              fontSize: '11px',
+              color: s.id === activeId ? 'var(--text-primary)' : 'var(--text-muted)',
+              background: s.id === activeId ? 'var(--surface-0)' : 'transparent',
+              border: s.id === activeId ? '1px solid var(--border)' : '1px solid transparent',
+              borderBottom: 'none',
+            }}
+          >
+            {s.name}
+            <button
+              onClick={e => { e.stopPropagation(); closeSession(s.id); }}
+              className="flex items-center justify-center rounded transition-colors"
+              style={{ color: 'var(--text-muted)', width: 14, height: 14 }}
+              title="Close session"
+            >
+              <X size={11} />
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={addSession}
+          className="flex items-center justify-center rounded transition-colors"
+          style={{ color: 'var(--text-muted)', width: 22, height: 22 }}
+          title="New terminal session"
+        >
+          <Plus size={13} />
+        </button>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        {sessions.map(s => (
+          <TerminalSession key={s.id} active={s.id === activeId} />
+        ))}
       </div>
     </div>
   );

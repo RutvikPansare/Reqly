@@ -33,6 +33,58 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     next();
   });
 
+  // ---------------------------------------------------------------------------
+  // SSE - server-sent events for real-time UI updates
+  // ---------------------------------------------------------------------------
+  const sseClients = new Set<express.Response>();
+
+  const emit = (type: string) => {
+    if (sseClients.size === 0) return;
+    const payload = `data: ${JSON.stringify({ type })}\n\n`;
+    for (const client of sseClients) {
+      try { client.write(payload); } catch { sseClients.delete(client); }
+    }
+  };
+
+  // Intercept res.json on mutating requests to emit the right event type.
+  // One middleware covers all routes - no need to add emit() calls per route.
+  app.use((req, res, next) => {
+    if (req.method === 'GET') return next();
+    const orig = res.json.bind(res);
+    (res as any).json = function (body: unknown) {
+      const result = orig(body);
+      if (res.statusCode < 400) {
+        const p = req.path;
+        if (p.startsWith('/api/collections') || p === '/capture/inbound' || p === '/api/import') {
+          emit('collections');
+        } else if (p.startsWith('/api/flows')) {
+          emit('flows');
+        } else if (p.startsWith('/api/environments') || p === '/api/dotenv') {
+          emit('environments');
+        } else if (p.startsWith('/api/run/') || p === '/api/history') {
+          emit('history');
+        } else if (p === '/api/switch-project') {
+          emit('project');
+        }
+      }
+      return result;
+    };
+    next();
+  });
+
+  app.get('/api/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    sseClients.add(res);
+    // Heartbeat every 25s to prevent proxy/nginx idle timeouts
+    const heartbeat = setInterval(() => {
+      try { res.write(':heartbeat\n\n'); } catch { sseClients.delete(res); clearInterval(heartbeat); }
+    }, 25000);
+    req.on('close', () => { sseClients.delete(res); clearInterval(heartbeat); });
+  });
+
   // Engine API Routes
   app.post('/api/proxy/start', async (req, res) => {
     try {

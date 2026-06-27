@@ -3,6 +3,7 @@ import { Search, Settings, ChevronLeft, ChevronRight, X, Plus, ChevronDown } fro
 import { updateRequest, fetchCollections, addRequest, fetchEnvironments, setActiveEnvironment } from './api';
 import { methodColorClass } from './lib/colors';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useServerEvents } from './hooks/useServerEvents';
 import { NavRail } from './components/NavRail';
 import type { NavPanel } from './components/NavRail';
 import { CollectionsPanel } from './components/CollectionsPanel';
@@ -17,10 +18,9 @@ import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
 import { FlowsPanel } from './components/FlowsPanel';
 import { FlowWorkspace } from './components/FlowWorkspace';
-import { TerminalPanel } from './components/TerminalPanel';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
 import { SplitPane } from './components/SplitPane';
-import { BottomBar, BottomPanel, useConsoleStats } from './components/BottomPanel';
+import { BottomBar, BottomPanel, useConsoleStats, type BottomTab } from './components/BottomPanel';
 
 interface TabData {
   id: string;
@@ -78,6 +78,7 @@ const rehydrateTabs = (): TabData[] => {
 };
 
 function App() {
+  useServerEvents();
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [activePanel, setActivePanel] = useLocalStorage<NavPanel>(ACTIVE_PANEL_KEY, 'collections');
@@ -105,6 +106,7 @@ function App() {
   const [saveModal, setSaveModal] = useState<{ tabId: string; request: any } | null>(null);
   const [bottomOpen, setBottomOpen] = useState(false);
   const [bottomHeight, setBottomHeight] = useState(220);
+  const [bottomTab, setBottomTab] = useState<BottomTab>('console');
   const tabBarRef = useRef<HTMLDivElement>(null);
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameTabValue, setRenameTabValue] = useState('');
@@ -402,7 +404,7 @@ function App() {
             }
           }}
         />
-        {activePanel !== 'graphql' && activePanel !== 'terminal' && (
+        {activePanel !== 'graphql' && (
           <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-2)', borderRight: '1px solid var(--border)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
@@ -436,8 +438,6 @@ function App() {
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 relative" style={{ background: 'var(--surface-1)' }}>
           {activePanel === 'graphql' ? (
             <GraphQLWorkspace />
-          ) : activePanel === 'terminal' ? (
-            <TerminalPanel />
           ) : activePanel === 'flows' ? (
             selectedFlowName ? (
               <FlowWorkspace
@@ -612,10 +612,16 @@ function App() {
         onClose={() => setBottomOpen(false)}
         height={bottomHeight}
         onHeightChange={setBottomHeight}
+        activeTab={bottomTab}
+        onTabChange={setBottomTab}
       />
       <BottomBar
         consoleOpen={bottomOpen}
-        onToggleConsole={() => setBottomOpen(o => !o)}
+        activeTab={bottomTab}
+        onSelectTab={(tab) => {
+          if (bottomOpen && bottomTab === tab) setBottomOpen(false);
+          else { setBottomTab(tab); setBottomOpen(true); }
+        }}
         entryCount={consoleStats.total}
         errorCount={consoleStats.errors}
       />

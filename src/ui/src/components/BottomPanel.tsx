@@ -1,7 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Terminal, ChevronDown, Trash2 } from 'lucide-react';
+import { Terminal, TerminalSquare, ChevronDown, Trash2 } from 'lucide-react';
+import { TerminalSessionsPanel } from './TerminalPanel';
 
-type BottomTab = 'console';
+export type BottomTab = 'console' | 'terminal';
 
 interface ConsoleEntry {
   id: number;
@@ -51,13 +52,14 @@ interface BottomPanelProps {
   onClose: () => void;
   height: number;
   onHeightChange: (h: number) => void;
+  activeTab: BottomTab;
+  onTabChange: (tab: BottomTab) => void;
 }
 
 const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 600;
 
-export function BottomPanel({ open, onClose, height, onHeightChange }: BottomPanelProps) {
-  const [activeTab, setActiveTab] = useState<BottomTab>('console');
+export function BottomPanel({ open, onClose, height, onHeightChange, activeTab, onTabChange }: BottomPanelProps) {
   const entries = useConsoleEntries();
   const listRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
@@ -90,15 +92,14 @@ export function BottomPanel({ open, onClose, height, onHeightChange }: BottomPan
   const errorCount = entries.filter(e => e.level === 'error').length;
   const warnCount = entries.filter(e => e.level === 'warn').length;
 
-  if (!open) return null;
-
   return (
     <div
       className="shrink-0 flex flex-col"
       style={{
-        height,
+        height: open ? height : 0,
         background: 'var(--surface-0)',
-        borderTop: '1px solid var(--border)',
+        borderTop: open ? '1px solid var(--border)' : 'none',
+        overflow: 'hidden',
       }}
     >
       {/* Drag handle */}
@@ -114,7 +115,7 @@ export function BottomPanel({ open, onClose, height, onHeightChange }: BottomPan
         <button
           className={`tab-btn text-xs ${activeTab === 'console' ? 'active' : ''}`}
           style={activeTab === 'console' ? { color: '#fbbf24', borderBottomColor: '#f59e0b' } : {}}
-          onClick={() => setActiveTab('console')}
+          onClick={() => onTabChange('console')}
         >
           <Terminal size={12} />
           Console
@@ -130,16 +131,27 @@ export function BottomPanel({ open, onClose, height, onHeightChange }: BottomPan
           )}
         </button>
 
+        <button
+          className={`tab-btn text-xs ${activeTab === 'terminal' ? 'active' : ''}`}
+          style={activeTab === 'terminal' ? { color: '#fbbf24', borderBottomColor: '#f59e0b' } : {}}
+          onClick={() => onTabChange('terminal')}
+        >
+          <TerminalSquare size={12} />
+          Terminal
+        </button>
+
         {/* Right controls */}
         <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={() => clearConsoleLogs()}
-            className="flex items-center gap-1 transition-colors rounded px-2"
-            style={{ color: 'var(--text-muted)', fontSize: '0.7rem', height: '24px' }}
-            title="Clear console"
-          >
-            <Trash2 size={11} />
-          </button>
+          {activeTab === 'console' && (
+            <button
+              onClick={() => clearConsoleLogs()}
+              className="flex items-center gap-1 transition-colors rounded px-2"
+              style={{ color: 'var(--text-muted)', fontSize: '0.7rem', height: '24px' }}
+              title="Clear console"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="flex items-center justify-center rounded transition-colors"
@@ -149,6 +161,11 @@ export function BottomPanel({ open, onClose, height, onHeightChange }: BottomPan
             <ChevronDown size={14} />
           </button>
         </div>
+      </div>
+
+      {/* Terminal content - stays mounted across tab switches and panel close so sessions persist */}
+      <div className="flex-1 min-h-0" style={{ display: activeTab === 'terminal' ? 'flex' : 'none' }}>
+        <TerminalSessionsPanel />
       </div>
 
       {/* Console content */}
@@ -191,26 +208,30 @@ export function BottomPanel({ open, onClose, height, onHeightChange }: BottomPan
 // Bottom status bar - always visible
 interface BottomBarProps {
   consoleOpen: boolean;
-  onToggleConsole: () => void;
+  activeTab: BottomTab;
+  onSelectTab: (tab: BottomTab) => void;
   entryCount: number;
   errorCount: number;
 }
 
-export function BottomBar({ consoleOpen, onToggleConsole, entryCount, errorCount }: BottomBarProps) {
+export function BottomBar({ consoleOpen, activeTab, onSelectTab, entryCount, errorCount }: BottomBarProps) {
+  const isConsoleActive = consoleOpen && activeTab === 'console';
+  const isTerminalActive = consoleOpen && activeTab === 'terminal';
+
   return (
     <div
-      className="shrink-0 flex items-center px-3 gap-3"
+      className="shrink-0 flex items-center px-3 gap-2"
       style={{ height: '26px', background: 'var(--surface-0)', borderTop: '1px solid var(--border)', zIndex: 10 }}
     >
       <button
-        onClick={onToggleConsole}
+        onClick={() => onSelectTab('console')}
         className="flex items-center gap-1.5 rounded transition-colors px-2"
         style={{
           height: '20px',
           fontSize: '0.7rem',
-          color: consoleOpen ? '#fbbf24' : 'var(--text-muted)',
-          background: consoleOpen ? 'rgba(251,191,36,0.08)' : 'transparent',
-          border: consoleOpen ? '1px solid rgba(251,191,36,0.2)' : '1px solid transparent',
+          color: isConsoleActive ? '#fbbf24' : 'var(--text-muted)',
+          background: isConsoleActive ? 'rgba(251,191,36,0.08)' : 'transparent',
+          border: isConsoleActive ? '1px solid rgba(251,191,36,0.2)' : '1px solid transparent',
         }}
         title="Toggle Console (Ctrl+`)"
       >
@@ -226,6 +247,22 @@ export function BottomBar({ consoleOpen, onToggleConsole, entryCount, errorCount
             {entryCount}
           </span>
         )}
+      </button>
+
+      <button
+        onClick={() => onSelectTab('terminal')}
+        className="flex items-center gap-1.5 rounded transition-colors px-2"
+        style={{
+          height: '20px',
+          fontSize: '0.7rem',
+          color: isTerminalActive ? '#fbbf24' : 'var(--text-muted)',
+          background: isTerminalActive ? 'rgba(251,191,36,0.08)' : 'transparent',
+          border: isTerminalActive ? '1px solid rgba(251,191,36,0.2)' : '1px solid transparent',
+        }}
+        title="Toggle Terminal"
+      >
+        <TerminalSquare size={11} />
+        Terminal
       </button>
     </div>
   );
