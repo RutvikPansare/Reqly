@@ -110,7 +110,7 @@ export function FlowWorkspace({ flowName, lastResult, onRunComplete }: FlowWorks
       </div>
 
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="flex-1 overflow-y-auto flex flex-col" style={{ padding: '12px 16px', gap: 6 }}>
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ padding: '12px 16px', gap: 6 }}>
           {flow.steps.map((step: any) => (
             <FlowStepCard
               key={step.id}
@@ -147,13 +147,14 @@ export function FlowWorkspace({ flowName, lastResult, onRunComplete }: FlowWorks
         </div>
 
         {hasData && showDataPanel && (
-          <div className="flex flex-col shrink-0" style={{ width: 196, borderLeft: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+          <div className="flex flex-col shrink-0 min-h-0" style={{ width: 196, borderLeft: '1px solid var(--border)', background: 'var(--surface-1)' }}>
             <div
               className="flex items-center shrink-0"
               style={{ padding: '10px 12px 8px', borderBottom: '1px solid var(--border)', fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', gap: 6 }}
             >
               <Table size={13} /> Data rows
             </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
             {flow.data.map((row: any, i: number) => {
               const rowResult = lastResult?.dataRows?.[i];
               const rowPassed = rowResult ? rowResult.steps.filter((s: any) => s.passed).length : 0;
@@ -177,6 +178,7 @@ export function FlowWorkspace({ flowName, lastResult, onRunComplete }: FlowWorks
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>

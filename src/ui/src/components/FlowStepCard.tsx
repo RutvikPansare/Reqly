@@ -96,7 +96,7 @@ export function FlowStepCard({ step, result, expanded, onToggleExpand, onDelete 
           {step.id}
         </span>
 
-        <span className="flex-1 truncate" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+        <span className="flex-1 truncate" style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: 0 }}>
           {stepMeta(step)}
         </span>
 
@@ -143,6 +143,9 @@ function Field({ label, value, danger }: { label: string; value: string; danger?
           borderRadius: 4,
           padding: '2px 6px',
           flex: 1,
+          minWidth: 0,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
         }}
       >
         {value}

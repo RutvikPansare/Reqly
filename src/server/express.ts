@@ -18,6 +18,7 @@ import { parseCurl } from '../engine/curl-parser.js';
 import { generateCode } from '../engine/code-generator.js';
 import { exportToPostman, exportToOpenApi } from '../engine/exporter.js';
 import { execute as executeHttp } from '../engine/http-executor.js';
+import { attachTerminal } from './terminal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1137,7 +1138,14 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
-  return app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.error(`Reqly Express server listening on http://localhost:${port}`);
   });
+
+  // path.dirname of getBaseDir() (.reqly/) always reflects the *current*
+  // project root, including after /api/switch-project reassigns
+  // context.collectionManager - no separate mutable state needed.
+  attachTerminal(server, () => path.dirname(context.collectionManager.getBaseDir()));
+
+  return server;
 }

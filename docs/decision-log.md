@@ -8,6 +8,14 @@ Newest entries at the top.
 
 ## 2026-06-27
 
+**Decision:** T-112's embedded terminal (`/terminal` WebSocket, `child_process.spawn`, no auth) shipped exactly as specced after explicit user confirmation - the safety classifier flagged it mid-implementation as an arbitrary command-execution surface and blocked further tool calls until confirmed.
+**Why:** The spec's own rationale ("no authentication needed - Reqly already only binds to localhost") matches the project's existing trust model (`exec_with_proxy` already spawns child processes from an MCP tool call with no extra auth). Still, a raw WS-to-shell bridge is a meaningfully different risk shape (any page that can reach localhost can run commands) worth a deliberate yes/no rather than silent implementation - asked, got an explicit "proceed as specced," then continued.
+
+**Decision:** `attachTerminal(server, getProjectRoot: () => string)` takes a getter, not a static path - it re-reads `path.dirname(context.collectionManager.getBaseDir())` on every `run` message rather than capturing the project root once at server startup.
+**Why:** `/api/switch-project` reassigns `context.collectionManager` to a new project's manager at any time (single global Express instance, see the 2026-06-24 single-instance-enforcement entry). A static path captured at WS-attach time would silently keep spawning commands in the old project's directory after a switch - same bug class as the dotEnvLoader closure bug fixed in T-104, caught proactively this time instead of by a failing test.
+
+## 2026-06-27
+
 **Decision:** `ContractCheckResult` (shared `checkContract` helper) carries `path`/`method` (the matched spec operation's path template) separately from `inferredPath` (the request's actual resolved path, only set when unmatched).
 **Why:** The UI spec wants "All checks passed · `GET /users/{id}` · `getUser`" on a match (the spec's path template + operationId) but "No matching operation found... inferred path: /orders/9" on a miss (what the request actually resolved to). These are different strings serving different purposes - conflating them into one field would make one of the two UI states wrong.
 
