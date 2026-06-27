@@ -13,11 +13,7 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 - [x] **T-118** Replace `fs.watch` with `chokidar` in engine watchers (M5)
 
-- [ ] **T-119** Windows CI matrix + doc updates (M5)
-  - **CI matrix:** find the main test workflow in `.github/workflows/` (likely `ci.yml` or `test.yml`). Add `windows-latest` to the `os` matrix: `strategy: { matrix: { os: [ubuntu-latest, windows-latest] } }` with `runs-on: ${{ matrix.os }}`. No code changes.
-  - **README.md** (`Quick Setup` section, lines 37-52): `npm install -g` already works on Windows. Add a one-liner below the Homebrew block flagging it as macOS-only: "On Windows, use npm (above). Homebrew is macOS-only." Add a platform note at the top of the section: "Reqly runs on macOS, Linux, and Windows."
-  - **llms.txt** (`Installation and Setup` section, lines 3-14): add the same Homebrew caveat and platform note. This is the higher-priority fix - agents read `llms.txt` when helping users install Reqly, so a Windows user's agent must not suggest `brew install`.
-  - **knowledge.md**: scan the "What's built" section for Mac-implicit language ("shell", "terminal") and add Windows equivalents (PowerShell) where relevant.
+- [x] **T-119** Windows CI matrix + doc updates (M5)
 
 ### M5 - Desktop App (Electron)
 

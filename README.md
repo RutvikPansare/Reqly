@@ -34,6 +34,8 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 
 ## Quick Setup
 
+Reqly runs on macOS, Linux, and Windows.
+
 Run these two commands anywhere to install Reqly globally and configure your AI tool (Cursor, Claude Desktop, Claude Code, Gemini, or Codex) to use it:
 
 ```bash
@@ -49,7 +51,7 @@ brew install reqly
 reqly setup
 ```
 
-(Homebrew will ask you to run `brew trust RutvikPansare/reqly` the first time, since it's a third-party tap.)
+(Homebrew will ask you to run `brew trust RutvikPansare/reqly` the first time, since it's a third-party tap. Homebrew is macOS-only - on Windows and Linux, use the npm command above.)
 
 ## The fastest way to start
 

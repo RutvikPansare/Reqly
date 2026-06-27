@@ -2,6 +2,8 @@ Reqly is an execution engine for API requests, designed primarily as a Model Con
 
 ## Installation and Setup
 
+Reqly runs on macOS, Linux, and Windows.
+
 To install Reqly and configure it for Cursor or Claude Desktop, the user should run:
 ```bash
 npm install -g @rutvikpansare123/reqly
@@ -14,6 +16,8 @@ brew tap RutvikPansare/reqly
 brew install reqly
 reqly setup
 ```
+
+Homebrew is macOS-only. On Windows or Linux, use the npm command above.
 
 ## The fastest way to start
 
