@@ -52,35 +52,113 @@ Reqly is not an AI—it's an engine for your AI. When connected, your AI coding 
 
 Reqly exposes these tools directly to your AI agent:
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `list_collections` | Lists all collections and requests in the project | (None) |
-| `create_collection`| Scaffolds a brand new collection file | `name` |
-| `create_request` | Adds a request to a collection | `collectionName`, `request` |
-| `run_request` | Executes a specific request by name and returns the response | `collectionName`, `requestName` |
-| `run_collection` | Fires all requests sequentially in a collection | `collectionName` |
-| `get_response` | Retrieves the last stored response data for a request | `collectionName`, `requestName` |
-| `set_environment` | Changes active env for variable resolution (`{{var}}`) | `environmentName` |
-| `create_environment` | Creates a new named environment with variables | `name`, `variables` |
-| `set_variable` | Sets a variable on an environment | `environmentName`, `key`, `value` |
-| `get_variables` | Lists variables for an environment | `environmentName` |
-| `delete_variable` | Removes a variable from an environment | `environmentName`, `key` |
-| `get_response_full` | Retrieves the last untruncated response for a request | `collectionName`, `requestName` |
-| `start_proxy` | Auto-captures local outbound traffic into a collection | `port`, `collectionName` |
-| `stop_proxy` | Stops traffic interception | (None) |
-| `exec_with_proxy` | Starts the proxy and runs a dev command with it injected | `command`, `collection`, `port` |
-| `export_collection` | Exports a collection as Postman v2.1 or OpenAPI 3.0 JSON | `collectionName`, `format` |
-| `install_middleware` | Detects your framework and returns the inbound-capture middleware snippet | (None) |
+**Collections and Requests**
+
+| Tool | Description |
+|------|-------------|
+| `list_collections` | Lists all collections and requests in the project |
+| `create_collection` | Scaffolds a new collection |
+| `create_request` | Adds a request to a collection. Supports `{{variables}}`, assertions, pre/post scripts, auth, multipart bodies. |
+| `run_request` | Fires a request and returns status, body, headers, latency, assertions, diff, and contract violations |
+| `run_collection` | Fires all requests in a collection sequentially |
+| `get_response` | Retrieves the last stored (truncated) response for a request |
+| `get_response_full` | Retrieves the last untruncated response |
+| `export_collection` | Exports a collection as Postman v2.1 or OpenAPI 3.0 JSON |
+| `import_collection` | Imports a Postman v2.1 or Bruno collection |
+
+**Environments and Variables**
+
+| Tool | Description |
+|------|-------------|
+| `set_environment` | Changes the active environment |
+| `create_environment` | Creates a named environment with variables |
+| `set_variable` | Sets a variable on an environment |
+| `get_variables` | Lists variables for an environment (with source tags) |
+| `delete_variable` | Removes a variable from an environment |
+| `get_collection_variables` | Lists per-collection variables |
+| `set_collection_variable` | Sets a per-collection variable |
+| `delete_collection_variable` | Deletes a per-collection variable |
+| `set_dotenv_files` | Configures which `.env` files are auto-loaded |
+| `get_dotenv_files` | Lists the configured dotenv files |
+
+**Auth**
+
+| Tool | Description |
+|------|-------------|
+| `get_collection_auth` | Gets the default auth config for a collection |
+| `set_collection_auth` | Sets Bearer/API Key/Basic/OAuth2 auth for all requests in a collection |
+| `delete_collection_auth` | Removes collection-level auth |
+
+**OpenAPI Contract Validation**
+
+| Tool | Description |
+|------|-------------|
+| `set_collection_spec` | Points a collection at an OpenAPI spec (file path or URL). Validates every response against it. |
+| `get_collection_spec` | Gets the spec config and load status |
+| `delete_collection_spec` | Removes the spec from a collection |
+| `list_spec_operations` | Lists all operations in the loaded spec |
+| `validate_response` | Re-validates the last stored response without re-firing |
+
+**Flows**
+
+| Tool | Description |
+|------|-------------|
+| `create_flow` | Creates a new flow |
+| `get_flow` | Gets a flow's config and steps |
+| `list_flows` | Lists all flows |
+| `delete_flow` | Deletes a flow |
+| `add_flow_step` | Appends a step to a flow (run/extract/assert/poll/conditional) |
+| `update_flow_step` | Replaces a step in place |
+| `delete_flow_step` | Removes a step |
+| `run_flow` | Executes a flow and returns per-step results |
+
+**Capture and Proxy**
+
+| Tool | Description |
+|------|-------------|
+| `start_proxy` | Auto-captures local outbound traffic into a collection |
+| `stop_proxy` | Stops traffic interception |
+| `exec_with_proxy` | Starts the proxy and runs a dev command with it injected |
+| `install_middleware` | Returns the inbound-capture middleware snippet for your framework |
+
+**Mock Server**
+
+| Tool | Description |
+|------|-------------|
+| `start_mock` | Starts the mock server for a collection on a given port |
+| `stop_mock` | Stops the mock server |
+| `get_mock_status` | Returns mock server status and active routes |
 
 ## Recently shipped
 
-- **cURL import** - paste any cURL command into the URL bar modal; fields populate instantly
-- **Code snippet generation** - one-click fetch/axios/curl snippet from any request
-- **TypeScript interface generator** - infers a typed TS interface from any JSON response body
-- **Collection export** - export as Postman v2.1 or OpenAPI 3.0 JSON (UI right-click or MCP tool)
-- **Script console** - `console.log/warn/error` in pre/post scripts are captured and shown in a Console tab in the response viewer
-- **Response diffing** - detects what changed between runs; shows status, latency delta, and body diff
+- **Flows** - multi-step automation tests (run, extract, assert, poll, conditional) with data-driven support
+- **OpenAPI contract validation** - point a collection at a spec; every response is checked automatically
+- **Multipart body editor** - send `multipart/form-data` with file and text parts
+- **Response diffing** - detects what changed between runs: status, latency delta, body diff
+- **Mock server** - serve saved examples as a real HTTP server for frontend dev and agent testing
+- **Pre/post scripts** - per-request sandboxed JS that can read/write env vars before and after the request fires
 - **GraphQL workspace** - dedicated editor with schema introspection, syntax highlighting, and variable panel
+- **cURL import** - paste any cURL command; fields populate instantly
+- **TypeScript interface generator** - infers a typed TS interface from any JSON response body
+- **.env integration** - zero-config: if `.env` exists at the project root it's loaded automatically
+
+## Flows
+
+Flows are ordered sequences of steps stored in `.reqly/flows/<name>.yaml`. Each step type:
+
+- **`run`** - fire a saved request (optional retry on specific status codes)
+- **`extract`** - pull a value from the last response into a flow-local variable (`response.body.id`, `response.status`, etc.)
+- **`assert`** - check the last response using the same assertion schema as request-level assertions
+- **`poll`** - fire repeatedly until a condition is met (`until: "response.status === 200"`)
+- **`conditional`** - branch: goto a step id, `skip`, or `abort` based on a response expression
+
+Variables extracted by `extract` steps are available in subsequent request URLs and bodies via `{{varName}}`. For data-driven runs, set `data:` rows in the flow - the step sequence runs once per row with each row's keys injected as variables.
+
+```bash
+reqly run-flow "my-flow"
+reqly run-flow "my-flow" --reporter json
+reqly run-flow "my-flow" --data-row '{"userId":"42"}'
+```
 
 ## Capture Inbound Requests (Middleware)
 
@@ -110,22 +188,53 @@ Restart your dev server and Reqly starts capturing inbound requests into the `Ca
 
 Collections live in `.reqly/` inside your project directory as human-readable YAML files. They support variables, authentication profiles, and test assertions.
 
-Example `.reqly/users.yaml`:
+Example request YAML:
 ```yaml
-id: req_users_1
-name: users
-requests:
-  - name: create_user
-    method: POST
-    url: "{{baseUrl}}/api/users"
-    headers:
-      Content-Type: application/json
-    body:
-      email: test@example.com
-    assertions:
-      - path: status
-        operator: eq
-        value: 201
+name: create-user
+method: POST
+url: "{{baseUrl}}/api/users"
+headers:
+  Content-Type: application/json
+body:
+  email: test@example.com
+assertions:
+  - field: status
+    operator: eq
+    value: 201
+  - field: body
+    path: user.id
+    operator: neq
+    value: ""
+```
+
+## Assertions
+
+Assertions run automatically after every request execution. Each assertion checks one thing:
+
+| Property | Values | Notes |
+|----------|--------|-------|
+| `field` | `status` \| `body` \| `latency` | **Required.** Use `field`, not `type`. |
+| `operator` | `eq` \| `neq` \| `contains` \| `lt` \| `gt` | **Required.** |
+| `value` | string, number, or boolean | **Required.** Expected value. |
+| `path` | dot-notation string | Required when `field` is `body`. Path into the JSON body, e.g. `user.id` or `data.items.0.name`. |
+
+**Common mistake:** writing `type: "status"` instead of `field: "status"` - this silently produces an assertion that never matches, always failing with "got undefined".
+
+Examples:
+```yaml
+assertions:
+  - field: status       # HTTP status code
+    operator: eq
+    value: 200
+
+  - field: body         # JSON body field at path
+    path: user.active
+    operator: eq
+    value: true
+
+  - field: latency      # response time in ms
+    operator: lt
+    value: 2000
 ```
 
 ## CLI Runner
@@ -144,14 +253,8 @@ reqly run users --reporter tap
 
 ### Running Flows
 
-Flows are multi-step automation tests (login then use the token then assert a field) stored separately from collections. Run one with:
-
 ```bash
 reqly run-flow "Login Flow"
-```
-
-Same reporters as `reqly run`, plus a `--data-row` flag to run a single ad-hoc row instead of iterating the flow's saved data table:
-```bash
 reqly run-flow "Login Flow" --reporter json
 reqly run-flow "Login Flow" --reporter tap
 reqly run-flow "Signup Flow" --data-row '{"email":"test@example.com"}'
