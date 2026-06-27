@@ -12,6 +12,7 @@ import { HistoryStore } from '../engine/history-store.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { SpecLoader } from '../engine/spec-loader.js';
 import { LOCK_PATH } from './lock.js';
 
 const PROJECT_DIR = '/tmp/reqly-test-run-adhoc';
@@ -41,6 +42,7 @@ describe('POST /api/run/adhoc - collection variable resolution', () => {
       historyStore: new HistoryStore(),
       flowManager: new FlowManager(PROJECT_DIR),
       dotEnvLoader: new DotEnvLoader(PROJECT_DIR),
+      specLoader: new SpecLoader(),
       executeRequest: executeRequest as unknown as EngineContext['executeRequest'],
     };
     server = startExpressServer(context, 5002);

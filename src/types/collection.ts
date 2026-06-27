@@ -25,11 +25,26 @@ export interface CollectionAuth {
   credentials?: Record<string, string>;
 }
 
+// OpenAPI/Swagger spec configured on a collection, used for contract
+// validation. At most one of specPath (local file) or specUrl (remote) is set.
+export interface CollectionSpec {
+  specPath?: string;
+  specUrl?: string;
+}
+
+// A single contract-validation finding against an OpenAPI spec.
+export interface ContractViolation {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
 export interface Collection {
   name: string;
   description?: string;
   variables?: Record<string, string>;
   auth?: CollectionAuth;
+  spec?: CollectionSpec;
   requests: CollectionRequest[];
 }
 
@@ -37,4 +52,5 @@ export interface CollectionMeta {
   description?: string;
   variables?: Record<string, string>;
   auth?: CollectionAuth;
+  spec?: CollectionSpec;
 }

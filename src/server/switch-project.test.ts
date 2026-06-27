@@ -12,6 +12,7 @@ import { HistoryStore } from '../engine/history-store.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { SpecLoader } from '../engine/spec-loader.js';
 import { LOCK_PATH, writeLock, readLock, clearLock } from './lock.js';
 
 function buildContext(projectDir: string): EngineContext {
@@ -26,6 +27,7 @@ function buildContext(projectDir: string): EngineContext {
     historyStore: new HistoryStore(),
     flowManager: new FlowManager(projectDir),
     dotEnvLoader: new DotEnvLoader(projectDir),
+    specLoader: new SpecLoader(),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),
   };
 }

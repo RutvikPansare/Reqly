@@ -6,6 +6,7 @@ import { execute as executeRequest } from '../engine/http-executor.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { FlowRunner } from '../engine/flow-runner.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { SpecLoader } from '../engine/spec-loader.js';
 import * as path from 'path';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
@@ -102,6 +103,7 @@ export async function handleRunFlowCommand(
       historyStore,
       flowManager,
       dotEnvLoader,
+      specLoader: new SpecLoader(),
       executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
         executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars)
     };

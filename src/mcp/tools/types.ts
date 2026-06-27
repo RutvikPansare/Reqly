@@ -8,6 +8,7 @@ import { TunnelManager } from '../../engine/tunnel-manager.js';
 import { FlowManager } from '../../engine/flow-manager.js';
 import { MockServer } from '../../engine/mock-server.js';
 import { DotEnvLoader } from '../../engine/dotenv-loader.js';
+import { SpecLoader } from '../../engine/spec-loader.js';
 import { HttpResponse, CollectionRequest, Environment, AuthProfile } from '../../types/index.js';
 
 export interface EngineContext {
@@ -21,6 +22,7 @@ export interface EngineContext {
   flowManager: FlowManager;
   mockServer?: MockServer;
   dotEnvLoader: DotEnvLoader;
+  specLoader: SpecLoader;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>, collectionAuth?: AuthProfile) => Promise<HttpResponse>;
   execChildPid?: number;
 }

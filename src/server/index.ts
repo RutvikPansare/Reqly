@@ -10,6 +10,7 @@ import { HistoryStore } from '../engine/history-store.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { MockServer } from '../engine/mock-server.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { SpecLoader } from '../engine/spec-loader.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -121,6 +122,7 @@ async function main() {
     flowManager,
     mockServer,
     dotEnvLoader,
+    specLoader: new SpecLoader(),
     executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;

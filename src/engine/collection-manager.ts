@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { load, dump } from 'js-yaml';
-import { Collection, CollectionRequest, ExampleResponse, CollectionMeta, CollectionAuth } from '../types/index.js';
+import { Collection, CollectionRequest, ExampleResponse, CollectionMeta, CollectionAuth, CollectionSpec } from '../types/index.js';
 
 // Reserved filename for collection-level metadata (variables, description).
 // It lives alongside request files inside the collection folder but is never
@@ -78,6 +78,7 @@ export class CollectionManager {
       ...(meta.variables ? { variables: meta.variables } : {}),
       ...(meta.description ? { description: meta.description } : {}),
       ...(meta.auth ? { auth: meta.auth } : {}),
+      ...(meta.spec ? { spec: meta.spec } : {}),
     };
   }
 
@@ -134,6 +135,23 @@ export class CollectionManager {
   async deleteCollectionAuth(collectionName: string): Promise<void> {
     const meta = await this.readMeta(collectionName);
     delete meta.auth;
+    await this.writeMeta(collectionName, meta);
+  }
+
+  async getCollectionSpec(collectionName: string): Promise<CollectionSpec | undefined> {
+    const meta = await this.readMeta(collectionName);
+    return meta.spec;
+  }
+
+  async setCollectionSpec(collectionName: string, spec: CollectionSpec): Promise<void> {
+    const meta = await this.readMeta(collectionName);
+    meta.spec = spec;
+    await this.writeMeta(collectionName, meta);
+  }
+
+  async deleteCollectionSpec(collectionName: string): Promise<void> {
+    const meta = await this.readMeta(collectionName);
+    delete meta.spec;
     await this.writeMeta(collectionName, meta);
   }
 

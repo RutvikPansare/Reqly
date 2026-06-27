@@ -6,6 +6,14 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-27
+
+**Decision:** OpenAPI contract validation (T-105) lives in a standalone `ContractValidator` (`src/engine/contract-validator.ts`) that callers run AFTER `execute()`, not "wired into `http-executor.ts`" as the task spec literally said. The executor keeps its existing signature and stays free of any spec/filesystem dependency.
+**Why:** `http-executor.ts` is the engine-pure HTTP layer - it deliberately knows nothing about assertions or response diffing either; both are computed by the callers (the express adhoc route, the collection runner) after the response comes back. Pushing spec loading + ajv validation into the executor would drag `swagger-parser`/`ajv`/`fs` into the one module that must stay a thin request-firer, and would diverge from the established assertion/diff pattern that T-106's `run_request`/route/CLI wiring already mirrors. `ContractValidator.validate(operation, response)` is pure and unit-tested in isolation; T-106 composes `specLoader.load()` + `findOperation()` + `validate()` at each call site, exactly where assertions are computed today.
+
+**Decision:** `ajv-formats` is imported and then normalized with `(addFormatsModule as any).default ?? addFormatsModule` rather than a plain default import.
+**Why:** `ajv-formats` is a CommonJS package; under this repo's `NodeNext` module resolution `tsc` rejects the plain `import addFormats from 'ajv-formats'` default-call ("has no call signatures") even though it runs fine via esbuild/vitest. The runtime callable is on `.default` in some resolutions and is the module itself in others, so normalizing covers both and makes `tsc --noEmit`, the `tsc -p .` build, and the runtime all agree. `ajv` itself uses its named `{ Ajv }` export for the same reason.
+
 ## 2026-06-26
 
 **Decision:** `DotEnvLoader` resolves `.env` files relative to the project root (`cwd`/`path.dirname(collectionManager.getBaseDir())`), not `CollectionManager.getBaseDir()` as T-104's spec text literally said.

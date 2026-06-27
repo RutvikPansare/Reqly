@@ -346,4 +346,45 @@ describe('CollectionManager', () => {
       await expect(manager.setCollectionAuth('Nope', { type: 'bearer' })).rejects.toThrow(CollectionNotFoundError);
     });
   });
+
+  describe('collection spec', () => {
+    it('returns undefined when no spec is set', async () => {
+      await manager.createCollection('API');
+      expect(await manager.getCollectionSpec('API')).toBeUndefined();
+    });
+
+    it('sets and reads back a collection spec', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionSpec('API', { specPath: './openapi.yaml' });
+      expect(await manager.getCollectionSpec('API')).toEqual({ specPath: './openapi.yaml' });
+    });
+
+    it('deletes a collection spec', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionSpec('API', { specUrl: 'https://x/openapi.json' });
+      await manager.deleteCollectionSpec('API');
+      expect(await manager.getCollectionSpec('API')).toBeUndefined();
+    });
+
+    it('keeps auth and variables intact when setting a spec', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionVariable('API', 'baseUrl', 'https://x');
+      await manager.setCollectionAuth('API', { type: 'bearer', credentials: { token: 't' } });
+      await manager.setCollectionSpec('API', { specPath: './openapi.yaml' });
+      expect(await manager.getCollectionVariables('API')).toEqual({ baseUrl: 'https://x' });
+      expect(await manager.getCollectionAuth('API')).toEqual({ type: 'bearer', credentials: { token: 't' } });
+      expect(await manager.getCollectionSpec('API')).toEqual({ specPath: './openapi.yaml' });
+    });
+
+    it('surfaces the spec on the returned collection', async () => {
+      await manager.createCollection('API');
+      await manager.setCollectionSpec('API', { specPath: './openapi.yaml' });
+      const col = await manager.getCollection('API');
+      expect(col.spec).toEqual({ specPath: './openapi.yaml' });
+    });
+
+    it('throws when setting a spec on a missing collection', async () => {
+      await expect(manager.setCollectionSpec('Nope', { specPath: './x.yaml' })).rejects.toThrow(CollectionNotFoundError);
+    });
+  });
 });

@@ -33,4 +33,8 @@ export interface RequestConfig {
   // Explicit mock-server route path. When set, overrides the path inferred
   // from `url` by the mock server (T-101). e.g. '/v1/charges', '/users/:id'.
   mockPath?: string;
+  // Explicit OpenAPI operationId for contract validation (T-105). When set,
+  // the validator matches this request to the spec operation by id instead of
+  // inferring the path from `url`.
+  specOperationId?: string;
 }

@@ -7,6 +7,7 @@ import { runAssertions } from '../engine/assertion-runner.js';
 import { CollectionRunner } from '../engine/collection-runner.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { SpecLoader } from '../engine/spec-loader.js';
 import * as path from 'path';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
@@ -119,6 +120,7 @@ export async function handleRunCommand(
         historyStore,
         flowManager: new FlowManager(collectionManager.getBaseDir()),
         dotEnvLoader,
+        specLoader: new SpecLoader(),
         executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
           executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars)
       };
