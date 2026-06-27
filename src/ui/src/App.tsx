@@ -394,7 +394,10 @@ function App() {
                 <HistoryPanel onSelectRequest={handleSelectRequestFromSidebar} />
               )}
               {activePanel === 'capture' && (
-                <CapturePanel onSelectCaptured={(req) => onSelectCaptured(req)} />
+                <CapturePanel
+                  onSelectCaptured={(req) => onSelectCaptured(req)}
+                  onOpenCollection={(_col) => setActivePanel('collections')}
+                />
               )}
               {activePanel === 'flows' && (
                 <FlowsPanel
