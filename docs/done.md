@@ -229,3 +229,4 @@
 - [x] **T-136** Center the Response Viewer panel by default on load. Changed `autoSplit={tab.response ? 50 : 75}` to `defaultSplit={50}` in `App.tsx` so the request and response sections are evenly split (50/50) vertically when opening a new tab, rather than squeezing the response to the bottom 25%.
 - [x] **T-137** Fix response tab persisting on reload and correct SplitPane styling to center empty state vertically. Ensured panel-header height is strictly 34px to prevent visual jumps when responses arrive.
 - [x] **T-138** Allow explicit dismissal of EmptyStateNudge via an X button (saves to localStorage) and fix sidebar empty state hint text wrapping.
+- [x] **T-139** Added 'Tests' tab to ResponseViewer to display assertion results for individual requests.
