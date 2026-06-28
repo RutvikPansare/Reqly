@@ -1,0 +1,14 @@
+id: test1
+name: TestReq
+method: GET
+url: "https://httpbin.org/get"
+headers:
+  ActiveHeader: "yes"
+disabledHeaders:
+  - key: DisabledHeader
+    value: "no"
+params:
+  activeParam: "true"
+disabledParams:
+  - key: disabledParam
+    value: "false"
