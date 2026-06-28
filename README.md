@@ -1,13 +1,29 @@
-# Reqly
+# Reqly - The API client built for AI-native developers.
 
-[![npm version](https://img.shields.io/npm/v/getreqly.svg)](https://www.npmjs.com/package/getreqly)
-[![license](https://img.shields.io/npm/l/getreqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/reqly-app.svg)](https://www.npmjs.com/package/reqly-app)
+[![license](https://img.shields.io/npm/l/reqly-app.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
 [![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
 
 Your AI agent builds and tests your APIs. Reqly is the execution engine.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [How It Works](#what-an-agent-session-looks-like)
+- [MCP Tools](#mcp-tools)
+- [CLI Runner](#cli-runner)
+- [Flows](#flows)
+- [Mock Server](#mock-server)
+- [Capture Inbound Requests](#capture-inbound-requests-middleware)
+- [Collections and Assertions](#how-collections-work)
+- [Why Reqly](#why-reqly-beats-postman-insomnia-and-bruno-for-ai-native-developers)
+- [Recently Shipped](#recently-shipped)
+- [FAQ](#faq)
+- [Star History](#star-history)
+
 ```bash
-npm install -g getreqly
+npm install -g reqly-app
 ```
 
 <!-- TODO: record demo GIF - agent prompt -> MCP tool fires -> collection appears in sidebar -> run -> response shown -->
@@ -45,37 +61,28 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 3. "Write an e2e flow for the login → checkout path" → agent calls create_flow + add_flow_step, runs it
 ```
 
-## Quick start
-
-```bash
-npm i -g getreqly
-cd my-project
-reqly init
-reqly setup cursor
-```
-
-Then ask Cursor: "list my Reqly collections". Under 2 minutes, no manual YAML.
-
-## Quick Setup
+## Installation
 
 Reqly runs on macOS, Linux, and Windows.
 
-Run these two commands anywhere to install Reqly globally and configure your AI tool (Cursor, Claude Desktop, Claude Code, Gemini, or Codex) to use it:
-
 ```bash
-npm install -g getreqly
-reqly setup
-```
+# On any platform via npm
+npm install -g reqly-app
 
-On macOS, you can also install via Homebrew:
-
-```bash
+# On macOS via Homebrew
 brew tap RutvikPansare/reqly
 brew install reqly
+```
+
+Then wire it up to your AI tool:
+
+```bash
 reqly setup
 ```
 
-(Homebrew will ask you to run `brew trust RutvikPansare/reqly` the first time, since it's a third-party tap. Homebrew is macOS-only - on Windows and Linux, use the npm command above.)
+This configures Cursor, Claude Desktop, Claude Code, Gemini CLI, and Codex in one shot. To configure a specific tool only: `reqly setup cursor`, `reqly setup claude`, `reqly setup gemini`.
+
+Restart your AI tool, then ask it: "list my Reqly collections".
 
 ## The fastest way to start
 
@@ -97,91 +104,103 @@ reqly init
 
 This copies a working example collection (against the free [JSONPlaceholder](https://jsonplaceholder.typicode.com) API, no auth needed) into `.reqly/` in your current project - collection variables, request chaining, a postScript that extracts a response value, and a flow. It won't overwrite any collections you already have. See `example/reqly-starter/README.md` for what each request demonstrates.
 
-## What Reqly does
+## What your agent can do
 
-Reqly is not an AI—it's an engine for your AI. When connected, your AI coding agent can securely query your local APIs, introspect GraphQL endpoints, and verify behavior without you needing to tab out to a browser. All collections are stored in `.reqly/` in your project so they are committed to Git alongside your code. Reqly also serves a local developer UI for you at `http://localhost:4242`.
+> Reqly is not an AI - it's an engine for your AI. Connect once, then your agent has the full toolkit.
 
-## MCP Tools
+| | Capability | What it means |
+|---|---|---|
+| 🗂️ | **Build collections** | Reads your routes, scaffolds requests, no YAML by hand |
+| ⚡ | **Fire and assert** | Runs requests, checks status/body/latency, returns pass/fail per assertion |
+| 🔗 | **Chain flows** | Multi-step sequences with extract, poll, and conditional branching |
+| 📋 | **Validate contracts** | Point at an OpenAPI spec - every response checked automatically |
+| 🎭 | **Serve mocks** | Fake a backend from saved examples, no live server needed |
+| 🕵️ | **Capture traffic** | Proxy outbound, middleware for inbound, tunnel for webhooks |
 
-Reqly exposes these tools directly to your AI agent:
+<details>
+<summary><strong>View all 30+ MCP tools</strong></summary>
 
-**Collections and Requests**
+<br>
 
-| Tool | Description |
+**🗂️ Collections and Requests**
+
+| Tool | What it does |
 |------|-------------|
 | `list_collections` | Lists all collections and requests in the project |
 | `create_collection` | Scaffolds a new collection |
-| `create_request` | Adds a request to a collection. Supports `{{variables}}`, assertions, pre/post scripts, auth, multipart bodies, and persistently turning off specific headers/params. |
-| `run_request` | Fires a request and returns status, body, headers, latency, assertions (with pass/fail tests), diff, and contract violations |
+| `create_request` | Adds a request. Supports `{{variables}}`, assertions, pre/post scripts, auth, multipart bodies |
+| `run_request` | Fires a request - returns status, body, headers, latency, assertion results, diff, contract violations |
 | `run_collection` | Fires all requests in a collection sequentially |
-| `get_response` | Retrieves the last stored (truncated) response for a request |
+| `get_response` | Retrieves the last stored response (truncated) |
 | `get_response_full` | Retrieves the last untruncated response |
-| `export_collection` | Exports a collection as Postman v2.1 or OpenAPI 3.0 JSON |
+| `export_collection` | Exports as Postman v2.1 or OpenAPI 3.0 JSON |
 | `import_collection` | Imports a Postman v2.1 or Bruno collection |
 
-**Environments and Variables**
+**🌍 Environments and Variables**
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
 | `set_environment` | Changes the active environment |
 | `create_environment` | Creates a named environment with variables |
 | `set_variable` | Sets a variable on an environment |
 | `get_variables` | Lists variables for an environment (with source tags) |
-| `delete_variable` | Removes a variable from an environment |
+| `delete_variable` | Removes a variable |
 | `get_collection_variables` | Lists per-collection variables |
 | `set_collection_variable` | Sets a per-collection variable |
 | `delete_collection_variable` | Deletes a per-collection variable |
 | `set_dotenv_files` | Configures which `.env` files are auto-loaded |
 | `get_dotenv_files` | Lists the configured dotenv files |
 
-**Auth**
+**🔐 Auth**
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
 | `get_collection_auth` | Gets the default auth config for a collection |
-| `set_collection_auth` | Sets Bearer/API Key/Basic/OAuth2 auth for all requests in a collection |
+| `set_collection_auth` | Sets Bearer / API Key / Basic / OAuth 2.0 auth for all requests |
 | `delete_collection_auth` | Removes collection-level auth |
 
-**OpenAPI Contract Validation**
+**📋 OpenAPI Contract Validation**
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
-| `set_collection_spec` | Points a collection at an OpenAPI spec (file path or URL). Validates every response against it. |
+| `set_collection_spec` | Points a collection at an OpenAPI spec (file path or URL) |
 | `get_collection_spec` | Gets the spec config and load status |
 | `delete_collection_spec` | Removes the spec from a collection |
 | `list_spec_operations` | Lists all operations in the loaded spec |
-| `validate_response` | Re-validates the last stored response without re-firing |
+| `validate_response` | Re-validates the last response without re-firing |
 
-**Flows**
+**🔗 Flows**
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
 | `create_flow` | Creates a new flow |
 | `get_flow` | Gets a flow's config and steps |
 | `list_flows` | Lists all flows |
 | `delete_flow` | Deletes a flow |
-| `add_flow_step` | Appends a step to a flow (run/extract/assert/poll/conditional) |
+| `add_flow_step` | Appends a step (run / extract / assert / poll / conditional) |
 | `update_flow_step` | Replaces a step in place |
 | `delete_flow_step` | Removes a step |
 | `run_flow` | Executes a flow and returns per-step results |
-| `export_flow_ci` | Generates a GitHub Actions workflow for a flow, writes it to `.github/workflows/`, and returns the path |
+| `export_flow_ci` | Generates a GitHub Actions workflow and writes it to `.github/workflows/` |
 
-**Capture and Proxy**
+**🕵️ Capture and Proxy**
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
-| `start_proxy` | Auto-captures local outbound traffic into a collection |
+| `start_proxy` | Auto-captures outbound traffic into a collection |
 | `stop_proxy` | Stops traffic interception |
 | `exec_with_proxy` | Starts the proxy and runs a dev command with it injected |
-| `install_middleware` | Returns the inbound-capture middleware snippet for your framework |
+| `install_middleware` | Returns the inbound-capture snippet for your framework |
 
-**Mock Server**
+**🎭 Mock Server**
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
 | `start_mock` | Starts the mock server for a collection on a given port |
 | `stop_mock` | Stops the mock server |
 | `get_mock_status` | Returns mock server status and active routes |
+
+</details>
 
 ## Recently shipped
 
@@ -198,30 +217,75 @@ Reqly exposes these tools directly to your AI agent:
 
 ## Flows
 
-Flows are ordered sequences of steps stored in `.reqly/flows/<name>.yaml`. Each step type:
+Flows are multi-step sequences your agent builds once and CI runs forever. Each step chains into the next - extract a value from one response and inject it into the next request automatically.
 
-- **`run`** - fire a saved request (optional retry on specific status codes)
-- **`extract`** - pull a value from the last response into a flow-local variable (`response.body.id`, `response.status`, etc.)
-- **`assert`** - check the last response using the same assertion schema as request-level assertions
-- **`poll`** - fire repeatedly until a condition is met (`until: "response.status === 200"`)
-- **`conditional`** - branch: goto a step id, `skip`, or `abort` based on a response expression
+```mermaid
+flowchart LR
+    A(["▶ run\nFire a request"]) --> B(["⬇ extract\nPull value from response"])
+    B --> C(["✓ assert\nCheck the response"])
+    C --> D{"⎇ conditional\nBranch on result"}
+    D -->|"pass"| E(["▶ run\nNext request"])
+    D -->|"retry"| F(["↻ poll\nRepeat until condition met"])
+    F --> E
 
-Variables extracted by `extract` steps are available in subsequent request URLs and bodies via `{{varName}}`. For data-driven runs, set `data:` rows in the flow - the step sequence runs once per row with each row's keys injected as variables.
-
-```bash
-reqly run-flow "my-flow"
-reqly run-flow "my-flow" --reporter json
-reqly run-flow "my-flow" --data-row '{"userId":"42"}'
+    style A fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style B fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style C fill:#14532d,stroke:#22c55e,color:#e2e8f0
+    style D fill:#3b1f1f,stroke:#ef4444,color:#e2e8f0
+    style E fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style F fill:#3b2f0a,stroke:#f59e0b,color:#e2e8f0
 ```
 
-Generate a GitHub Actions workflow that installs Reqly and runs a flow in CI:
+**Example: login → create post → verify it exists**
 
-```bash
-reqly export-flow "my-flow" --format github-actions
-# Written to .github/workflows/my-flow.yml
+```yaml
+# .reqly/flows/e2e-post.yaml
+steps:
+  - type: run
+    request: auth/login
+
+  - type: extract
+    from: response.body.token
+    into: authToken          # now available as {{authToken}}
+
+  - type: run
+    request: posts/create-post
+
+  - type: extract
+    from: response.body.id
+    into: postId
+
+  - type: assert
+    field: status
+    operator: eq
+    value: 201
+
+  - type: run
+    request: posts/get-post  # uses {{postId}} in the URL
+
+  - type: assert
+    field: body
+    path: post.title
+    operator: eq
+    value: "Hello world"
 ```
 
-Add a "Start server" step before "Run flow" in the generated workflow if the flow hits a local API. Agents can do the same via the `export_flow_ci` MCP tool.
+Run it:
+
+```bash
+reqly run-flow "e2e-post"
+reqly run-flow "e2e-post" --reporter json
+reqly run-flow "e2e-post" --data-row '{"userId":"42"}'
+```
+
+Export to CI in one command:
+
+```bash
+reqly export-flow "e2e-post" --format github-actions
+# Writes .github/workflows/e2e-post.yml - installs Reqly, runs the flow, uploads JUnit results
+```
+
+Agents can do the same via the `export_flow_ci` MCP tool - no manual YAML writing.
 
 ## Capture Inbound Requests (Middleware)
 
@@ -355,6 +419,190 @@ POST /api/mock/start   { collection, port? }
 POST /api/mock/stop
 GET  /api/mock/status
 ```
+
+## FAQ
+
+<details>
+<summary><strong>Do I need an AI agent to use Reqly?</strong></summary>
+<br>
+No. The localhost UI at <code>localhost:4242</code> works standalone - create collections, fire requests, inspect responses, all without an agent. The MCP interface is additive: when your agent is connected, it gets the same capabilities via tools. You can use both at the same time.
+</details>
+
+<details>
+<summary><strong>How is this different from Postman or Insomnia?</strong></summary>
+<br>
+Three things:
+
+1. <strong>Collections are YAML files in your repo</strong>, not locked in a cloud account or proprietary binary format. They travel with your code via git, your agent can read and write them directly, and you can diff them in a PR.
+2. <strong>Reqly is an MCP server</strong>. Your AI agent connects to it and gets a full toolkit - fire requests, run flows, validate contracts - without opening a UI. Postman and Insomnia are UI-first; Reqly is agent-first.
+3. <strong>No cloud dependency, ever.</strong> No account required, no sync, no telemetry. Everything runs on your machine.
+</details>
+
+<details>
+<summary><strong>How is this different from Bruno?</strong></summary>
+<br>
+Bruno is the closest comparison - it's also local, file-based, and git-native. The key difference is the agent interface. Bruno has no MCP server; your agent can't call Bruno tools to fire requests or build collections programmatically. Reqly was designed from day one so that an AI agent is the primary user, with the UI as a secondary window into the same engine.
+</details>
+
+<details>
+<summary><strong>Does Reqly send any data to the cloud?</strong></summary>
+<br>
+No. Reqly is a local process. Collections stay in <code>.reqly/</code> in your repo. Your API keys stay in <code>~/.reqly/config.json</code> on your machine. The prompt bar in the UI sends requests to your own API key directly from your browser - nothing routes through Reqly's servers, because there are no Reqly servers.
+</details>
+
+<details>
+<summary><strong>Can I use Reqly without Cursor or Claude Code?</strong></summary>
+<br>
+Yes. Any MCP-compatible client works: Cursor, Claude Code, Claude Desktop, Gemini CLI, Codex, or anything that supports the MCP stdio transport. If your agent doesn't support MCP yet, you can still use the CLI (<code>reqly run</code>, <code>reqly run-flow</code>) and the localhost UI without any agent at all.
+</details>
+
+<details>
+<summary><strong>My agent is looking for collections in the wrong directory. What do I do?</strong></summary>
+<br>
+This happens when your AI tool launches the Reqly process from a different working directory than your project. Fix it one of three ways:
+
+1. <strong>Cursor / most editors</strong> - run <code>reqly setup cursor</code> again from inside your project directory. The setup command writes <code>${workspaceFolder}</code> into the MCP config so Cursor passes the right path at launch.
+2. <strong>Claude Desktop</strong> - run <code>reqly use /path/to/your/project</code> to set the active project globally, then restart Claude Desktop.
+3. <strong>Manual override</strong> - set the <code>REQLY_PROJECT_DIR</code> environment variable on the MCP server entry in your AI tool's config.
+</details>
+
+<details>
+<summary><strong>Can I use Reqly in CI without an AI agent?</strong></summary>
+<br>
+Yes - that's the point of <code>reqly run</code> and <code>reqly run-flow</code>. Your agent builds and maintains the collection locally; CI just executes it. Use <code>--reporter junit</code> to get JUnit XML output that GitHub Actions, GitLab CI, and Jenkins parse natively into test dashboards.
+
+```bash
+reqly run my-collection --reporter junit > results.xml
+```
+
+Or generate the full GitHub Actions workflow automatically:
+
+```bash
+reqly export-flow "my-flow" --format github-actions
+```
+</details>
+
+<details>
+<summary><strong>Does the middleware capture requests in production?</strong></summary>
+<br>
+No - by design. <code>reqly-middleware</code> phones home to <code>localhost:4242</code> and is a silent no-op if Reqly isn't running. It will never capture traffic in a production environment where Reqly isn't present, and it never buffers or delays your requests (fire-and-forget, errors swallowed).
+</details>
+
+<details>
+<summary><strong>What auth types does Reqly support?</strong></summary>
+<br>
+Bearer token, API Key (header or query param), Basic auth, and OAuth 2.0 with PKCE. Auth can be set at the collection level (applies to all requests) or overridden per-request. Your agent can configure auth via the <code>set_collection_auth</code> MCP tool - no manual YAML editing required.
+</details>
+
+<details>
+<summary><strong>Can I import my existing Postman or Bruno collections?</strong></summary>
+<br>
+Yes. Reqly imports Postman v2.1 collections and Bruno collections out of the box:
+
+```bash
+reqly import postman-collection.json
+reqly import bruno-collection/
+```
+
+Or via the MCP tool: your agent can call <code>import_collection</code> and pass the file path. Reqly also exports to Postman v2.1 and OpenAPI 3.0 if you need to go the other way.
+</details>
+
+<details>
+<summary><strong>How do environment variables work?</strong></summary>
+<br>
+Reqly has three variable layers, resolved in this order:
+
+1. <strong>.env files</strong> - auto-loaded from your project root (or configured via <code>set_dotenv_files</code>)
+2. <strong>Environment variables</strong> - named sets like <code>dev</code>, <code>staging</code>, <code>prod</code>, stored in <code>.reqly/environments.yaml</code>
+3. <strong>Collection variables</strong> - scoped to a single collection, useful for values like <code>baseUrl</code>
+
+Use <code>{{varName}}</code> anywhere in a URL, header, or body. Switch environments with <code>reqly run --env prod</code> or via the UI dropdown.
+</details>
+
+<details>
+<summary><strong>Does Reqly support GraphQL?</strong></summary>
+<br>
+Yes. The UI has a dedicated GraphQL workspace with schema introspection, syntax highlighting, and a variables panel. GraphQL requests are stored in collections the same as REST - your agent can create and run them via the same MCP tools.
+</details>
+
+<details>
+<summary><strong>Can I run Reqly on a team? How do we share collections?</strong></summary>
+<br>
+Collections are plain YAML files in <code>.reqly/</code> inside your project repo. Sharing is just git - commit the folder and everyone on the team has the same collections. There's no account, no workspace invite, no cloud sync required. Secrets and API keys are stored in <code>~/.reqly/config.json</code> locally on each developer's machine and are never committed.
+</details>
+
+<details>
+<summary><strong>What Node.js version does Reqly require?</strong></summary>
+<br>
+Node.js 18 or later. Reqly uses native <code>fetch</code>, ES modules, and the MCP SDK which all require Node 18+. Check your version with <code>node --version</code>.
+</details>
+
+<details>
+<summary><strong>Port 4242 is already in use. Can I change it?</strong></summary>
+<br>
+Yes. Pass <code>--port</code> when starting:
+
+```bash
+reqly start --port 4243
+```
+
+Or set it in your MCP config args. The UI will open on whichever port you choose.
+</details>
+
+<details>
+<summary><strong>How do pre/post scripts work?</strong></summary>
+<br>
+Each request can have a <code>preScript</code> and a <code>postScript</code> - small sandboxed JavaScript snippets that run before and after the request fires. They have access to a <code>reqly</code> object with methods to read and write environment variables:
+
+```js
+// preScript - set a dynamic header before the request
+reqly.setEnvVar('timestamp', Date.now().toString())
+
+// postScript - extract a value from the response into an env var
+const token = reqly.response.body.access_token
+reqly.setEnvVar('authToken', token)
+```
+
+Scripts run in an isolated context with no filesystem or network access - they can only interact with Reqly's variable store and the response object.
+</details>
+
+<details>
+<summary><strong>How do I stop Reqly?</strong></summary>
+<br>
+
+```bash
+reqly stop        # stops the running instance
+reqly status      # check if an instance is running and which project it's on
+```
+
+Or press Ctrl+C in the terminal where Reqly is running. Reqly writes a lock file at <code>~/.reqly/running.json</code> to track the running instance - <code>reqly stop</code> reads this to find and signal the process.
+</details>
+
+<details>
+<summary><strong>Can I switch projects without restarting?</strong></summary>
+<br>
+Yes. If a Reqly instance is already running, starting a new one in a different project directory hot-swaps the active project without restarting the server:
+
+```bash
+cd /path/to/other-project
+reqly start
+# "Switched active project to /path/to/other-project"
+```
+
+The new process hands off to the existing instance and exits. The MCP connection stays alive and immediately sees the new project's collections.
+</details>
+
+<details>
+<summary><strong>Is there a way to test webhooks?</strong></summary>
+<br>
+Yes - use the tunnel command to expose your local server to the internet and capture incoming webhook payloads:
+
+```bash
+reqly exec --tunnel npm run dev
+```
+
+This starts your dev server with a public HTTPS URL. Any requests hitting that URL are proxied to your local server and saved into the <code>Captured</code> collection automatically.
+</details>
 
 ## Star History
 
