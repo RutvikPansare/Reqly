@@ -126,7 +126,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
 
   if (!response && !isSending) {
     return (
-      <div className="flex-1 flex flex-col rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div className="flex-1 flex flex-col" style={{ background: 'var(--surface-1)' }}>
         <div className="panel-header">
           <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         </div>
@@ -173,7 +173,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
   };
 
   return (
-    <div className="flex flex-col flex-1 rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+    <div className="flex flex-col flex-1" style={{ background: 'var(--surface-1)' }}>
       <div className="panel-header">
         <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         {isSending ? (
@@ -193,33 +193,29 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
             {body != null && typeof body === 'object' && (
               <button
                 onClick={() => setShowTsInterface(true)}
-                className="flex items-center gap-1 btn btn-secondary transition-all"
-                style={{ fontSize: '0.75rem', padding: '0.125rem 0.625rem' }}
+                className="icon-btn"
                 title="Generate TypeScript interface"
               >
-                <Braces size={12} />
-                TS
+                <Braces size={14} />
               </button>
             )}
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 btn btn-secondary transition-all"
-              style={{ fontSize: '0.75rem', padding: '0.125rem 0.625rem', color: copied ? '#4ade80' : undefined, borderColor: copied ? 'rgba(74,222,128,0.3)' : undefined }}
-              title="Copy response body"
+              className="icon-btn"
+              style={{ color: copied ? '#4ade80' : undefined }}
+              title={copied ? 'Copied!' : 'Copy response body'}
             >
-              {copied ? <Check size={12} /> : <Copy size={12} />}
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? <Check size={14} /> : <Copy size={14} />}
             </button>
             {canSaveExample && (
               <button
                 onClick={handleSaveExample}
                 disabled={savingExample}
-                className="flex items-center gap-1 btn btn-secondary transition-all disabled:opacity-50"
-                style={{ fontSize: '0.75rem', padding: '0.125rem 0.625rem', color: savedExampleMsg ? '#4ade80' : undefined, borderColor: savedExampleMsg ? 'rgba(74,222,128,0.3)' : undefined }}
-                title="Save as example response"
+                className="icon-btn disabled:opacity-50"
+                style={{ color: savedExampleMsg ? '#4ade80' : undefined }}
+                title={savedExampleMsg || 'Save as example response'}
               >
-                <BookMarked size={12} />
-                {savedExampleMsg || 'Save Example'}
+                <BookMarked size={14} />
               </button>
             )}
           </div>
@@ -227,7 +223,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
       </div>
 
       {response?.assertions && response.assertions.length > 0 && !isSending && (
-        <div className="px-4 py-2 border-b flex gap-4 overflow-x-auto" style={{ background: 'var(--surface-0)', borderColor: 'var(--border)' }}>
+        <div className="px-4 py-2 border-b flex gap-4 overflow-x-auto" style={{ background: 'var(--surface-1)', borderColor: 'var(--border)' }}>
           {response.assertions.map((ass: any, i: number) => (
             <div key={i} className={`text-xs flex items-center gap-1 px-2 py-1 rounded ${ass.passed ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
               <span>{ass.passed ? '✅' : '❌'}</span>
@@ -282,7 +278,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         )}
         {activeTab === 'body' && body != null && (
           <div className="ml-auto flex items-center pr-2">
-            <div className="flex items-center gap-1 px-2 rounded" style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', height: '24px' }}>
+            <div className="flex items-center gap-1 px-2" style={{ background: 'transparent', height: '24px' }}>
               <Search size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 type="text"
@@ -300,7 +296,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto font-mono text-sm relative" style={{ background: 'var(--surface-3)' }}>
+      <div className="flex-1 overflow-y-auto font-mono text-sm relative" style={{ background: 'var(--surface-1)' }}>
         {isSending && (
           <div className="absolute inset-0 backdrop-blur-sm z-10" style={{ background: 'rgba(0,0,0,0.3)' }} />
         )}
@@ -473,7 +469,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
                 placeholder='e.g. "Success 200" or "Not Found 404"'
                 className="rounded px-3 py-2 text-sm w-full outline-none"
                 style={{
-                  background: 'var(--surface-0)',
+                  background: 'var(--surface-1)',
                   border: '1px solid var(--border)',
                   color: 'var(--text-primary)',
                 }}

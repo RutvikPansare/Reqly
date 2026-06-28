@@ -11,9 +11,9 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ### M5 - Windows Support
 
-- [x] **T-118** Replace `fs.watch` with `chokidar` in engine watchers (M5)
+### Project switcher MCP tools + UI
 
-- [x] **T-119** Windows CI matrix + doc updates (M5)
+### Agent onboarding nudge (empty state)
 
 ### M5 - Desktop App (Electron)
 

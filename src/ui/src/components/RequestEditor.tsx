@@ -3,7 +3,7 @@ import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, Externa
 import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables, getCollectionAuth, fetchDotenvFiles } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
-import { VariableInput } from './VariableInput';
+import { VariableInput, VarPill } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 import { ScriptEditor } from './ScriptEditor';
 import { CurlImportModal } from './CurlImportModal';
@@ -298,28 +298,30 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
   ];
 
   return (
-    <div className="flex flex-col h-full rounded overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+    <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>
       {/* URL bar */}
-      <div className="flex p-2 gap-2" style={{ background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
-        <select
-          className="rounded px-2 py-1 text-sm font-bold focus:outline-none"
-          style={{ background: 'var(--surface-3)', border: `1px solid ${methodColor(method)}40`, color: methodColor(method) }}
-          value={method}
-          onChange={e => setMethod(e.target.value as any)}
-        >
-          <option>GET</option>
-          <option>POST</option>
-          <option>PUT</option>
-          <option>PATCH</option>
-          <option>DELETE</option>
-        </select>
-        <VariableInput
-          variables={availableVariables}
-          className="input flex-1"
-          value={url}
-          onChange={val => handleUrlChange(val)}
-          placeholder="https://api.example.com/v1/users"
-        />
+      <div className="flex p-2 gap-2" style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-stretch flex-1" style={{ border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+          <select
+            className="px-2 text-sm font-bold focus:outline-none"
+            style={{ background: 'transparent', border: 'none', borderRight: '1px solid var(--border-strong)', color: methodColor(method) }}
+            value={method}
+            onChange={e => setMethod(e.target.value as any)}
+          >
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+          </select>
+          <VariableInput
+            variables={availableVariables}
+            className="flex-1 px-3 py-1.5 text-sm bg-transparent focus:outline-none"
+            value={url}
+            onChange={val => handleUrlChange(val)}
+            placeholder="https://api.example.com/v1/users"
+          />
+        </div>
         <button
           className="btn btn-ghost rounded"
           onClick={() => setShowCurlImport(true)}
@@ -379,7 +381,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4" style={{ background: 'var(--surface-2)' }}>
+      <div className="flex-1 overflow-y-auto p-4" style={{ background: 'var(--surface-1)' }}>
         {activeTab === 'params' ? (
           <div className="py-2">
             <KeyValueEditor pairs={paramsList} onChange={handleParamsChange} variables={availableVariables} />
@@ -428,7 +430,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
               <VariableInput
                 multiline
                 variables={availableVariables}
-                className="flex-1 bg-gray-950 border border-gray-800 rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
+                className="flex-1 bg-[var(--surface-1)] border border-[var(--border)] rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
                 placeholder={bodyType === 'json' ? '{"key": "value"}' : 'Enter raw text here...'}
                 value={bodyText}
                 onChange={val => setBodyText(val)}
@@ -458,7 +460,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <div className="mb-6 flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24">Profile</label>
               <select 
-                className="flex-1 bg-gray-800 text-gray-200 border border-gray-700 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                className="flex-1 bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
                 value={authProfileId}
                 onChange={e => {
                   const id = e.target.value;
@@ -489,7 +491,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                   <button 
                     key={t}
                     disabled={!!authProfileId}
-                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'}`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
                     {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t}
@@ -498,7 +500,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
               </div>
             </div>
 
-            <div className="bg-gray-950 p-4 rounded border border-gray-800 space-y-4">
+            <div className="bg-[var(--surface-1)] p-4 rounded border border-[var(--border)] space-y-4">
               {authType === 'none' && <div className="text-sm text-gray-500 italic">This request does not use any authorization.</div>}
               
               {authType === 'bearer' && (
@@ -507,7 +509,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                   <VariableInput 
                     variables={availableVariables}
                     disabled={!!authProfileId}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                    className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                     placeholder="e.g. {{login.response.body.token}}"
                     value={authCreds.token || ''}
                     onChange={val => setAuthCreds({ ...authCreds, token: val })}
@@ -523,7 +525,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                       <input 
                         type="text" 
                         disabled={!!authProfileId}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                         placeholder="X-API-Key"
                         value={authCreds.keyName || 'X-API-Key'}
                         onChange={e => setAuthCreds({ ...authCreds, keyName: e.target.value })}
@@ -533,7 +535,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                       <label className="block text-sm text-gray-400 mb-1">Placement</label>
                       <select 
                         disabled={!!authProfileId}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                         value={authCreds.placement || 'header'}
                         onChange={e => setAuthCreds({ ...authCreds, placement: e.target.value })}
                       >
@@ -547,7 +549,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                     <VariableInput 
                       variables={availableVariables}
                       disabled={!!authProfileId}
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       value={authCreds.value || ''}
                       onChange={val => setAuthCreds({ ...authCreds, value: val })}
                     />
@@ -562,7 +564,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                     <VariableInput 
                       variables={availableVariables}
                       disabled={!!authProfileId}
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       value={authCreds.username || ''}
                       onChange={val => setAuthCreds({ ...authCreds, username: val })}
                     />
@@ -573,7 +575,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                       type="password" 
                       variables={availableVariables}
                       disabled={!!authProfileId}
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       value={authCreds.password || ''}
                       onChange={val => setAuthCreds({ ...authCreds, password: val })}
                     />
@@ -587,27 +589,27 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Client ID</label>
                       <VariableInput variables={availableVariables} disabled={!!authProfileId}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                         value={authCreds.clientId || ''} onChange={val => setAuthCreds({ ...authCreds, clientId: val })} />
                     </div>
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Client Secret</label>
                       <VariableInput variables={availableVariables} disabled={!!authProfileId} type="password"
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                        className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                         value={authCreds.clientSecret || ''} onChange={val => setAuthCreds({ ...authCreds, clientSecret: val })} />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Authorization URL</label>
                     <VariableInput variables={availableVariables} disabled={!!authProfileId}
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       placeholder="https://provider.com/oauth/authorize"
                       value={authCreds.authUrl || ''} onChange={val => setAuthCreds({ ...authCreds, authUrl: val })} />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Token URL</label>
                     <VariableInput variables={availableVariables} disabled={!!authProfileId}
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
+                      className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500"
                       placeholder="https://provider.com/oauth/token"
                       value={authCreds.tokenUrl || ''} onChange={val => setAuthCreds({ ...authCreds, tokenUrl: val })} />
                   </div>
@@ -615,14 +617,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Redirect URI</label>
                       <input disabled={!!authProfileId}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                         placeholder="http://localhost:9876/callback"
                         value={authCreds.redirectUri || ''} onChange={e => setAuthCreds({ ...authCreds, redirectUri: e.target.value })} />
                     </div>
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Scope</label>
                       <input disabled={!!authProfileId}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                         placeholder="openid profile email"
                         value={authCreds.scope || ''} onChange={e => setAuthCreds({ ...authCreds, scope: e.target.value })} />
                     </div>
@@ -635,7 +637,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                     const expiry = prof?.credentials?.expiresAt ? new Date(Number(prof.credentials.expiresAt)) : null;
                     const isExpired = expiry ? Date.now() > expiry.getTime() : false;
                     return (
-                      <div className="mt-2 p-3 rounded border border-gray-700 space-y-2">
+                      <div className="mt-2 p-3 rounded border border-[var(--border-strong)] space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-400">
                             {hasToken
@@ -714,7 +716,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
               <div className="mt-4 flex justify-end">
                 <button 
                   onClick={handleSaveProfile}
-                  className="bg-gray-800 hover:bg-gray-700 text-blue-400 border border-gray-700 hover:border-gray-600 px-3 py-1.5 rounded text-sm transition-colors"
+                  className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-blue-400 border border-[var(--border-strong)] hover:border-[var(--border-strong)] px-3 py-1.5 rounded text-sm transition-colors"
                 >
                   Save as Profile
                 </button>
@@ -811,8 +813,8 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                   <span className="text-sm">{emptyMessage}</span>
                 </div>
               ) : (
-                <div className="rounded overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                  <div className="grid grid-cols-[180px_1fr_100px] text-xs font-semibold uppercase tracking-widest px-3 py-2" style={{ background: 'var(--surface-3)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ borderTop: '1px solid var(--border)' }}>
+                  <div className="grid grid-cols-[180px_1fr_100px] text-xs font-semibold uppercase tracking-widest px-3 py-2" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
                     <span>Header</span>
                     <span>Value</span>
                     <span>Source</span>
@@ -847,15 +849,15 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             {Object.keys(collectionVars).length === 0 && Object.keys(activeEnvVars).length === 0 && dotenvVars.length === 0 ? (
               <p className="text-sm text-gray-600 italic">No variables in scope.</p>
             ) : (
-              <div className="border border-gray-800 rounded overflow-hidden">
-                <div className="grid grid-cols-[1fr_1fr_1fr] bg-gray-950 text-xs font-semibold text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-gray-800">
+              <div style={{ borderTop: '1px solid var(--border)' }}>
+                <div className="grid grid-cols-[1fr_1fr_1fr] text-xs font-semibold text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-[var(--border)]">
                   <span>Key</span>
                   <span>Value</span>
                   <span>Source</span>
                 </div>
                 {Object.entries(collectionVars).map(([k, v]) => (
-                  <div key={`col-${k}`} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
-                    <span className="text-gray-300 font-mono truncate">{`{{${k}}}`}</span>
+                  <div key={`col-${k}`} className="grid grid-cols-[1fr_1fr_1fr] items-center px-3 py-1.5 text-sm border-b border-[var(--border)] last:border-b-0">
+                    <span className="truncate"><VarPill varName={k} resolvedValue={String(v)} /></span>
                     <span className="text-gray-400 font-mono truncate">{String(v)}</span>
                     <span className="text-gray-500 truncate">{request?._collection}</span>
                   </div>
@@ -863,8 +865,8 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                 {Object.entries(activeEnvVars)
                   .filter(([k]) => collectionVars[k] === undefined)
                   .map(([k, v]) => (
-                    <div key={`env-${k}`} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
-                      <span className="text-gray-300 font-mono truncate">{`{{${k}}}`}</span>
+                    <div key={`env-${k}`} className="grid grid-cols-[1fr_1fr_1fr] items-center px-3 py-1.5 text-sm border-b border-[var(--border)] last:border-b-0">
+                      <span className="truncate"><VarPill varName={k} resolvedValue={String(v)} /></span>
                       <span className="text-gray-400 font-mono truncate">{String(v)}</span>
                       <span className="text-gray-500 truncate">{activeEnvName || 'env'}</span>
                     </div>
@@ -872,8 +874,8 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                 {dotenvVars
                   .filter(v => collectionVars[v.key] === undefined && activeEnvVars[v.key] === undefined)
                   .map(v => (
-                    <div key={`dotenv-${v.key}`} className="grid grid-cols-[1fr_1fr_1fr] px-3 py-1.5 text-sm border-b border-gray-800 last:border-b-0">
-                      <span className="text-gray-300 font-mono truncate">{`{{${v.key}}}`}</span>
+                    <div key={`dotenv-${v.key}`} className="grid grid-cols-[1fr_1fr_1fr] items-center px-3 py-1.5 text-sm border-b border-[var(--border)] last:border-b-0">
+                      <span className="truncate"><VarPill varName={v.key} resolvedValue="hidden" /></span>
                       <span className="text-gray-600 font-mono truncate italic">hidden</span>
                       <span className="text-gray-500 truncate">{v.source}</span>
                     </div>
@@ -884,7 +886,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         ) : activeTab === 'pre-script' ? (
           <div className="flex flex-col h-full gap-2">
             <p className="text-xs text-gray-500">
-              Runs before the request fires. <code className="bg-gray-800 px-1 rounded">env</code> (read/write) and <code className="bg-gray-800 px-1 rounded">request</code> (read-only) are available. Mutations to <code className="bg-gray-800 px-1 rounded">env</code> are applied for this request and downstream requests in a collection run.
+              Runs before the request fires. <code className="bg-[var(--surface-3)] px-1 rounded">env</code> (read/write) and <code className="bg-[var(--surface-3)] px-1 rounded">request</code> (read-only) are available. Mutations to <code className="bg-[var(--surface-3)] px-1 rounded">env</code> are applied for this request and downstream requests in a collection run.
             </p>
             <ScriptEditor
               value={preScript}
@@ -895,7 +897,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         ) : activeTab === 'post-script' ? (
           <div className="flex flex-col h-full gap-2">
             <p className="text-xs text-gray-500">
-              Runs after the response is received. <code className="bg-gray-800 px-1 rounded">env</code> (read/write), <code className="bg-gray-800 px-1 rounded">request</code>, and <code className="bg-gray-800 px-1 rounded">response</code> are available. Use it to extract tokens from responses and store them in <code className="bg-gray-800 px-1 rounded">env</code> for subsequent requests.
+              Runs after the response is received. <code className="bg-[var(--surface-3)] px-1 rounded">env</code> (read/write), <code className="bg-[var(--surface-3)] px-1 rounded">request</code>, and <code className="bg-[var(--surface-3)] px-1 rounded">response</code> are available. Use it to extract tokens from responses and store them in <code className="bg-[var(--surface-3)] px-1 rounded">env</code> for subsequent requests.
             </p>
             <ScriptEditor
               value={postScript}

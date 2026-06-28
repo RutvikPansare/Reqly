@@ -41,13 +41,17 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
   };
 
   return (
-    <div className="flex flex-col gap-1 w-full max-w-4xl">
+    <div className="w-full">
       {items.map((pair, i) => {
         const isLastEmpty = i === items.length - 1 && !pair.key && !pair.value;
         return (
-          <div key={i} className="flex items-center gap-2 group">
-            <button 
-              className="text-gray-500 hover:text-gray-300 w-6 flex justify-center"
+          <div
+            key={i}
+            className="flex items-stretch group"
+            style={{ borderBottom: isLastEmpty ? 'none' : '1px solid var(--border)' }}
+          >
+            <button
+              className="text-gray-500 hover:text-gray-300 w-9 flex justify-center items-center shrink-0"
               onClick={() => !isLastEmpty && handleChange(i, 'enabled', !pair.enabled)}
               disabled={isLastEmpty}
             >
@@ -61,23 +65,23 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
                 <div className="w-4 h-4"></div>
               )}
             </button>
-            <VariableInput 
+            <VariableInput
               variables={variables}
-              className={`flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
+              className={`flex-1 bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
               placeholder="Key"
               value={pair.key}
               onChange={val => handleChange(i, 'key', val)}
             />
-            <VariableInput 
+            <VariableInput
               variables={variables}
-              className={`flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
+              className={`flex-1 bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
               placeholder="Value"
               value={pair.value}
               onChange={val => handleChange(i, 'value', val)}
             />
-            <button 
-              onClick={() => handleRemove(i)} 
-              className={`text-gray-600 hover:text-red-400 w-6 flex justify-center ${isLastEmpty ? 'invisible' : 'invisible group-hover:visible'}`}
+            <button
+              onClick={() => handleRemove(i)}
+              className={`text-gray-600 hover:text-red-400 w-9 flex justify-center items-center shrink-0 ${isLastEmpty ? 'invisible' : 'invisible group-hover:visible'}`}
             >
               <Trash2 size={16} />
             </button>

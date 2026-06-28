@@ -39,7 +39,7 @@ export function TsInterfaceModal({ body, onClose }: TsInterfaceModalProps) {
         </button>
         <pre
           className="p-4 pt-10 rounded overflow-x-auto text-sm font-mono leading-relaxed"
-          style={{ background: 'var(--surface-0)', border: '1px solid var(--border)', color: '#7dd3fc', maxHeight: '420px', overflowY: 'auto' }}
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', color: '#7dd3fc', maxHeight: '420px', overflowY: 'auto' }}
         >
           {tsCode}
         </pre>

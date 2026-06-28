@@ -162,7 +162,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
     }
   };
 
-  const inputCls = 'w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none';
+  const inputCls = 'w-full bg-[var(--surface-3)] border border-[var(--border-strong)] rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none';
 
   return (
     <Modal title={`${collectionName} - Settings`} onClose={onClose} icon={<Settings size={16} />} width="w-[580px]">
@@ -207,7 +207,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
             <div className="flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24 shrink-0">Profile</label>
               <select
-                className="flex-1 bg-gray-800 text-gray-200 border border-gray-700 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
+                className="flex-1 bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-500"
                 value={authProfileId}
                 onChange={e => {
                   const id = e.target.value;
@@ -236,7 +236,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   <button
                     key={t}
                     disabled={!!authProfileId}
-                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
                     {t === 'apiKey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'none' ? 'None' : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -246,7 +246,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
             </div>
 
             {/* Credential fields */}
-            <div className="bg-gray-950 p-4 rounded border border-gray-800 space-y-4">
+            <div className="bg-[var(--surface-1)] p-4 rounded border border-[var(--border)] space-y-4">
               {authType === 'none' && (
                 <p className="text-sm text-gray-500 italic">No collection-level auth. Each request uses its own auth configuration.</p>
               )}
@@ -375,7 +375,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                 {(['path', 'url'] as const).map(s => (
                   <button
                     key={s}
-                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${specSource === s ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                    className={`px-3 py-1 rounded text-sm capitalize transition-colors ${specSource === s ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'}`}
                     onClick={() => setSpecSource(s)}
                   >
                     {s === 'path' ? 'File path' : 'URL'}
@@ -395,7 +395,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
             </div>
 
             {specConfigured && (
-              <div className="bg-gray-950 p-3 rounded border border-gray-800 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              <div className="bg-[var(--surface-1)] p-3 rounded border border-[var(--border)] text-sm" style={{ color: 'var(--text-secondary)' }}>
                 {specOperationCount !== null
                   ? `Loaded - ${specOperationCount} operation${specOperationCount === 1 ? '' : 's'} found.`
                   : 'Configured but not currently loaded.'}

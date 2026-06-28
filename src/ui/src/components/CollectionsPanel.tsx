@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, FolderInput, Search, Download, BookMarked, Trash2, Settings } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, importCollection, exportCollection, deleteExample } from '../api';
+import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, exportCollection, deleteExample } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
@@ -12,8 +12,231 @@ interface CollectionsPanelProps {
   onRunCollection: (name: string) => void;
 }
 
+function formatProjectPath(p: string) {
+  const parts = p.replace(/\\/g, '/').split('/');
+  const name = parts[parts.length - 1] || parts[parts.length - 2] || p;
+  const parent = parts.slice(0, -1).join('/') || '/';
+  const display = parent.startsWith('/Users/') ? parent.replace(/^\/Users\/[^/]+/, '~') : parent;
+  return { name, display };
+}
+
+function SidebarEmptyHint() {
+  const [copied, setCopied] = useState(false);
+  const prompt = 'Create a Reqly collection from my routes.';
+
+  return (
+    <div className="flex items-center gap-1.5 px-1.5 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+      <span className="truncate">Ask your agent: "{prompt}"</span>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(prompt).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        }}
+        className="flex items-center justify-center rounded shrink-0"
+        style={{ width: '18px', height: '18px', color: copied ? '#4ade80' : 'var(--text-muted)', background: 'transparent', border: 'none' }}
+        title="Copy"
+      >
+        {copied ? <Check size={11} /> : <Copy size={11} />}
+      </button>
+    </div>
+  );
+}
+
+function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { projectPath: string; lastMcpActivityAt: number | null; onSwitch: (p: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState('');
+  const [error, setError] = useState('');
+  const [switching, setSwitching] = useState(false);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [pendingDir, setPendingDir] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasRecentMcpActivity = !!lastMcpActivityAt && Date.now() - lastMcpActivityAt < 60000;
+
+  const startEdit = () => {
+    setInput(projectPath);
+    setError('');
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 30);
+  };
+
+  const cancel = () => { setEditing(false); setError(''); setPendingDir(null); };
+
+  const doSwitch = async (target: string, createIfMissing = false) => {
+    setSwitching(true);
+    setError('');
+    try {
+      const res = await fetch('/api/switch-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectDir: target, createIfMissing }),
+      });
+      const data = await res.json();
+      if (res.status === 404 && data.notFound) {
+        setError('Path not found');
+        setSwitching(false);
+        return;
+      }
+      if (!res.ok) { setError(data.error || 'Failed to switch'); setSwitching(false); return; }
+      if (data.needsReqlyDir) {
+        setPendingDir(target);
+        setSwitching(false);
+        return;
+      }
+      onSwitch(target);
+      setEditing(false);
+      setPendingDir(null);
+    } catch {
+      setError('Network error');
+    }
+    setSwitching(false);
+  };
+
+  const submit = () => {
+    const target = input.trim();
+    if (!target || target === projectPath) { cancel(); return; }
+    doSwitch(target);
+  };
+
+  const openPicker = async () => {
+    setPickerBusy(true);
+    try {
+      const res = await fetch('/api/open-folder-picker');
+      const data = await res.json();
+      if (data.path) {
+        setInput(data.path);
+        setError('');
+      }
+    } catch {
+      // ignore - leave input as-is
+    }
+    setPickerBusy(false);
+  };
+
+  const { name, display } = formatProjectPath(projectPath);
+
+  if (pendingDir) {
+    return (
+      <>
+        <div className="shrink-0 rounded-md px-3 py-2" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <div className="font-mono font-medium truncate" style={{ fontSize: '0.75rem', color: 'var(--text-primary)' }}>{name}</div>
+          <div className="font-mono truncate" style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{display}</div>
+        </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="rounded-md p-4 max-w-sm" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No Reqly collections found</h3>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+              The folder <span className="font-mono">{pendingDir}</span> doesn't have a <span className="font-mono">.reqly/</span> directory. Reqly uses this folder to store your collections.
+            </p>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => doSwitch(pendingDir, true)}
+                disabled={switching}
+                className="flex-1 text-xs rounded px-2 py-1.5 font-medium"
+                style={{ background: 'var(--accent)', color: '#000', opacity: switching ? 0.6 : 1 }}
+              >
+                {switching ? 'Creating…' : `Create .reqly/ here`}
+              </button>
+              <button
+                onClick={async () => { setPendingDir(null); await openPicker(); }}
+                disabled={switching}
+                className="text-xs rounded px-2 py-1.5"
+                style={{ background: 'var(--surface-4)', color: 'var(--text-muted)' }}
+              >
+                Choose a different folder
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (editing) {
+    return (
+      <div className="shrink-0 rounded-md" style={{ background: 'var(--surface-2)', border: '1px solid var(--accent)' }}>
+        <div className="flex items-center gap-2 px-3 py-2">
+          <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
+          <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>Switch project</span>
+        </div>
+        <div className="px-3 pb-2 flex flex-col gap-1.5">
+          <div className="flex gap-1.5">
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={e => { setInput(e.target.value); setError(''); }}
+              onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') cancel(); }}
+              className="input font-mono flex-1"
+              style={{ fontSize: '0.7rem', height: '28px' }}
+              placeholder="/path/to/project"
+              disabled={switching}
+              spellCheck={false}
+            />
+            <button
+              onClick={openPicker}
+              disabled={switching || pickerBusy}
+              title="Browse for folder"
+              className="rounded flex items-center justify-center shrink-0"
+              style={{ width: '28px', height: '28px', background: 'var(--surface-4)', color: 'var(--text-muted)', opacity: pickerBusy ? 0.6 : 1 }}
+            >
+              <Folder size={13} />
+            </button>
+          </div>
+          {hasRecentMcpActivity && (
+            <p className="text-xs flex items-start gap-1" style={{ color: '#fbbf24' }}>
+              <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+              An AI agent may be using this project. Switching will change its context.
+            </p>
+          )}
+          {error && <p className="text-xs" style={{ color: '#f87171' }}>{error}</p>}
+          <div className="flex gap-1.5">
+            <button
+              onClick={submit}
+              disabled={switching}
+              className="flex-1 text-xs rounded px-2 py-1 transition-colors font-medium"
+              style={{ background: 'var(--accent)', color: '#000', opacity: switching ? 0.6 : 1 }}
+            >
+              {switching ? 'Switching…' : 'Switch'}
+            </button>
+            <button
+              onClick={cancel}
+              disabled={switching}
+              className="text-xs rounded px-2 py-1 transition-colors"
+              style={{ background: 'var(--surface-4)', color: 'var(--text-muted)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={startEdit}
+      className="shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group"
+      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+      title={`${projectPath}\nClick to switch project`}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+    >
+      <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
+      <div className="min-w-0 flex-1">
+        <div className="font-mono font-medium truncate" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
+        <div className="font-mono truncate" style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{display}</div>
+      </div>
+      <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-muted)' }}>change</span>
+    </button>
+  );
+}
+
 export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection }: CollectionsPanelProps) {
   const [collections, setCollections] = useState<any[]>([]);
+  const [projectPath, setProjectPath] = useState<string>('');
+  const [lastMcpActivityAt, setLastMcpActivityAt] = useState<number | null>(null);
   const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
   const [expandedReqs, setExpandedReqs] = useState<Record<string, boolean>>({});
 
@@ -29,11 +252,9 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const [renamingCol, setRenamingCol] = useState<string | null>(null);
   const [colRenameValue, setColRenameValue] = useState('');
 
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   const [contextMenu, setContextMenu] = useState<
     | { x: number; y: number; type: 'col'; col: string }
@@ -44,6 +265,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const loadData = () => {
     fetchCollections().then(setCollections).catch(console.error);
+    fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); setLastMcpActivityAt(d.lastMcpActivityAt ?? null); }).catch(() => {});
   };
 
   useEffect(() => {
@@ -53,55 +275,18 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       const { col, req } = (e as CustomEvent).detail;
       setExpandedReqs(p => ({ ...p, [`${col}/${req}`]: true }));
     };
+    const handleImportSuccess = (e: Event) => setImportSuccess((e as CustomEvent).detail);
     document.addEventListener('click', closeMenu);
     window.addEventListener('reqly-reload', loadData);
     window.addEventListener('reqly-example-saved', handleExampleSaved);
+    window.addEventListener('reqly-import-success', handleImportSuccess);
     return () => {
       document.removeEventListener('click', closeMenu);
       window.removeEventListener('reqly-reload', loadData);
       window.removeEventListener('reqly-example-saved', handleExampleSaved);
+      window.removeEventListener('reqly-import-success', handleImportSuccess);
     };
   }, []);
-
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportError(null);
-    const name = file.name.toLowerCase();
-    let format: 'postman' | 'bruno' | 'insomnia' | 'openapi';
-    if (name.endsWith('.bru')) {
-      format = 'bruno';
-    } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
-      format = 'openapi';
-    } else {
-      // JSON - detect from content
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (parsed._type === 'export' && parsed.__export_format === 4) format = 'insomnia';
-        else if (parsed.openapi || parsed.swagger) format = 'openapi';
-        else format = 'postman';
-        await importCollection(text, format);
-        loadData();
-        setImportSuccess(file.name.replace(/\.(json|bru|yaml|yml)$/i, ''));
-      } catch (err: any) {
-        setImportError(err.message || 'Import failed');
-      } finally {
-        e.target.value = '';
-      }
-      return;
-    }
-    try {
-      const content = await file.text();
-      await importCollection(content, format);
-      loadData();
-      setImportSuccess(file.name.replace(/\.(json|bru|yaml|yml)$/i, ''));
-    } catch (err: any) {
-      setImportError(err.message || 'Import failed');
-    } finally {
-      e.target.value = '';
-    }
-  };
 
   const handleCreateCol = async () => {
     if (newColName.trim()) {
@@ -183,22 +368,10 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   return (
     <div className="p-3 flex flex-col gap-3 relative min-h-full">
 
-      {/* Import button - prominent, top of panel */}
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        className="flex items-center gap-2 w-full px-3 py-2 rounded text-sm font-medium transition-colors shrink-0"
-        style={{ background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
-        title="Import from Postman (.json) or Bruno (.bru)"
-      >
-        <FolderInput size={15} className="text-blue-400 shrink-0" />
-        Import Collection
-      </button>
+      {/* Active project path - click to switch project */}
+      {projectPath && <ProjectPathWidget projectPath={projectPath} lastMcpActivityAt={lastMcpActivityAt} onSwitch={setProjectPath} />}
 
-      {importError && (
-        <p className="text-xs text-red-400 px-1 break-words shrink-0">{importError}</p>
-      )}
-
-      {/* Environments section - below import button, above collections */}
+      {/* Environments section - above collections */}
       <div className="-mx-3 -mt-1" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <SidebarEnvSection />
       </div>
@@ -231,14 +404,6 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           )}
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json,.bru,.yaml,.yml"
-        className="hidden"
-        onChange={handleImportFile}
-      />
 
       <div className="space-y-1">
         {creatingCol && (
@@ -287,18 +452,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
         {/* Normal tree view (hidden when searching) */}
         {!search.trim() && collections.length === 0 && !creatingCol && (
-          <div className="flex flex-col items-center justify-center py-8 gap-3" style={{ color: 'var(--text-muted)' }}>
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.35">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No collections yet</p>
-            <button
-              onClick={() => setCreatingCol(true)}
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              + Create one
-            </button>
-          </div>
+          <SidebarEmptyHint />
         )}
 
         {!search.trim() && collections.map(col => {

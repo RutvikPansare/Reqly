@@ -55,7 +55,7 @@ function VarTooltip({ state }: { state: VarTooltipState }) {
   );
 }
 
-function VarPill({
+export function VarPill({
   varName,
   resolvedValue,
 }: {
@@ -318,7 +318,7 @@ export function VariableInput({
       {showMenu && (
         <div
           ref={menuRef}
-          className="absolute z-50 bg-gray-800 border border-gray-700 rounded shadow-lg max-h-48 overflow-y-auto w-full min-w-[200px]"
+          className="absolute z-50 bg-[var(--surface-3)] border border-[var(--border-strong)] rounded shadow-lg max-h-48 overflow-y-auto w-full min-w-[200px]"
           style={{ top: '100%', left: 0, marginTop: '4px' }}
         >
           {menuItems.map((item, index) => {

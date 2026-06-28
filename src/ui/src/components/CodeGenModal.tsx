@@ -73,7 +73,7 @@ export function CodeGenModal({ request, onClose }: CodeGenModalProps) {
         </div>
         <pre
           className="p-4 rounded overflow-x-auto text-sm font-mono leading-relaxed"
-          style={{ background: 'var(--surface-0)', border: '1px solid var(--border)', color: 'var(--text-secondary)', minHeight: '160px' }}
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-secondary)', minHeight: '160px' }}
         >
           {loading ? <span style={{ color: 'var(--text-muted)' }}>Generating...</span> : (codes[activeTab] || '')}
         </pre>

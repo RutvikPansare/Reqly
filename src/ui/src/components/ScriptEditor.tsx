@@ -50,7 +50,7 @@ export function ScriptEditor({ value, onChange, placeholder }: ScriptEditorProps
   };
 
   return (
-    <div className="relative flex-1 rounded border border-gray-800 bg-gray-950 overflow-hidden focus-within:border-blue-500 transition-colors">
+    <div className="relative flex-1 rounded border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden focus-within:border-blue-500 transition-colors">
       {/* Highlight overlay - sits behind the transparent textarea */}
       <div
         ref={overlayRef}

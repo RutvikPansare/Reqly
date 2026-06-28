@@ -76,7 +76,7 @@ export function FlowStepCard({ step, result, expanded, onToggleExpand, onDelete 
             width: 16,
             height: 16,
             borderRadius: '50%',
-            background: status === 'pass' ? 'var(--bg-success)' : status === 'fail' ? 'var(--bg-danger)' : 'var(--surface-0)',
+            background: status === 'pass' ? 'var(--bg-success)' : status === 'fail' ? 'var(--bg-danger)' : 'var(--surface-1)',
             border: status === 'pending' ? '1px solid var(--border-strong)' : 'none',
             color: status === 'pass' ? 'var(--text-success)' : status === 'fail' ? 'var(--text-danger)' : 'transparent',
           }}
@@ -138,7 +138,7 @@ function Field({ label, value, danger }: { label: string; value: string; danger?
           fontSize: '11px',
           fontFamily: 'var(--font-mono, monospace)',
           color: danger ? 'var(--text-danger)' : 'var(--text-secondary)',
-          background: 'var(--surface-0)',
+          background: 'var(--surface-1)',
           border: '1px solid var(--border)',
           borderRadius: 4,
           padding: '2px 6px',
@@ -166,7 +166,7 @@ function ResponseSnippet({ body }: { body: unknown }) {
     <div
       style={{
         marginTop: 6,
-        background: 'var(--surface-0)',
+        background: 'var(--surface-1)',
         border: '1px solid var(--border)',
         borderRadius: 4,
         padding: '6px 8px',

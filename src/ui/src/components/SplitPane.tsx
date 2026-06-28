@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 
 interface SplitPaneProps {
   top: React.ReactNode;
@@ -6,16 +6,28 @@ interface SplitPaneProps {
   defaultSplit?: number; // 0-100, initial percentage for top pane
   minTop?: number;
   minBottom?: number;
+  // When set and the user hasn't manually dragged the divider yet, the split
+  // re-syncs to this value - e.g. give the bottom pane less room while it has
+  // nothing to show, then expand it back once content (a response) arrives.
+  autoSplit?: number;
 }
 
-export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBottom = 15 }: SplitPaneProps) {
-  const [split, setSplit] = useState(defaultSplit);
+export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBottom = 15, autoSplit }: SplitPaneProps) {
+  const [split, setSplit] = useState(autoSplit ?? defaultSplit);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const userDragged = useRef(false);
+
+  useEffect(() => {
+    if (autoSplit !== undefined && !userDragged.current) {
+      setSplit(autoSplit);
+    }
+  }, [autoSplit]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     dragging.current = true;
+    userDragged.current = true;
 
     const onMove = (ev: MouseEvent) => {
       if (!dragging.current || !containerRef.current) return;
@@ -41,25 +53,16 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
         {top}
       </div>
 
-      {/* Drag handle - full-width divider with centered pill */}
+      {/* Drag handle - single full-width line, brightens on hover/drag */}
       <div
         onMouseDown={handleMouseDown}
         className="shrink-0 flex items-center justify-center cursor-row-resize group relative"
-        style={{ height: '12px' }}
+        style={{ height: '5px' }}
       >
-        {/* Full-width line */}
         <div
-          className="absolute inset-x-0 top-1/2 -translate-y-1/2 transition-colors"
-          style={{ height: '1px', background: 'var(--border-strong)' }}
+          className="absolute inset-x-0 top-1/2 -translate-y-1/2 transition-colors group-hover:bg-blue-500"
+          style={{ height: '1px', background: 'var(--border)' }}
         />
-        {/* Center handle indicator */}
-        <div
-          className="relative z-10 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full transition-colors group-hover:bg-blue-500"
-          style={{ background: 'var(--surface-4)', border: '1px solid var(--border-strong)' }}
-        >
-          <div className="w-3 h-0.5 rounded-full" style={{ background: 'var(--text-muted)' }} />
-          <div className="w-3 h-0.5 rounded-full" style={{ background: 'var(--text-muted)' }} />
-        </div>
       </div>
 
       {/* Bottom pane */}

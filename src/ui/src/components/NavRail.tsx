@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function NavRail({ active, onSelect }: NavRailProps) {
   return (
-    <nav className="w-12 shrink-0 flex flex-col items-center py-2 gap-1" style={{ background: 'var(--surface-0)', borderRight: '1px solid var(--border)' }}>
+    <nav className="w-12 shrink-0 flex flex-col items-center py-2 gap-1" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--border)' }}>
       {NAV_ITEMS.map(item => {
         const isActive = active === item.id;
         return (

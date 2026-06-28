@@ -56,6 +56,8 @@ import * as getCollectionSpec from './tools/get-collection-spec.js';
 import * as deleteCollectionSpec from './tools/delete-collection-spec.js';
 import * as listSpecOperations from './tools/list-spec-operations.js';
 import * as validateResponse from './tools/validate-response.js';
+import * as getProject from './tools/get-project.js';
+import * as switchProject from './tools/switch-project.js';
 
 const tools = [
   runRequest,
@@ -108,6 +110,8 @@ const tools = [
   deleteCollectionSpec,
   listSpecOperations,
   validateResponse,
+  getProject,
+  switchProject,
 ];
 
 import { z } from 'zod';
@@ -139,6 +143,8 @@ export function createServer(context: EngineContext) {
   for (const t of tools) {
     const shape = convertSchemaToZodShape(t.definition.inputSchema);
     server.tool(t.definition.name, t.definition.description, shape, async (args: any) => {
+      context.lastMcpActivityAt = Date.now();
+      context.hasEverConnectedAgent = true;
       return await t.handler(args, context);
     });
   }

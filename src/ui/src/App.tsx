@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Settings, ChevronLeft, ChevronRight, X, Plus, ChevronDown } from 'lucide-react';
-import { updateRequest, fetchCollections, addRequest, fetchEnvironments, setActiveEnvironment } from './api';
+import { Search, Settings, X, Plus, ChevronDown, FolderInput } from 'lucide-react';
+import { updateRequest, fetchCollections, addRequest, fetchEnvironments, setActiveEnvironment, importCollection } from './api';
 import { methodColorClass } from './lib/colors';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useServerEvents } from './hooks/useServerEvents';
@@ -21,6 +21,7 @@ import { FlowWorkspace } from './components/FlowWorkspace';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
 import { SplitPane } from './components/SplitPane';
 import { BottomBar, BottomPanel, useConsoleStats, type BottomTab } from './components/BottomPanel';
+import { EmptyStateNudge } from './components/EmptyStateNudge';
 
 interface TabData {
   id: string;
@@ -127,6 +128,27 @@ function App() {
     setRenameTabValue('');
   };
 
+  // Empty-state agent nudge - shown in place of the canvas while no collection
+  // exists yet. Once any collection has ever existed, never show it again,
+  // even if the user later deletes all of them.
+  const [everHadCollections, setEverHadCollections] = useLocalStorage('reqly.everHadCollections', false);
+  const [collectionsEmpty, setCollectionsEmpty] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkCollections = () => {
+      fetchCollections().then(cols => {
+        const empty = !cols || cols.length === 0;
+        setCollectionsEmpty(empty);
+        if (!empty) setEverHadCollections(true);
+      }).catch(() => {});
+    };
+    checkCollections();
+    window.addEventListener('reqly-reload', checkCollections);
+    return () => window.removeEventListener('reqly-reload', checkCollections);
+  }, []);
+
+  const showEmptyStateNudge = activePanel === 'collections' && collectionsEmpty === true && !everHadCollections;
+
   // Compact header env selector state
   const [headerEnvs, setHeaderEnvs] = useState<any[]>([]);
   const [headerActiveEnv, setHeaderActiveEnv] = useState<string | null>(null);
@@ -162,6 +184,40 @@ function App() {
     window.dispatchEvent(new Event('reqly-reload'));
   };
 
+  // Header import-collection control
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    let format: 'postman' | 'bruno' | 'insomnia' | 'openapi';
+    try {
+      if (name.endsWith('.bru')) {
+        format = 'bruno';
+        const content = await file.text();
+        await importCollection(content, format);
+      } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
+        format = 'openapi';
+        const content = await file.text();
+        await importCollection(content, format);
+      } else {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (parsed._type === 'export' && parsed.__export_format === 4) format = 'insomnia';
+        else if (parsed.openapi || parsed.swagger) format = 'openapi';
+        else format = 'postman';
+        await importCollection(text, format);
+      }
+      window.dispatchEvent(new Event('reqly-reload'));
+      window.dispatchEvent(new CustomEvent('reqly-import-success', { detail: file.name.replace(/\.(json|bru|yaml|yml)$/i, '') }));
+    } catch (err: any) {
+      alert(err.message || 'Import failed');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   // Persist sanitized tabs (debounced).
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -187,12 +243,6 @@ function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
-  const scrollTabs = (dir: 'left' | 'right') => {
-    const el = tabBarRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
-  };
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
   const consoleStats = useConsoleStats();
@@ -318,11 +368,11 @@ function App() {
     <div className="h-screen flex flex-col relative" style={{ background: 'var(--surface-1)', overflow: 'hidden' }}>
       {/* Main area: header + sidebar/content - flex-1 so bottom bar is never squeezed out */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
+      <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
         {/* Wordmark - left */}
         <h1
           className="shrink-0 select-none"
-          style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.04em', color: '#e4e4e7', lineHeight: 1 }}
+          style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', color: '#e4e4e7', lineHeight: 1 }}
         >
           Reqly
         </h1>
@@ -339,6 +389,24 @@ function App() {
           <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>⌘K</span>
         </button>
         <div className="flex items-center gap-2 ml-auto">
+          {/* Import collection */}
+          <button
+            onClick={() => importFileInputRef.current?.click()}
+            className="flex items-center gap-1.5 rounded px-3 transition-colors shrink-0"
+            style={{ height: '32px', background: 'var(--surface-3)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
+            title="Import from Postman (.json), Bruno (.bru), Insomnia (.json), or OpenAPI (.yaml/.yml)"
+          >
+            <FolderInput size={14} className="text-blue-400" />
+            Import
+          </button>
+          <input
+            ref={importFileInputRef}
+            type="file"
+            accept=".json,.bru,.yaml,.yml"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+
           {/* Compact env selector */}
           <div className="relative" ref={headerEnvRef}>
             <button
@@ -405,7 +473,7 @@ function App() {
           }}
         />
         {activePanel !== 'graphql' && (
-          <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-2)', borderRight: '1px solid var(--border)' }}>
+          <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--border)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
                 <CollectionsPanel
@@ -450,17 +518,11 @@ function App() {
                 Select a flow, or create one in the sidebar
               </div>
             )
+          ) : showEmptyStateNudge ? (
+            <EmptyStateNudge onCreateManually={() => setActivePanel('collections')} />
           ) : (
             <>
-              <div className="flex items-center shrink-0" style={{ height: '40px', background: 'var(--surface-0)', borderBottom: '1px solid var(--border)' }}>
-                <button
-                  onClick={() => scrollTabs('left')}
-                  className="flex items-center justify-center shrink-0 transition-colors"
-                  style={{ width: '28px', height: '40px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRight: '1px solid var(--border)' }}
-                  title="Scroll left"
-                >
-                  <ChevronLeft size={13} />
-                </button>
+              <div className="flex items-center shrink-0" style={{ height: '40px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
                 <div ref={tabBarRef} className="flex overflow-x-auto flex-1 h-full" style={{ scrollbarWidth: 'none' }}>
                   {tabs.map(tab => {
                     const isActive = activeTabId === tab.id;
@@ -473,8 +535,8 @@ function App() {
                         onClick={() => !isRenaming && setActiveTabId(tab.id)}
                         className="relative flex items-center gap-2 px-3 cursor-pointer min-w-32 max-w-44 group transition-colors h-full"
                         style={{
-                          borderRight: '1px solid var(--border)',
-                          background: isActive ? 'var(--surface-2)' : 'transparent',
+                          borderRight: '1px solid rgba(255,255,255,0.03)',
+                          background: 'transparent',
                         }}
                       >
                         {isActive && (
@@ -532,30 +594,23 @@ function App() {
                   <button
                     onClick={createNewTab}
                     className="flex items-center justify-center shrink-0 transition-colors h-full"
-                    style={{ padding: '0 10px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRight: '1px solid var(--border)' }}
+                    style={{ padding: '0 10px', color: 'var(--text-muted)', background: 'transparent', border: 'none' }}
                     title="New Tab"
                   >
                     <Plus size={13} />
                   </button>
                 </div>
-                <button
-                  onClick={() => scrollTabs('right')}
-                  className="flex items-center justify-center shrink-0 transition-colors"
-                  style={{ width: '28px', height: '40px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderLeft: '1px solid var(--border)' }}
-                  title="Scroll right"
-                >
-                  <ChevronRight size={13} />
-                </button>
               </div>
 
               <div className="flex-1 overflow-hidden relative">
                 {tabs.map(tab => (
                   <div
                     key={tab.id}
-                    className="absolute inset-0 p-4 gap-0 overflow-hidden"
+                    className="absolute inset-0 gap-0 overflow-hidden"
                     style={{ display: activeTabId === tab.id ? 'flex' : 'none', flexDirection: 'column' }}
                   >
                     <SplitPane
+                      autoSplit={tab.response ? 50 : 75}
                       top={
                         <RequestEditor
                           isActive={activeTabId === tab.id}

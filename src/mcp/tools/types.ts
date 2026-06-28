@@ -25,6 +25,8 @@ export interface EngineContext {
   specLoader: SpecLoader;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>, collectionAuth?: AuthProfile) => Promise<HttpResponse>;
   execChildPid?: number;
+  lastMcpActivityAt?: number | null;
+  hasEverConnectedAgent?: boolean;
 }
 
 export interface ToolDefinition {

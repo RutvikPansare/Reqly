@@ -150,7 +150,7 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
 
   return (
     <div className="p-3 flex flex-col gap-3 h-full">
-      <div className="flex items-center gap-4 shrink-0 border-b border-gray-800 pb-2">
+      <div className="flex items-center gap-4 shrink-0 border-b border-[var(--border)] pb-2">
         <button 
           onClick={() => setTab('proxy')}
           className={`text-xs font-bold uppercase tracking-widest ${tab === 'proxy' ? 'text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
@@ -208,7 +208,7 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
               return (
                 <div
                   key={i}
-                  className="px-2 py-2 hover:bg-gray-800 cursor-pointer flex flex-col gap-1 border-b border-gray-800/50 rounded"
+                  className="px-2 py-2 hover:bg-[var(--surface-3)] cursor-pointer flex flex-col gap-1 border-b border-[var(--border)]/50 rounded"
                   onClick={() => onSelectCaptured(req)}
                 >
                   <div className="flex items-center gap-2">
@@ -240,9 +240,9 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
           </div>
 
           {tunnelActive ? (
-            <div className="text-xs text-blue-400 shrink-0 bg-gray-900 p-2 rounded border border-gray-800">
+            <div className="text-xs text-blue-400 shrink-0 bg-[var(--surface-1)] p-2 rounded border border-[var(--border)]">
               <span className="text-gray-300 block mb-1">Send webhooks to:</span>
-              <code className="block break-all font-mono select-all bg-gray-950 p-1.5 rounded">{tunnelUrl}/webhooks/your-path</code>
+              <code className="block break-all font-mono select-all bg-[var(--surface-1)] p-1.5 rounded">{tunnelUrl}/webhooks/your-path</code>
             </div>
           ) : (
             <p className="text-xs text-gray-500 shrink-0">
@@ -269,7 +269,7 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
                   value={mockCollection}
                   onChange={e => setMockCollection(e.target.value)}
                   className="text-xs rounded px-2 py-1.5 outline-none"
-                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                  style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                 >
                   {collections.length === 0 && <option value="">No collections</option>}
                   {collections.map(c => <option key={c} value={c}>{c}</option>)}
@@ -282,7 +282,7 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
                   value={mockPort}
                   onChange={e => setMockPort(e.target.value)}
                   className="text-xs rounded px-2 py-1.5 outline-none w-full"
-                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                  style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                 />
               </div>
               <button
@@ -336,7 +336,7 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
                       className="grid px-2 py-1.5 font-semibold uppercase tracking-wider text-[10px]"
                       style={{
                         gridTemplateColumns: '64px 1fr 40px',
-                        background: 'var(--surface-0)',
+                        background: 'var(--surface-1)',
                         borderBottom: '1px solid var(--border)',
                         color: 'var(--text-muted)',
                       }}

@@ -5,6 +5,7 @@ import { graphql } from 'cm6-graphql';
 import { buildClientSchema } from 'graphql';
 import { json } from '@codemirror/lang-json';
 import { ResponseViewer } from './ResponseViewer';
+import { SplitPane } from './SplitPane';
 import { addRequest, fetchCollections } from '../api';
 
 const INTROSPECTION_QUERY = `query IntrospectionQuery {
@@ -157,14 +158,15 @@ export function GraphQLWorkspace() {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col p-4 gap-4 overflow-hidden">
-      <div className="flex-1 min-h-0 flex flex-col">
-        <div className="flex flex-col h-full bg-gray-900 border border-gray-800 rounded overflow-hidden">
-          <div className="flex p-2 gap-2 border-b border-gray-800 bg-gray-950">
+    <div className="absolute inset-0 flex flex-col overflow-hidden" style={{ background: 'var(--surface-1)' }}>
+      <SplitPane
+        top={
+        <div className="flex flex-col h-full">
+          <div className="flex p-2 gap-2 border-b border-[var(--border)] bg-[var(--surface-1)]">
             <span className="px-2 py-1 rounded text-xs font-semibold bg-pink-600 text-white border border-pink-500">GQL</span>
             <input
               type="text"
-              className="flex-1 bg-gray-800 text-gray-200 border border-gray-700 rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
+              className="flex-1 bg-transparent text-gray-200 border border-[var(--border-strong)] rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder="https://api.example.com/graphql"
@@ -178,7 +180,7 @@ export function GraphQLWorkspace() {
               {isSending ? 'Sending...' : 'Send'}
             </button>
             <button
-              className={`px-3 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5 border ${saveSuccess ? 'bg-green-900 border-green-700 text-green-300' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5 border ${saveSuccess ? 'bg-green-900 border-green-700 text-green-300' : 'bg-[var(--surface-3)] border-[var(--border-strong)] text-gray-300 hover:bg-[var(--surface-4)]'}`}
               onClick={() => setShowSaveForm(v => !v)}
               title="Save to collection"
             >
@@ -188,9 +190,9 @@ export function GraphQLWorkspace() {
           </div>
 
           {showSaveForm && (
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800 bg-gray-900">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--surface-1)]">
               <select
-                className="bg-gray-800 text-gray-200 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none"
+                className="bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1 text-xs focus:outline-none"
                 value={saveCollection}
                 onChange={e => setSaveCollection(e.target.value)}
               >
@@ -199,7 +201,7 @@ export function GraphQLWorkspace() {
               </select>
               <input
                 type="text"
-                className="flex-1 bg-gray-800 text-gray-200 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
+                className="flex-1 bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
                 value={saveName}
                 onChange={e => setSaveName(e.target.value)}
                 placeholder="Request name"
@@ -219,13 +221,13 @@ export function GraphQLWorkspace() {
             <div className="flex justify-between items-center px-1">
               <div className="flex gap-1">
                 <button
-                  className={`px-3 py-1 text-xs font-semibold rounded ${bodyTab === 'query' ? 'bg-gray-800 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`px-3 py-1 text-xs font-semibold rounded ${bodyTab === 'query' ? 'bg-[var(--surface-3)] text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
                   onClick={() => setBodyTab('query')}
                 >
                   Query
                 </button>
                 <button
-                  className={`px-3 py-1 text-xs font-semibold rounded ${bodyTab === 'variables' ? 'bg-gray-800 text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`px-3 py-1 text-xs font-semibold rounded ${bodyTab === 'variables' ? 'bg-[var(--surface-3)] text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
                   onClick={() => setBodyTab('variables')}
                 >
                   Variables
@@ -234,7 +236,7 @@ export function GraphQLWorkspace() {
               <button
                 onClick={runIntrospection}
                 disabled={introspecting}
-                className="text-xs text-pink-400 hover:text-pink-300 px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="text-xs text-pink-400 hover:text-pink-300 px-2 py-1 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-4)] transition-colors disabled:opacity-50"
                 title="Fetch and parse the GraphQL schema from the endpoint"
               >
                 {introspecting ? 'Introspecting...' : 'Introspect'}
@@ -247,7 +249,7 @@ export function GraphQLWorkspace() {
                     Schema loaded: {schemaFields().length} query fields - {schemaFields().join(', ')}
                   </div>
                 )}
-                <div className="flex-1 min-h-0 bg-gray-950 border border-gray-800 rounded overflow-hidden">
+                <div className="flex-1 min-h-0" style={{ borderTop: '1px solid var(--border)' }}>
                   <CodeMirror
                     value={query}
                     height="100%"
@@ -259,7 +261,7 @@ export function GraphQLWorkspace() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 min-h-0 bg-gray-950 border border-gray-800 rounded overflow-hidden">
+              <div className="flex-1 min-h-0" style={{ borderTop: '1px solid var(--border)' }}>
                 <CodeMirror
                   value={variables}
                   height="100%"
@@ -272,10 +274,9 @@ export function GraphQLWorkspace() {
             )}
           </div>
         </div>
-      </div>
-      <div className="flex-1 min-h-0 flex flex-col">
-        <ResponseViewer response={response} isSending={isSending} />
-      </div>
+        }
+        bottom={<ResponseViewer response={response} isSending={isSending} />}
+      />
     </div>
   );
 }

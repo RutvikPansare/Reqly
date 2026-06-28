@@ -18,6 +18,7 @@ import { parseCurl } from '../engine/curl-parser.js';
 import { generateCode } from '../engine/code-generator.js';
 import { exportToPostman, exportToOpenApi } from '../engine/exporter.js';
 import { execute as executeHttp } from '../engine/http-executor.js';
+import { detectFramework } from '../engine/framework-detector.js';
 import { attachTerminal } from './terminal.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -63,7 +64,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
           emit('environments');
         } else if (p.startsWith('/api/run/') || p === '/api/history') {
           emit('history');
-        } else if (p === '/api/switch-project') {
+        } else if (p === '/api/switch-project' && (body as any)?.ok) {
           emit('project');
         }
       }
@@ -190,6 +191,56 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       }
 
       res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/project', async (_req, res) => {
+    const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+    const framework = await detectFramework(projectRoot);
+    res.json({
+      path: projectRoot,
+      name: path.basename(projectRoot),
+      framework,
+      hasEverConnectedAgent: context.hasEverConnectedAgent ?? false,
+      lastMcpActivityAt: context.lastMcpActivityAt ?? null,
+    });
+  });
+
+  app.get('/api/open-folder-picker', async (_req, res) => {
+    try {
+      const { execFile } = await import('child_process');
+      const { promisify } = await import('util');
+      const execFileAsync = promisify(execFile);
+
+      if (process.platform === 'darwin') {
+        try {
+          const { stdout } = await execFileAsync(
+            'osascript',
+            ['-e', 'POSIX path of (choose folder)'],
+            { timeout: 120000 }
+          );
+          res.json({ path: stdout.trim() });
+        } catch {
+          res.json({ cancelled: true });
+        }
+      } else if (process.platform === 'win32') {
+        try {
+          const psScript = "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }";
+          const { stdout } = await execFileAsync('powershell', ['-Command', psScript], { timeout: 120000 });
+          const selected = stdout.trim();
+          if (selected) {
+            res.json({ path: selected });
+          } else {
+            res.json({ cancelled: true });
+          }
+        } catch {
+          res.json({ cancelled: true });
+        }
+      } else {
+        res.status(501).json({ error: 'Native folder picker is not supported on this platform' });
+      }
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -813,11 +864,36 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
   app.post('/api/switch-project', async (req, res) => {
     try {
       const projectDir: string = req.body.projectDir;
+      const createIfMissing: boolean = !!req.body.createIfMissing;
       if (!projectDir) {
         res.status(400).json({ error: 'projectDir is required' });
         return;
       }
+
+      try {
+        await fs.access(projectDir);
+      } catch {
+        res.status(404).json({ error: 'Path not found', notFound: true });
+        return;
+      }
+
       const collectionsDir = path.join(projectDir, '.reqly');
+      let hasReqlyDir = true;
+      try {
+        await fs.access(collectionsDir);
+      } catch {
+        hasReqlyDir = false;
+      }
+
+      if (!hasReqlyDir && !createIfMissing) {
+        res.json({ ok: false, needsReqlyDir: true, projectDir });
+        return;
+      }
+
+      if (!hasReqlyDir && createIfMissing) {
+        await fs.mkdir(collectionsDir, { recursive: true });
+      }
+
       const environmentsPath = path.join(collectionsDir, 'environments.yaml');
 
       context.collectionManager = new CollectionManager(collectionsDir);

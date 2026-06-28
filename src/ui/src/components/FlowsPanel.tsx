@@ -119,9 +119,9 @@ export function FlowsPanel({ selectedFlow, onSelectFlow, lastResults }: FlowsPan
               gap: '8px',
               color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
               borderLeft: `2px solid ${isActive ? 'var(--fill-accent)' : 'transparent'}`,
-              background: isActive ? 'var(--surface-0)' : 'transparent',
+              background: isActive ? 'var(--surface-1)' : 'transparent',
             }}
-            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-0)'; }}
+            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--surface-1)'; }}
             onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
           >
             <GitBranch size={14} className="shrink-0" />

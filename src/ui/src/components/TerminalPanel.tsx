@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import { Trash2, Square, Plus, X } from 'lucide-react';
+import { Plus, X, TerminalSquare, ChevronDown } from 'lucide-react';
 
 const RECONNECT_MAX_DELAY = 5000;
 
@@ -45,9 +45,6 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
   // Resets to false on every component mount (i.e. browser refresh), so a
   // fresh mount always replays whatever the server has buffered.
   const hasReplayedRef = useRef(false);
-
-  const [connected, setConnected] = useState(false);
-  const [running,   setRunning]   = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -117,8 +114,6 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
         if (msg.type === 'ready') {
           const wasReconnect = attempt > 0;
           attempt = 0;
-          setConnected(true);
-          setRunning(true);
 
           if (msg.isNew) {
             // Server spawned a fresh PTY (first connect, or server restarted).
@@ -149,15 +144,12 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
         if (msg.type === 'data')  { term.write(msg.data); }
         else if (msg.type === 'exit') {
           term.write(`\r\n\x1b[90m[shell exited${msg.signal ? ` (${msg.signal})` : ` with code ${msg.code}`}]\x1b[0m\r\n`);
-          setRunning(false);
         } else if (msg.type === 'error') {
           term.write(`\r\n\x1b[31m[error] ${msg.message}\x1b[0m\r\n`);
         }
       };
 
       ws.onclose = () => {
-        setConnected(false);
-        setRunning(false);
         if (destroyed) return;
         attempt += 1;
         term.write('\r\n\x1b[33m[disconnected - reconnecting...]\x1b[0m\r\n');
@@ -187,42 +179,9 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
     }
   }, [active]);
 
-  const handleKill   = () => wsRef.current?.send(JSON.stringify({ type: 'kill' }));
-  const handleClear  = () => termRef.current?.clear();
-
   return (
     <div className="flex flex-col h-full" style={{ background: '#0a0a0a', display: active ? 'flex' : 'none' }}>
       <div ref={containerRef} className="flex-1 overflow-hidden min-h-0" onClick={() => termRef.current?.focus()} />
-
-      <div className="shrink-0 flex items-center px-3 gap-2" style={{ height: 28, borderTop: '1px solid var(--border)', background: 'var(--surface-1)' }}>
-        <span
-          className="shrink-0 rounded-full"
-          style={{ width: 6, height: 6, background: connected ? '#4ade80' : '#f59e0b' }}
-          title={connected ? 'Connected' : 'Reconnecting…'}
-        />
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          {connected ? 'bash/zsh - click terminal to type' : 'Reconnecting…'}
-        </span>
-        <div className="flex-1" />
-        {running && (
-          <button
-            onClick={handleKill}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors"
-            style={{ color: '#f87171', background: 'var(--surface-3)' }}
-            title="Send Ctrl+C"
-          >
-            <Square size={12} /> Ctrl+C
-          </button>
-        )}
-        <button
-          onClick={handleClear}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors"
-          style={{ color: 'var(--text-muted)' }}
-          title="Clear terminal"
-        >
-          <Trash2 size={12} /> Clear
-        </button>
-      </div>
     </div>
   );
 }
@@ -237,7 +196,7 @@ function makeSession(name: string): Session {
   return { id: _nextSessionId++, name, uuid: newUuid() };
 }
 
-export function TerminalSessionsPanel() {
+export function TerminalSessionsPanel({ onClose }: { onClose?: () => void }) {
   const [sessions, setSessions] = useState<Session[]>(() => {
     const persisted = loadPersistedSessions();
     if (persisted.length > 0) {
@@ -274,23 +233,29 @@ export function TerminalSessionsPanel() {
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 min-w-0" style={{ background: '#0a0a0a' }}>
-      {/* Tab bar - compact height */}
-      <div className="flex items-center shrink-0 px-2 gap-1" style={{ height: 26, borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+      {/* Merged header + tab bar - one compact row, flush tabs with faint dividers */}
+      <div className="flex items-center shrink-0 px-3 gap-1" style={{ height: 26, borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+        <span className="flex items-center gap-1.5 text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
+          <TerminalSquare size={12} />
+          Terminal
+        </span>
+        <div className="w-px self-stretch my-1.5 mx-1.5 shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }} />
         {sessions.map(s => (
           <div
             key={s.id}
             onClick={() => setActiveId(s.id)}
-            className="flex items-center gap-1.5 cursor-pointer rounded-md transition-colors"
+            className="relative flex items-center gap-1.5 cursor-pointer h-full shrink-0"
             style={{
-              height: 20,
-              padding: '0 5px 0 8px',
+              padding: '0 8px',
               fontSize: '11px',
               fontWeight: s.id === activeId ? 500 : 400,
               color: s.id === activeId ? 'var(--text-primary)' : 'var(--text-muted)',
-              background: s.id === activeId ? 'var(--surface-0)' : 'transparent',
-              border: s.id === activeId ? '1px solid var(--border)' : '1px solid transparent',
+              borderRight: '1px solid rgba(255,255,255,0.03)',
             }}
           >
+            {s.id === activeId && (
+              <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500" aria-hidden="true" />
+            )}
             {s.name}
             <button
               onClick={e => { e.stopPropagation(); closeSession(s.id); }}
@@ -304,12 +269,22 @@ export function TerminalSessionsPanel() {
         ))}
         <button
           onClick={addSession}
-          className="flex items-center justify-center rounded-md transition-colors"
+          className="flex items-center justify-center rounded-md transition-colors shrink-0"
           style={{ color: 'var(--text-muted)', width: 20, height: 20 }}
           title="New terminal session"
         >
           <Plus size={12} />
         </button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="ml-auto flex items-center justify-center rounded transition-colors shrink-0"
+            style={{ color: 'var(--text-muted)', width: 22, height: 22 }}
+            title="Close panel"
+          >
+            <ChevronDown size={14} />
+          </button>
+        )}
       </div>
 
       <div className="flex-1 min-h-0">

@@ -59,7 +59,7 @@ interface BottomPanelProps {
 const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 600;
 
-export function BottomPanel({ open, onClose, height, onHeightChange, activeTab, onTabChange }: BottomPanelProps) {
+export function BottomPanel({ open, onClose, height, onHeightChange, activeTab }: BottomPanelProps) {
   const entries = useConsoleEntries();
   const listRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
@@ -89,60 +89,37 @@ export function BottomPanel({ open, onClose, height, onHeightChange, activeTab, 
     window.addEventListener('mouseup', onUp);
   }, [height, onHeightChange]);
 
-  const errorCount = entries.filter(e => e.level === 'error').length;
-  const warnCount = entries.filter(e => e.level === 'warn').length;
-
   return (
     <div
       className="shrink-0 flex flex-col"
       style={{
         height: open ? height : 0,
-        background: 'var(--surface-0)',
-        borderTop: open ? '1px solid var(--border)' : 'none',
+        background: 'var(--surface-1)',
         overflow: 'hidden',
       }}
     >
-      {/* Drag handle */}
+      {/* Drag handle - thin line, brightens on hover/drag like the request/response divider */}
       <div
         onMouseDown={onDragStart}
-        className="shrink-0 flex items-center justify-center"
-        style={{ height: '4px', cursor: 'ns-resize', background: 'var(--surface-2)' }}
+        className="shrink-0 flex items-center justify-center cursor-row-resize group relative"
+        style={{ height: '5px' }}
         title="Drag to resize"
-      />
+      >
+        <div
+          className="absolute inset-x-0 top-1/2 -translate-y-1/2 transition-colors group-hover:bg-blue-500"
+          style={{ height: '1px', background: 'var(--border)' }}
+        />
+      </div>
 
-      {/* Panel tab bar */}
-      <div className="flex items-center shrink-0 px-2" style={{ height: '34px', borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
-        <button
-          className={`tab-btn text-xs ${activeTab === 'console' ? 'active' : ''}`}
-          style={activeTab === 'console' ? { color: '#fbbf24', borderBottomColor: '#f59e0b' } : {}}
-          onClick={() => onTabChange('console')}
-        >
-          <Terminal size={12} />
-          Console
-          {errorCount > 0 && (
-            <span className="ml-1 text-[10px] font-bold px-1 rounded" style={{ background: 'rgba(248,113,113,0.15)', color: '#f87171' }}>
-              {errorCount}
-            </span>
-          )}
-          {warnCount > 0 && errorCount === 0 && (
-            <span className="ml-1 text-[10px] font-bold px-1 rounded" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
-              {warnCount}
-            </span>
-          )}
-        </button>
+      {/* Console header - terminal's header+tabs merge into TerminalSessionsPanel's own row below to save space */}
+      {activeTab === 'console' && (
+        <div className="flex items-center shrink-0 px-3" style={{ height: '26px', borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+            <Terminal size={12} />
+            Console
+          </span>
 
-        <button
-          className={`tab-btn text-xs ${activeTab === 'terminal' ? 'active' : ''}`}
-          style={activeTab === 'terminal' ? { color: '#fbbf24', borderBottomColor: '#f59e0b' } : {}}
-          onClick={() => onTabChange('terminal')}
-        >
-          <TerminalSquare size={12} />
-          Terminal
-        </button>
-
-        {/* Right controls */}
-        <div className="ml-auto flex items-center gap-1">
-          {activeTab === 'console' && (
+          <div className="ml-auto flex items-center gap-1">
             <button
               onClick={() => clearConsoleLogs()}
               className="flex items-center gap-1 transition-colors rounded px-2"
@@ -151,26 +128,26 @@ export function BottomPanel({ open, onClose, height, onHeightChange, activeTab, 
             >
               <Trash2 size={11} />
             </button>
-          )}
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center rounded transition-colors"
-            style={{ color: 'var(--text-muted)', width: '24px', height: '24px' }}
-            title="Close panel"
-          >
-            <ChevronDown size={14} />
-          </button>
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center rounded transition-colors"
+              style={{ color: 'var(--text-muted)', width: '24px', height: '24px' }}
+              title="Close panel"
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Terminal content - stays mounted across tab switches and panel close so sessions persist */}
       <div className="flex-1 min-h-0" style={{ display: activeTab === 'terminal' ? 'flex' : 'none' }}>
-        <TerminalSessionsPanel />
+        <TerminalSessionsPanel onClose={onClose} />
       </div>
 
       {/* Console content */}
       {activeTab === 'console' && (
-        <div ref={listRef} className="flex-1 overflow-y-auto font-mono text-xs" style={{ background: 'var(--surface-0)' }}>
+        <div ref={listRef} className="flex-1 overflow-y-auto font-mono text-xs" style={{ background: 'var(--surface-1)' }}>
           {entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-1" style={{ color: 'var(--text-muted)' }}>
               <Terminal size={20} strokeWidth={1.2} opacity={0.3} />
@@ -221,7 +198,7 @@ export function BottomBar({ consoleOpen, activeTab, onSelectTab, entryCount, err
   return (
     <div
       className="shrink-0 flex items-center px-3 gap-2"
-      style={{ height: '26px', background: 'var(--surface-0)', borderTop: '1px solid var(--border)', zIndex: 10 }}
+      style={{ height: '26px', background: 'var(--surface-1)', borderTop: '1px solid var(--border)', zIndex: 10 }}
     >
       <button
         onClick={() => onSelectTab('console')}

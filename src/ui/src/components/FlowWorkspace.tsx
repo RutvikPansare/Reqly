@@ -165,7 +165,7 @@ export function FlowWorkspace({ flowName, lastResult, onRunComplete }: FlowWorks
                   key={i}
                   onClick={() => setSelectedRow(i)}
                   className="cursor-pointer"
-                  style={{ padding: '6px 12px', borderBottom: '1px solid var(--border)', background: isActive ? 'var(--surface-0)' : 'transparent' }}
+                  style={{ padding: '6px 12px', borderBottom: '1px solid var(--border)', background: isActive ? 'var(--surface-1)' : 'transparent' }}
                 >
                   <div style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: '11px', marginBottom: 2 }}>Row {i + 1}</div>
                   <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

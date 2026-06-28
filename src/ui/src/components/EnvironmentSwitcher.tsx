@@ -127,7 +127,7 @@ export function EnvironmentSwitcher() {
               <div key={env.name} className="flex items-center group">
                 <button 
                   onClick={() => handleSelect(env.name)}
-                  className="flex-1 text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 flex items-center gap-2"
+                  className="flex-1 text-left px-3 py-2 text-sm text-gray-300 hover:bg-[var(--surface-3)] flex items-center gap-2"
                 >
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active === env.name ? 'bg-green-500' : 'bg-transparent'}`}></span>
                   <span className="truncate">{env.name}</span>
@@ -148,16 +148,16 @@ export function EnvironmentSwitcher() {
               <div className="px-3 py-2 text-sm text-gray-500 italic">No environments</div>
             )}
           </div>
-          <div className="border-t border-gray-800 mt-1 pt-1">
+          <div className="border-t border-[var(--border)] mt-1 pt-1">
             <button 
               onClick={() => { setIsOpen(false); setShowNewModal(true); }}
-              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-gray-800 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-[var(--surface-3)] flex items-center gap-2"
             >
               + New environment
             </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-gray-800 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:bg-[var(--surface-3)] flex items-center gap-2"
             >
               <Upload size={12} /> Import Postman environment
             </button>
