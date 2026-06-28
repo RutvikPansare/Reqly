@@ -49,7 +49,11 @@ async function attach(ws: WebSocket, messages: any[], sessionId: string, cols = 
   return messages.find(m => m.type === 'ready');
 }
 
-describe('/terminal WebSocket (PTY + session registry)', () => {
+// node-pty's conpty backend calls AttachConsole, which throws on GitHub Actions'
+// windows-latest runner because the test process has no attached console window
+// (no TTY in headless CI). Real Windows dev machines and self-hosted runners with
+// a console are unaffected - this only skips the CI job that can't physically pass.
+describe.skipIf(process.platform === 'win32' && !!process.env.CI)('/terminal WebSocket (PTY + session registry)', () => {
   let server: ReturnType<typeof startExpressServer>;
   let collectionManager: CollectionManager;
 
