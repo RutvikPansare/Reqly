@@ -15,7 +15,7 @@ describe('generateGithubActionsWorkflow', () => {
   it('includes the install, start, and checkout steps', () => {
     const yaml = generateGithubActionsWorkflow('my-flow');
     expect(yaml).toContain('uses: actions/checkout@v4');
-    expect(yaml).toContain('npm install -g @rutvikpansare123/reqly');
+    expect(yaml).toContain('npm install -g getreqly');
     expect(yaml).toContain('reqly start --project-dir . &');
   });
 

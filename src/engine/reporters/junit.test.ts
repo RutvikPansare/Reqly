@@ -145,8 +145,8 @@ describe('toJUnitFromFlow', () => {
       passed: false,
       duration: 30,
       steps: [
-        { stepId: 'create-post', type: 'request', passed: true, duration: 20 },
-        { stepId: 'get-nonexistent', type: 'request', passed: false, error: 'expected 404, got 500', duration: 10 }
+        { stepId: 'create-post', type: 'run', passed: true, duration: 20 },
+        { stepId: 'get-nonexistent', type: 'run', passed: false, error: 'expected 404, got 500', duration: 10 }
       ]
     };
 
@@ -159,12 +159,13 @@ describe('toJUnitFromFlow', () => {
 
   it('flattens dataRows when the flow ran with data-driven rows', () => {
     const result: FlowRunResult = {
-      flowName: 'my-flow',
+      flowName: 'data-driven-flow',
       passed: true,
       duration: 10,
+      steps: [],
       dataRows: [
-        { data: { userId: '1' }, passed: true, steps: [{ stepId: 'get-user', type: 'request', passed: true, duration: 5 }] },
-        { data: { userId: '2' }, passed: true, steps: [{ stepId: 'get-user', type: 'request', passed: true, duration: 5 }] }
+        { data: { userId: '1' }, passed: true, steps: [{ stepId: 'get-user', type: 'run', passed: true, duration: 5 }] },
+        { data: { userId: '2' }, passed: true, steps: [{ stepId: 'get-user', type: 'run', passed: true, duration: 5 }] }
       ]
     };
 

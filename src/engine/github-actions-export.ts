@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Reqly
-        run: npm install -g @rutvikpansare123/reqly
+        run: npm install -g getreqly
       # If your flow tests a local server, add a step here to start it
       # - name: Start server
       #   run: npm run dev &

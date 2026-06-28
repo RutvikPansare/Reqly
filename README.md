@@ -1,13 +1,13 @@
 # Reqly
 
-[![npm version](https://img.shields.io/npm/v/@rutvikpansare123/reqly.svg)](https://www.npmjs.com/package/@rutvikpansare123/reqly)
-[![license](https://img.shields.io/npm/l/@rutvikpansare123/reqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/getreqly.svg)](https://www.npmjs.com/package/getreqly)
+[![license](https://img.shields.io/npm/l/getreqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
 [![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
 
 Your AI agent builds and tests your APIs. Reqly is the execution engine.
 
 ```bash
-npm install -g @rutvikpansare123/reqly
+npm install -g getreqly
 ```
 
 <!-- TODO: record demo GIF - agent prompt -> MCP tool fires -> collection appears in sidebar -> run -> response shown -->
@@ -48,7 +48,7 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 ## Quick start
 
 ```bash
-npm i -g @rutvikpansare123/reqly
+npm i -g getreqly
 cd my-project
 reqly init
 reqly setup cursor
@@ -63,7 +63,7 @@ Reqly runs on macOS, Linux, and Windows.
 Run these two commands anywhere to install Reqly globally and configure your AI tool (Cursor, Claude Desktop, Claude Code, Gemini, or Codex) to use it:
 
 ```bash
-npm install -g @rutvikpansare123/reqly
+npm install -g getreqly
 reqly setup
 ```
 
