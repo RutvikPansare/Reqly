@@ -1,13 +1,13 @@
 # Reqly - From route to CI test in one agent session.
 
-[![npm version](https://img.shields.io/npm/v/reqly-app.svg)](https://www.npmjs.com/package/reqly-app)
-[![license](https://img.shields.io/npm/l/reqly-app.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/getreqly.svg)](https://www.npmjs.com/package/getreqly)
+[![license](https://img.shields.io/npm/l/getreqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
 [![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
 
 Your agent reads your codebase, builds the collection, writes the assertions, exports the GitHub Actions workflow, and ships it to CI. You never touch it.
 
 ```bash
-npm install -g reqly-app
+npm install -g getreqly
 reqly setup
 ```
 
