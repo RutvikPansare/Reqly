@@ -67,6 +67,14 @@ function TerminalSession({ active, sessionUuid }: TerminalSessionProps) {
       scrollback: 5000,
       smoothScrollDuration: 150,
     });
+    const ignoreAltScreen = (params: (number | number[])[]) => {
+      const p = params[0];
+      if (p === 1049 || p === 1047 || p === 47) return true;
+      return false;
+    };
+    term.parser?.registerCsiHandler({ prefix: '?', final: 'h' }, ignoreAltScreen);
+    term.parser?.registerCsiHandler({ prefix: '?', final: 'l' }, ignoreAltScreen);
+
     const fitAddon = new FitAddon();
     fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);

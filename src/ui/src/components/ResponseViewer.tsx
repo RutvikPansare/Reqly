@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, Copy, Check, Search, Braces, BookMarked, X } from 'lucide-react';
+import { Loader2, Copy, Check, Search, Braces, BookMarked, X, AlertTriangle } from 'lucide-react';
 import { statusBadgeClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
 import { saveExample, listExamples } from '../api';
@@ -9,6 +9,24 @@ interface ResponseViewerProps {
   response: any;
   isSending?: boolean;
   request?: any;
+}
+
+// Network/parse errors land here as a plain-string body with latency 0 (see
+// App.tsx's handleFire) - distinct from a real HTTP 4xx/5xx response, which
+// always has a latency and usually a JSON body. Only hint for the former.
+const ERROR_HINTS: Array<[RegExp, string]> = [
+  [/Failed to parse URL from/i, 'The URL could not be parsed. Check for unresolved {{variables}} or a missing protocol (https://).'],
+  [/ECONNREFUSED/, 'Connection refused. Is the server running on this host/port?'],
+  [/ENOTFOUND/, 'Hostname not found. Check the URL or your network connection.'],
+  [/ETIMEDOUT/, 'Request timed out. The server did not respond in time.'],
+];
+
+function getErrorHint(body: unknown, latency: number | undefined): string | null {
+  if (typeof body !== 'string' || latency) return null;
+  for (const [pattern, hint] of ERROR_HINTS) {
+    if (pattern.test(body)) return hint;
+  }
+  return null;
 }
 
 function formatSize(bytes: number): string {
@@ -126,7 +144,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
 
   if (!response && !isSending) {
     return (
-      <div className="flex-1 flex flex-col" style={{ background: 'var(--surface-1)' }}>
+      <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>
         <div className="panel-header">
           <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         </div>
@@ -222,20 +240,6 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         )}
       </div>
 
-      {response?.assertions && response.assertions.length > 0 && !isSending && (
-        <div className="px-4 py-2 border-b flex gap-4 overflow-x-auto" style={{ background: 'var(--surface-1)', borderColor: 'var(--border)' }}>
-          {response.assertions.map((ass: any, i: number) => (
-            <div key={i} className={`text-xs flex items-center gap-1 px-2 py-1 rounded ${ass.passed ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
-              <span>{ass.passed ? '✅' : '❌'}</span>
-              <span className="font-mono">{ass.assertion.field}</span>
-              <span style={{ color: 'var(--text-muted)' }}>{ass.assertion.operator}</span>
-              <span>{ass.assertion.value}</span>
-              {!ass.passed && <span className="ml-2 text-red-300 opacity-80">(got: {ass.actual})</span>}
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="tab-bar">
         {['body', 'headers', 'raw'].map(tab => (
           <button
@@ -302,11 +306,22 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         )}
 
         {activeTab === 'body' && body !== undefined && body !== null && (
-          <pre
-            className="p-4 whitespace-pre-wrap outline-none leading-relaxed"
-            style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
-            dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
-          />
+          <>
+            {(() => {
+              const hint = getErrorHint(body, latency);
+              return hint ? (
+                <div className="flex items-start gap-2 m-4 mb-0 p-3 rounded-md text-xs" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>{hint}</span>
+                </div>
+              ) : null;
+            })()}
+            <pre
+              className="p-4 whitespace-pre-wrap outline-none leading-relaxed"
+              style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
+              dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
+            />
+          </>
         )}
 
         {activeTab === 'headers' && headers && (

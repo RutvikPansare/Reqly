@@ -137,10 +137,16 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     }
   }, [request?.id, request?.name]);
 
+  // Encodes a query param piece for the URL while leaving {{variable}} templates
+  // untouched - encoding the braces (e.g. {{client}} -> %7B%7Bclient%7D%7D) would
+  // hide the template from the engine's variable substitution at request time.
+  const encodeParamPart = (str: string) =>
+    str.split(/(\{\{[^}]+\}\})/g).map((part, i) => (i % 2 === 1 ? part : encodeURIComponent(part))).join('');
+
   const updateUrlWithParams = (base: string, params: KeyValuePair[]) => {
     const active = params.filter(p => p.enabled && (p.key || p.value));
     if (active.length === 0) return base;
-    const qs = active.map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
+    const qs = active.map(p => `${encodeParamPart(p.key)}=${encodeParamPart(p.value)}`).join('&');
     return `${base}?${qs}`;
   };
 
@@ -300,7 +306,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>
       {/* URL bar */}
-      <div className="flex p-2 gap-2" style={{ background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
+      <div className="flex p-2 gap-2" style={{ background: 'var(--surface-1)' }}>
         <div className="flex items-stretch flex-1" style={{ border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
           <select
             className="px-2 text-sm font-bold focus:outline-none"

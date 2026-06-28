@@ -11,6 +11,15 @@ export class RequestError extends Error {
   }
 }
 
+// undici's fetch wraps connection failures in a generic "fetch failed" TypeError,
+// with the actual cause (ECONNREFUSED/ENOTFOUND/ETIMEDOUT) nested in err.cause.code.
+// Surface it in the message so the UI's contextual error hints can match on it.
+function formatNetworkError(err: any): string {
+  const message = err?.message || 'Network Error';
+  const code = err?.cause?.code;
+  return code && !message.includes(code) ? `${message} (${code})` : message;
+}
+
 import { resolveVariables } from './variable-substitutor.js';
 
 
@@ -108,7 +117,7 @@ export async function execute(
     try {
       response = await fetch(url, { method: config.method, headers, body: formData as any });
     } catch (err: any) {
-      throw new RequestError(err.message || 'Network Error');
+      throw new RequestError(formatNetworkError(err));
     }
     const latency = Date.now() - startTime;
     const resHeaders: Record<string, string> = {};
@@ -218,7 +227,7 @@ export async function execute(
       body: body as string | undefined,
     });
   } catch (err: any) {
-    throw new RequestError(err.message || 'Network Error');
+    throw new RequestError(formatNetworkError(err));
   }
   const latency = Date.now() - startTime;
 

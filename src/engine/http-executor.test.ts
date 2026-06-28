@@ -68,6 +68,26 @@ describe('http-executor', () => {
     }));
   });
 
+  it('should substitute a {{variable}} inside an existing query string, not percent-encode the braces', async () => {
+    const mockResponse = { status: 200, headers: new Headers(), arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('').buffer), text: vi.fn().mockResolvedValue('') };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as any);
+
+    const config: RequestConfig = {
+      method: 'GET',
+      url: 'https://example.com?client={{client}}',
+    };
+    const env: Environment = {
+      id: '1',
+      name: 'dev',
+      variables: { client: 'abc' },
+    };
+
+    await execute(config, env);
+    expect(fetch).toHaveBeenCalledWith('https://example.com?client=abc', expect.objectContaining({
+      method: 'GET',
+    }));
+  });
+
   it('should inject bearer auth', async () => {
     const mockResponse = { status: 200, headers: new Headers(), arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('').buffer), text: vi.fn().mockResolvedValue('') };
     vi.mocked(fetch).mockResolvedValue(mockResponse as any);
@@ -91,6 +111,19 @@ describe('http-executor', () => {
 
     const config: RequestConfig = { method: 'GET', url: 'http://example.com' };
     await expect(execute(config)).rejects.toThrow(RequestError);
+  });
+
+  it('should surface the underlying error code (e.g. ECONNREFUSED) in the RequestError message', async () => {
+    // undici's fetch wraps connection failures in a generic "fetch failed" TypeError,
+    // with the actual cause (ECONNREFUSED/ENOTFOUND/ETIMEDOUT) nested in err.cause.code.
+    // The UI's contextual error hints match against the message string, so the code
+    // needs to be surfaced there rather than left buried in the cause.
+    const err: any = new Error('fetch failed');
+    err.cause = { code: 'ECONNREFUSED' };
+    vi.mocked(fetch).mockRejectedValue(err);
+
+    const config: RequestConfig = { method: 'GET', url: 'http://localhost:59999' };
+    await expect(execute(config)).rejects.toThrow('fetch failed (ECONNREFUSED)');
   });
 
   it('should truncate large responses by default', async () => {

@@ -59,18 +59,26 @@ const ACTIVE_PANEL_KEY = 'reqly.activePanel';
 const sanitizeTab = (tab: TabData) => {
   const req = { ...tab.request };
   if (req.auth?.credentials) req.auth = { ...req.auth, credentials: undefined };
-  return { id: tab.id, tabName: tab.tabName, request: req };
+  
+  // Truncate response body if it's too large to prevent localStorage quota issues
+  let safeResponse = tab.response;
+  if (safeResponse?.body && typeof safeResponse.body === 'string' && safeResponse.body.length > 500000) {
+    safeResponse = { ...safeResponse, body: safeResponse.body.substring(0, 500000) + '\n\n...[Response truncated for storage]...' };
+  }
+  
+  return { id: tab.id, tabName: tab.tabName, request: req, response: safeResponse };
 };
 
 const rehydrateTabs = (): TabData[] => {
   try {
     const raw = localStorage.getItem(TABS_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as Array<{ id: string; tabName?: string; request: any }>;
+    const parsed = JSON.parse(raw) as Array<{ id: string; tabName?: string; request: any; response?: any }>;
     return parsed.map(t => {
       const tab = makeTab(t.request);
       tab.id = t.id;
       if (t.tabName) tab.tabName = t.tabName;
+      if (t.response) tab.response = t.response;
       return tab;
     });
   } catch {
@@ -610,7 +618,7 @@ function App() {
                     style={{ display: activeTabId === tab.id ? 'flex' : 'none', flexDirection: 'column' }}
                   >
                     <SplitPane
-                      autoSplit={tab.response ? 50 : 75}
+                      autoSplit={50}
                       top={
                         <RequestEditor
                           isActive={activeTabId === tab.id}

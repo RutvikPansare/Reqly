@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, AlertCircle, Trash2 } from 'lucide-react';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 
@@ -12,6 +12,19 @@ interface KeyValueEditorProps {
   pairs: KeyValuePair[];
   onChange: (pairs: KeyValuePair[]) => void;
   variables?: VariableItem[];
+}
+
+// Finds the first {{varName}} reference in text that isn't resolvable from the
+// known variables list. Dotted references (e.g. {{request.response.field}})
+// are response-chaining, not plain env/collection vars, so they're skipped.
+function findUnresolvedVar(text: string, variables: VariableItem[]): string | null {
+  const known = new Set(variables.map(v => v.name));
+  const matches = text.matchAll(/\{\{([^}]+)\}\}/g);
+  for (const m of matches) {
+    const name = m[1].trim();
+    if (!name.includes('.') && !known.has(name)) return name;
+  }
+  return null;
 }
 
 export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEditorProps) {
@@ -44,20 +57,28 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
     <div className="w-full">
       {items.map((pair, i) => {
         const isLastEmpty = i === items.length - 1 && !pair.key && !pair.value;
+        const unresolvedVar = !isLastEmpty && pair.enabled
+          ? (findUnresolvedVar(pair.key, variables) || findUnresolvedVar(pair.value, variables))
+          : null;
         return (
           <div
             key={i}
             className="flex items-stretch group"
-            style={{ borderBottom: isLastEmpty ? 'none' : '1px solid var(--border)' }}
+            style={{ borderBottom: '1px solid var(--border)' }}
           >
             <button
               className="text-gray-500 hover:text-gray-300 w-9 flex justify-center items-center shrink-0"
               onClick={() => !isLastEmpty && handleChange(i, 'enabled', !pair.enabled)}
               disabled={isLastEmpty}
+              title={unresolvedVar ? `Variable {{${unresolvedVar}}} is not set in the active environment.` : undefined}
             >
               {!isLastEmpty ? (
                 pair.enabled ? (
-                  <CheckCircle2 size={16} className="text-green-500" />
+                  unresolvedVar ? (
+                    <AlertCircle size={16} className="text-amber-400" />
+                  ) : (
+                    <CheckCircle2 size={16} className="text-green-500" />
+                  )
                 ) : (
                   <Circle size={16} />
                 )
@@ -65,13 +86,15 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
                 <div className="w-4 h-4"></div>
               )}
             </button>
-            <VariableInput
-              variables={variables}
-              className={`flex-1 bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
-              placeholder="Key"
-              value={pair.key}
-              onChange={val => handleChange(i, 'key', val)}
-            />
+            <div className="shrink-0" style={{ width: '380px' }}>
+              <VariableInput
+                variables={variables}
+                className={`w-full bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
+                placeholder="Key"
+                value={pair.key}
+                onChange={val => handleChange(i, 'key', val)}
+              />
+            </div>
             <VariableInput
               variables={variables}
               className={`flex-1 bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}

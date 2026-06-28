@@ -49,7 +49,7 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
   return (
     <div ref={containerRef} className="flex flex-col h-full select-none">
       {/* Top pane */}
-      <div style={{ flex: `${split} 1 0` }} className="min-h-0 overflow-hidden flex flex-col">
+      <div style={{ flex: `${split} 1 0%` }} className="min-h-0 overflow-hidden flex flex-col">
         {top}
       </div>
 
@@ -66,7 +66,7 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
       </div>
 
       {/* Bottom pane */}
-      <div style={{ flex: `${100 - split} 1 0` }} className="min-h-0 overflow-hidden flex flex-col">
+      <div style={{ flex: `${100 - split} 1 0%` }} className="min-h-0 overflow-hidden flex flex-col">
         {bottom}
       </div>
     </div>

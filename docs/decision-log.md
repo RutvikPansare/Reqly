@@ -6,6 +6,10 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-27 - Network error messages append the underlying cause code (e.g. `fetch failed (ECONNREFUSED)`)
+
+`http-executor.ts`'s catch blocks used to throw `RequestError(err.message)` verbatim. undici's `fetch` collapses connection failures into a generic `"fetch failed"` TypeError with the real reason in `err.cause.code` - so agents and the UI alike only ever saw "fetch failed" with no actionable detail. Added `formatNetworkError(err)` to append `(CODE)` when present. This is a response-body format change visible to MCP tool callers (`run_request` etc.) as well as the UI, but it's strictly additive (more detail, same prefix) so no consumer should break - flagging here since it touches the shape of an error string that scripts/assertions could theoretically pattern-match on.
+
 ## 2026-06-27 - SSE `project` event only fires on an actual switch, not any 200 from `/api/switch-project`
 
 The generic SSE-emit middleware in `express.ts` matched on route path alone (`p === '/api/switch-project'`) to decide when to broadcast the `project` event, which the UI treats as "the project changed - reload the page." Adding `needsReqlyDir`/`notFound` responses to that route (T-128) meant a 200 response that explicitly did NOT switch anything (the `.reqly/`-missing case) still triggered a full page reload, wiping the confirmation modal before the user could see it. Fixed by gating the emit on the response body's `ok` field rather than the path/status code. Lesson: path-based middleware that infers "did a mutation happen" from route + status code breaks as soon as a route grows multiple non-mutating success responses - check the actual body where it matters.
