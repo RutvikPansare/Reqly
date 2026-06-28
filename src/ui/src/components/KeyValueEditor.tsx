@@ -1,4 +1,4 @@
-import { AlertCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, Trash2, CheckSquare, Square } from 'lucide-react';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 
@@ -92,15 +92,13 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
               value={pair.value}
               onChange={val => handleChange(i, 'value', val)}
             />
-            <div className={`w-9 flex justify-center items-center shrink-0 ${isLastEmpty ? 'invisible' : ''}`}>
-              <input 
-                type="checkbox" 
-                checked={pair.enabled}
-                onChange={e => handleChange(i, 'enabled', e.target.checked)}
-                className="w-3.5 h-3.5 cursor-pointer accent-blue-500"
-                title="Toggle on/off"
-              />
-            </div>
+            <button
+              onClick={() => handleChange(i, 'enabled', !pair.enabled)}
+              className={`text-gray-500 hover:text-gray-300 w-9 flex justify-center items-center shrink-0 ${isLastEmpty ? 'invisible' : ''}`}
+              title="Toggle on/off"
+            >
+              {pair.enabled ? <CheckSquare size={16} className="text-green-500" /> : <Square size={16} />}
+            </button>
             <button
               onClick={() => handleRemove(i)}
               className={`text-gray-600 hover:text-red-400 w-9 flex justify-center items-center shrink-0 ${isLastEmpty ? 'invisible' : 'invisible group-hover:visible'}`}
