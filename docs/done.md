@@ -230,3 +230,4 @@
 - [x] **T-137** Fix response tab persisting on reload and correct SplitPane styling to center empty state vertically. Ensured panel-header height is strictly 34px to prevent visual jumps when responses arrive.
 - [x] **T-138** Allow explicit dismissal of EmptyStateNudge via an X button (saves to localStorage) and fix sidebar empty state hint text wrapping.
 - [x] **T-139** Added 'Tests' tab to ResponseViewer to display assertion results for individual requests.
+- [x] **T-140** Toggling headers and parameters persistently via checkboxes and MCP tools (using disabledParams/disabledHeaders in RequestConfig).

@@ -41,6 +41,8 @@ export interface RequestConfig {
   headers?: Record<string, string>;
   body?: RequestBody;
   params?: Record<string, string>;
+  disabledParams?: { key: string; value: string }[];
+  disabledHeaders?: { key: string; value: string }[];
   authProfileId?: string;
   auth?: InlineAuth;
   environmentId?: string;

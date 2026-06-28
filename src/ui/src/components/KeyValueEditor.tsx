@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, AlertCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, Trash2 } from 'lucide-react';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 
@@ -66,30 +66,20 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
             className="flex items-stretch group"
             style={{ borderBottom: '1px solid var(--border)' }}
           >
-            <button
-              className="text-gray-500 hover:text-gray-300 w-9 flex justify-center items-center shrink-0"
-              onClick={() => !isLastEmpty && handleChange(i, 'enabled', !pair.enabled)}
-              disabled={isLastEmpty}
+            <div
+              className="text-gray-500 w-9 flex justify-center items-center shrink-0"
               title={unresolvedVar ? `Variable {{${unresolvedVar}}} is not set in the active environment.` : undefined}
             >
-              {!isLastEmpty ? (
-                pair.enabled ? (
-                  unresolvedVar ? (
-                    <AlertCircle size={16} className="text-amber-400" />
-                  ) : (
-                    <CheckCircle2 size={16} className="text-green-500" />
-                  )
-                ) : (
-                  <Circle size={16} />
-                )
+              {!isLastEmpty && unresolvedVar && pair.enabled ? (
+                <AlertCircle size={16} className="text-amber-400" />
               ) : (
                 <div className="w-4 h-4"></div>
               )}
-            </button>
+            </div>
             <div className="shrink-0" style={{ width: '380px' }}>
               <VariableInput
                 variables={variables}
-                className={`w-full bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
+                className={`w-full bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50 line-through' : ''}`}
                 placeholder="Key"
                 value={pair.key}
                 onChange={val => handleChange(i, 'key', val)}
@@ -97,14 +87,24 @@ export function KeyValueEditor({ pairs, onChange, variables = [] }: KeyValueEdit
             </div>
             <VariableInput
               variables={variables}
-              className={`flex-1 bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50' : ''}`}
+              className={`flex-1 bg-transparent border-0 px-2 py-2 text-sm text-gray-200 focus:outline-none ${!pair.enabled && !isLastEmpty ? 'opacity-50 line-through' : ''}`}
               placeholder="Value"
               value={pair.value}
               onChange={val => handleChange(i, 'value', val)}
             />
+            <div className={`w-9 flex justify-center items-center shrink-0 ${isLastEmpty ? 'invisible' : ''}`}>
+              <input 
+                type="checkbox" 
+                checked={pair.enabled}
+                onChange={e => handleChange(i, 'enabled', e.target.checked)}
+                className="w-3.5 h-3.5 cursor-pointer accent-blue-500"
+                title="Toggle on/off"
+              />
+            </div>
             <button
               onClick={() => handleRemove(i)}
               className={`text-gray-600 hover:text-red-400 w-9 flex justify-center items-center shrink-0 ${isLastEmpty ? 'invisible' : 'invisible group-hover:visible'}`}
+              title="Delete"
             >
               <Trash2 size={16} />
             </button>

@@ -47,6 +47,14 @@ export const definition: ToolDefinition = {
             ],
           },
           params: { type: 'object' },
+          disabledParams: {
+            type: 'array',
+            items: { type: 'object', properties: { key: { type: 'string' }, value: { type: 'string' } } },
+          },
+          disabledHeaders: {
+            type: 'array',
+            items: { type: 'object', properties: { key: { type: 'string' }, value: { type: 'string' } } },
+          },
           authProfileId: { type: 'string' },
           environmentId: { type: 'string' },
           type: { type: 'string', enum: ['rest', 'graphql'] },

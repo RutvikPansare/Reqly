@@ -107,12 +107,23 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     if (request) {
       setUrl(request.url || '');
       setMethod(request.method || 'GET');
-      setParamsList(parseParams(request.url || ''));
+      const initialParams = parseParams(request.url || '');
+      if (request.disabledParams) {
+        request.disabledParams.forEach((p: any) => {
+          initialParams.push({ key: p.key, value: p.value, enabled: false });
+        });
+      }
+      setParamsList(initialParams);
 
       const hl: KeyValuePair[] = [];
       if (request.headers) {
         Object.entries(request.headers).forEach(([k, v]) => {
           hl.push({ key: k, value: String(v), enabled: true });
+        });
+      }
+      if (request.disabledHeaders) {
+        request.disabledHeaders.forEach((h: any) => {
+          hl.push({ key: h.key, value: h.value, enabled: false });
         });
       }
       setHeadersList(hl);
@@ -222,7 +233,17 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     };
 
     const buildRequest = () => {
+      const disabledParams = paramsList.filter(p => !p.enabled && (p.key || p.value)).map(p => ({ key: p.key, value: p.value }));
+      const disabledHeaders = headersList.filter(h => !h.enabled && (h.key || h.value)).map(h => ({ key: h.key, value: h.value }));
+      
       const req: any = { ...request, method, url, assertions, headers: getHeadersRecord(), body: getParsedBody() };
+      
+      if (disabledParams.length > 0) req.disabledParams = disabledParams;
+      else delete req.disabledParams;
+      
+      if (disabledHeaders.length > 0) req.disabledHeaders = disabledHeaders;
+      else delete req.disabledHeaders;
+
       if (preScript.trim()) req.preScript = preScript;
       else delete req.preScript;
       if (postScript.trim()) req.postScript = postScript;

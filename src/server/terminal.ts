@@ -106,9 +106,9 @@ export function attachTerminal(server: Server, getProjectRoot: () => string): We
         const cols = Math.max(1, Number(msg.cols) || 80);
         const rows = Math.max(1, Number(msg.rows) || 24);
 
-        if (sessions.has(sessionId)) {
+        if (sessions.has(sessionId!)) {
           // Re-attach: cancel idle timer, plug this client in, replay buffer.
-          session = sessions.get(sessionId)!;
+          session = sessions.get(sessionId!)!;
           if (session.idleTimer) { clearTimeout(session.idleTimer); session.idleTimer = null; }
           session.clients.add(ws);
           session.pty.resize(cols, rows);
@@ -129,10 +129,10 @@ export function attachTerminal(server: Server, getProjectRoot: () => string): We
           });
 
           session = { pty: ptyProcess, buffer: '', clients: new Set([ws]), idleTimer: null };
-          sessions.set(sessionId, session);
+          sessions.set(sessionId!, session);
 
           const sess   = session;   // capture for PTY callbacks
-          const sid    = sessionId;
+          const sid    = sessionId!;
 
           ptyProcess.onData((data) => {
             const raw = sess.buffer + data;
@@ -171,11 +171,11 @@ export function attachTerminal(server: Server, getProjectRoot: () => string): We
     });
 
     ws.on('close', () => {
-      if (!session || !sessionId) return;
+      if (!session || !sessionId!) return;
       session.clients.delete(ws);
       // Don't kill the PTY - schedule idle cleanup instead so the session
       // survives a browser refresh (client will re-attach within seconds).
-      if (session.clients.size === 0) scheduleIdleCleanup(sessionId, session);
+      if (session.clients.size === 0) scheduleIdleCleanup(sessionId!, session);
     });
   });
 
