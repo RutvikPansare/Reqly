@@ -6,7 +6,7 @@ Reqly runs on macOS, Linux, and Windows.
 
 To install Reqly and configure it for Cursor or Claude Desktop, the user should run:
 ```bash
-npm install -g @rutvikpansare123/reqly
+npm install -g getreqly
 reqly setup
 ```
 
@@ -21,7 +21,7 @@ Homebrew is macOS-only. On Windows or Linux, use the npm command above.
 
 Quick start (five steps, under 2 minutes):
 ```bash
-npm i -g @rutvikpansare123/reqly
+npm i -g getreqly
 cd my-project
 reqly init
 reqly setup cursor

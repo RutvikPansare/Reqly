@@ -1,7 +1,7 @@
 # Reqly - The API client built for AI-native developers.
 
-[![npm version](https://img.shields.io/npm/v/reqly-app.svg)](https://www.npmjs.com/package/reqly-app)
-[![license](https://img.shields.io/npm/l/reqly-app.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/getreqly.svg)](https://www.npmjs.com/package/getreqly)
+[![license](https://img.shields.io/npm/l/getreqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
 [![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
 
 Your AI agent builds and tests your APIs. Reqly is the execution engine.
@@ -23,7 +23,7 @@ Your AI agent builds and tests your APIs. Reqly is the execution engine.
 - [Star History](#star-history)
 
 ```bash
-npm install -g reqly-app
+npm install -g getreqly
 ```
 
 <!-- TODO: record demo GIF - agent prompt -> MCP tool fires -> collection appears in sidebar -> run -> response shown -->
@@ -47,11 +47,11 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 
 **Collections are plain YAML in your repo.** Every other tool stores collections in a proprietary format or database (Insomnia uses NeDB binary files, Postman locks them behind a cloud account). Reqly's `.reqly/` folder travels with your code via git - readable, diffable, committable. AI agents can read and write collection files directly without any tool calls.
 
-**Reqly is an MCP server, not an MCP client.** Insomnia recently added an MCP client so it can call external tools. Reqly goes further: it *is* the MCP server. Your AI agent in Cursor or Claude Code connects once and gets a full set of tools to fire requests, chain responses, run collections, and verify assertions - no UI required, no extra configuration.
+**Reqly is an MCP server, not an MCP client.** Insomnia recently added an MCP client so it can call external tools. Reqly goes further: it *is* the MCP server. Your AI agent in Cursor or Claude Code connects once and gets a full set of tools to fire requests, chain responses, run collections, and verify assertions - no UI required, no extra configuration. The desktop UI (coming soon) is a shell around the same headless engine - the MCP connection stays alive whether the window is open or closed. Other tools built GUI-first have to extract a headless runtime as an afterthought; Reqly was headless from day one.
 
 **Auto-capture, zero manual work.** Reqly can capture outbound traffic from your dev server via a proxy (`reqly exec npm run dev`), inbound traffic via a one-line middleware, and inbound webhooks via a public tunnel - then save everything into collections automatically. No other tool does all three.
 
-**BYOK, no cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. The prompt bar in the UI uses your own API key. Nothing is sent to Reqly's servers.
+**BYOK, no cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. The prompt bar in the UI uses your own API key. Nothing is sent to Reqly's servers - because there are no Reqly servers. No account required, no telemetry, no sync.
 
 ## What an agent session looks like
 
@@ -67,7 +67,7 @@ Reqly runs on macOS, Linux, and Windows.
 
 ```bash
 # On any platform via npm
-npm install -g reqly-app
+npm install -g getreqly
 
 # On macOS via Homebrew
 brew tap RutvikPansare/reqly
@@ -84,7 +84,18 @@ This configures Cursor, Claude Desktop, Claude Code, Gemini CLI, and Codex in on
 
 Restart your AI tool, then ask it: "list my Reqly collections".
 
-## The fastest way to start
+### Try it in 30 seconds
+
+No API, no agent setup needed yet. Run this in any directory:
+
+```bash
+reqly init
+reqly start
+```
+
+Open `localhost:4242` - you'll have a working collection against [JSONPlaceholder](https://jsonplaceholder.typicode.com) with request chaining, variables, assertions, and a flow already set up. Then connect your agent and ask it to extend it.
+
+## The fastest way to start with your own API
 
 Don't capture traffic, don't write YAML by hand - just tell your agent to read your code:
 
@@ -93,16 +104,6 @@ Don't capture traffic, don't write YAML by hand - just tell your agent to read y
 ```
 
 The agent reads your codebase and calls `create_collection` + `create_request` for each route it finds. No traffic capture needed - it already knows your API from the code.
-
-## Starter collection
-
-Want to try Reqly before pointing it at your own API? Run:
-
-```bash
-reqly init
-```
-
-This copies a working example collection (against the free [JSONPlaceholder](https://jsonplaceholder.typicode.com) API, no auth needed) into `.reqly/` in your current project - collection variables, request chaining, a postScript that extracts a response value, and a flow. It won't overwrite any collections you already have. See `example/reqly-starter/README.md` for what each request demonstrates.
 
 ## What your agent can do
 

@@ -171,6 +171,6 @@ describe('toJUnitFromFlow', () => {
 
     const xml = toJUnitFromFlow(result);
 
-    expect(xml).toContain('<testsuite name="my-flow" tests="2" failures="0"');
+    expect(xml).toContain('<testsuite name="data-driven-flow" tests="2" failures="0"');
   });
 });
