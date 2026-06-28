@@ -2,7 +2,10 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { definition, handler } from './stop-proxy.js';
 
 describe('stop_proxy', () => {
+  const originalPlatform = process.platform;
+
   afterEach(() => {
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
     vi.restoreAllMocks();
   });
 
@@ -19,6 +22,9 @@ describe('stop_proxy', () => {
   });
 
   it('kills the exec child process if one is tracked, and clears it', async () => {
+    // killProcessTree's negative-PID process-group kill is unix-only (win32 uses taskkill,
+    // already covered by process-utils.test.ts) - pin platform so this test is meaningful everywhere.
+    Object.defineProperty(process, 'platform', { value: 'linux' });
     const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true as any);
     const stopSpy = vi.fn().mockResolvedValue(undefined);
     const mockContext: any = { proxyServer: { stop: stopSpy }, execChildPid: 4242 };
@@ -30,6 +36,7 @@ describe('stop_proxy', () => {
   });
 
   it('falls back to killing the pid directly if killing the process group fails', async () => {
+    Object.defineProperty(process, 'platform', { value: 'linux' });
     const killSpy = vi.spyOn(process, 'kill').mockImplementation((pid: any) => {
       if (pid === -4242) throw new Error('ESRCH');
       return true as any;

@@ -19,6 +19,9 @@ reqly setup
 ### The full zero-human pipeline
 
 ```
+/goal Read my Express routes, build a collection with assertions, write an
+e2e flow for login → checkout, and export it to CI - don't stop until it's green.
+
 1. "Read my Express routes and build a collection with assertions"
         → agent calls create_collection + create_request for every endpoint
 
@@ -30,6 +33,8 @@ reqly setup
         → .github/workflows/checkout-flow.yml written automatically
         → installs Reqly, runs the flow, uploads JUnit results as a build artifact
 ```
+
+In Claude Code, `/goal` keeps the agent working the whole pipeline in one session instead of re-prompting at every step - Reqly's MCP tools are built to be chained that way.
 
 No `bru run` wiring. No manual Actions YAML. No environment setup. One agent session, tests running in CI forever.
 
@@ -410,6 +415,11 @@ reqly export-flow "Login Flow" --format github-actions
 ```
 
 Writes `.github/workflows/Login Flow.yml` (creates the directory if needed) that installs Reqly, starts it, runs the flow with `--reporter junit > results.xml`, and uploads `results.xml` as a build artifact on push and pull request. Add a "Start server" step before "Run flow" if the flow hits a local API.
+
+Want your agent to re-check the API on a cadence instead of only on push? In Claude Code:
+```
+/schedule every morning at 9am, run reqly run-flow "Login Flow" --reporter junit and tell me if anything broke
+```
 
 ### Mock server
 

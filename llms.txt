@@ -36,6 +36,17 @@ Don't wait for traffic capture - if the agent can read the project's source, tel
 ```
 The agent should call `create_collection` then `create_request` for each route it finds in the code. No proxy or traffic capture needed.
 
+For a multi-step build (routes → collection → flow → CI export) in one uninterrupted session, prefix the request with Claude Code's `/goal` so the agent doesn't stop until every step is done:
+```
+/goal Read my Express routes, build a collection with assertions, write an
+e2e flow for login → checkout, and export it to CI - don't stop until it's green.
+```
+
+To run that flow on a recurring cadence instead of only on push, use `/schedule`:
+```
+/schedule every morning at 9am, run reqly run-flow "Login Flow" --reporter junit and tell me if anything broke
+```
+
 To explore Reqly's patterns first, run `reqly init` to copy a working starter collection (JSONPlaceholder, no auth) into `.reqly/`.
 
 ## MCP Resources
