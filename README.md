@@ -1,17 +1,49 @@
-# Reqly - The API client built for AI-native developers.
+# Reqly - From route to CI test in one agent session.
 
-[![npm version](https://img.shields.io/npm/v/getreqly.svg)](https://www.npmjs.com/package/getreqly)
-[![license](https://img.shields.io/npm/l/getreqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/reqly-app.svg)](https://www.npmjs.com/package/reqly-app)
+[![license](https://img.shields.io/npm/l/reqly-app.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
 [![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
 
-Your AI agent builds and tests your APIs. Reqly is the execution engine.
+Your agent reads your codebase, builds the collection, writes the assertions, exports the GitHub Actions workflow, and ships it to CI. You never touch it.
+
+```bash
+npm install -g reqly-app
+reqly setup
+```
+
+<!-- TODO: record demo GIF - agent prompt -> MCP tool fires -> collection appears in sidebar -> run -> response shown -->
+![Reqly demo](docs/assets/demo.gif)
+
+**Works with:** [Cursor](https://cursor.com) · [Claude Code](https://claude.com/claude-code) · [Gemini CLI](https://github.com/google-gemini/gemini-cli) · [VS Code](https://code.visualstudio.com) (Claude extension)
+
+### The full zero-human pipeline
+
+```
+1. "Read my Express routes and build a collection with assertions"
+        → agent calls create_collection + create_request for every endpoint
+
+2. "Write an e2e flow for the login → checkout path"
+        → agent calls create_flow + add_flow_step, runs it, all green
+
+3. "Export it to CI"
+        → agent calls export_flow_ci
+        → .github/workflows/checkout-flow.yml written automatically
+        → installs Reqly, runs the flow, uploads JUnit results as a build artifact
+```
+
+No `bru run` wiring. No manual Actions YAML. No environment setup. One agent session, tests running in CI forever.
+
+Reqly runs locally as a background service with two interfaces from the same engine:
+- **MCP server (stdio)** - your agent connects once and gets the full toolkit. Zero UI, zero LLM cost on our side.
+- **Localhost web UI** - open `localhost:4242` to browse collections, watch your agent work, fire requests manually.
+
+Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable, directly writable by agents.
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
 - [Installation](#installation)
-- [How It Works](#what-an-agent-session-looks-like)
-- [MCP Tools](#mcp-tools)
+- [How It Works](#the-full-zero-human-pipeline)
+- [MCP Tools](#what-your-agent-can-do)
 - [CLI Runner](#cli-runner)
 - [Flows](#flows)
 - [Mock Server](#mock-server)
@@ -21,27 +53,6 @@ Your AI agent builds and tests your APIs. Reqly is the execution engine.
 - [Recently Shipped](#recently-shipped)
 - [FAQ](#faq)
 - [Star History](#star-history)
-
-```bash
-npm install -g getreqly
-```
-
-<!-- TODO: record demo GIF - agent prompt -> MCP tool fires -> collection appears in sidebar -> run -> response shown -->
-![Reqly demo](docs/assets/demo.gif)
-
-**Works with:** [Cursor](https://cursor.com) · [Claude Code](https://claude.com/claude-code) · [Gemini CLI](https://github.com/google-gemini/gemini-cli) · [VS Code](https://code.visualstudio.com) (Claude extension)
-
-Tell your agent in Cursor or Claude Code:
-
-> "Read my Express routes and build a Reqly collection for every endpoint. Add assertions and run them."
-
-The agent reads your codebase, calls Reqly's MCP tools to create requests, fires them, and reports results - no UI required, no manual collection writing.
-
-Reqly runs locally as a background service with two interfaces from the same engine:
-- **MCP server (stdio)** - AI agents call tools directly to fire requests, chain responses, run flows, validate contracts, and serve mocks. Zero UI, zero LLM cost on our side.
-- **Localhost web UI** - open `localhost:4242` to browse collections, fire requests visually, and watch your agent's work in real time.
-
-Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable, directly writable by agents.
 
 ## Why Reqly beats Postman, Insomnia, and Bruno for AI-native developers
 
