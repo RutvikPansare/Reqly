@@ -140,22 +140,23 @@ function App() {
   // exists yet. Once any collection has ever existed, never show it again,
   // even if the user later deletes all of them.
   const [everHadCollections, setEverHadCollections] = useLocalStorage('reqly.everHadCollections', false);
+  const [nudgeDismissed, setNudgeDismissed] = useLocalStorage('reqly.nudgeDismissed', false);
   const [collectionsEmpty, setCollectionsEmpty] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkCollections = () => {
       fetchCollections().then(cols => {
-        const empty = !cols || cols.length === 0;
+        const empty = cols.length === 0;
         setCollectionsEmpty(empty);
         if (!empty) setEverHadCollections(true);
-      }).catch(() => {});
+      }).catch(console.error);
     };
     checkCollections();
     window.addEventListener('reqly-reload', checkCollections);
     return () => window.removeEventListener('reqly-reload', checkCollections);
   }, []);
 
-  const showEmptyStateNudge = activePanel === 'collections' && collectionsEmpty === true && !everHadCollections;
+  const showEmptyStateNudge = !nudgeDismissed && activePanel === 'collections' && collectionsEmpty === true && !everHadCollections;
 
   // Compact header env selector state
   const [headerEnvs, setHeaderEnvs] = useState<any[]>([]);
@@ -527,7 +528,10 @@ function App() {
               </div>
             )
           ) : showEmptyStateNudge ? (
-            <EmptyStateNudge onCreateManually={() => setActivePanel('collections')} />
+            <EmptyStateNudge 
+              onCreateManually={() => setActivePanel('collections')}
+              onDismiss={() => setNudgeDismissed(true)}
+            />
           ) : (
             <>
               <div className="flex items-center shrink-0" style={{ height: '40px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>

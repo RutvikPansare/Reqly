@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, X } from 'lucide-react';
 
 interface ProjectInfo {
   framework: string | null;
@@ -47,7 +47,7 @@ function PromptCard({ label, prompt }: { label: string; prompt: string }) {
   );
 }
 
-export function EmptyStateNudge({ onCreateManually }: { onCreateManually: () => void }) {
+export function EmptyStateNudge({ onCreateManually, onDismiss }: { onCreateManually: () => void; onDismiss: () => void }) {
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const [setupTab, setSetupTab] = useState('cursor');
 
@@ -85,7 +85,14 @@ export function EmptyStateNudge({ onCreateManually }: { onCreateManually: () => 
 
   return (
     <div className="flex-1 flex justify-center overflow-y-auto">
-      <div className="flex flex-col gap-4 w-full max-w-md px-6 py-10">
+      <div className="flex flex-col gap-4 w-full max-w-md px-6 py-10 relative">
+        <button
+          onClick={onDismiss}
+          className="absolute top-2 right-2 icon-btn"
+          title="Dismiss"
+        >
+          <X size={16} />
+        </button>
         {showSetupNudge && (
           <div className="flex flex-col gap-2 p-3 rounded-md" style={{ border: '1px solid var(--border)', background: 'var(--surface-2)' }}>
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>First, connect your agent (one-time setup):</span>

@@ -25,8 +25,8 @@ function SidebarEmptyHint() {
   const prompt = 'Create a Reqly collection from my routes.';
 
   return (
-    <div className="flex items-center gap-1.5 px-1.5 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-      <span className="truncate">Ask your agent: "{prompt}"</span>
+    <div className="flex items-start gap-1.5 px-1.5 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+      <span className="leading-tight">Ask your agent: "{prompt}"</span>
       <button
         onClick={() => {
           navigator.clipboard.writeText(prompt).then(() => {
@@ -34,7 +34,7 @@ function SidebarEmptyHint() {
             setTimeout(() => setCopied(false), 2000);
           });
         }}
-        className="flex items-center justify-center rounded shrink-0"
+        className="flex items-center justify-center rounded shrink-0 mt-0.5"
         style={{ width: '18px', height: '18px', color: copied ? '#4ade80' : 'var(--text-muted)', background: 'transparent', border: 'none' }}
         title="Copy"
       >
