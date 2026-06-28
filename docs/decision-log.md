@@ -6,6 +6,10 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-28 - `switch-project.test.ts` stops the dotenv watcher in `afterEach`
+
+`POST /api/switch-project`'s "re-points dotEnvLoader" test starts a real chokidar watcher (via the handler's `context.dotEnvLoader.watch()`) on a temp dir, then the test deletes that dir before the watcher is ever stopped. On `windows-latest` CI the orphaned watcher threw an async `EPERM` during the *next* test, crashing the run despite every assertion passing (590/590 green, 1 stray error). Added `context.dotEnvLoader.stopWatching()` to the describe block's `afterEach` - mirrors what the real `switch_project` handler already does correctly before creating a new watcher.
+
 ## 2026-06-28 - `stop-proxy.test.ts` pinned to unix for the process-group-kill tests
 
 Two tests asserted `process.kill(-pid)` unconditionally, but `killProcessTree` uses `taskkill` on win32 and never calls `process.kill` there - failing on `windows-latest` CI. Pinned `process.platform` to `'linux'` in those two tests, matching the pattern `process-utils.test.ts` already uses for the same function.

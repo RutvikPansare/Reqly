@@ -92,6 +92,10 @@ describe('POST /api/switch-project', () => {
   });
 
   afterEach(async () => {
+    // switch-project's handler may have re-pointed context.dotEnvLoader and started a new
+    // chokidar watcher on a temp dir that the test itself deletes - leaving it open lets that
+    // watcher fire an async EPERM/ENOENT after the temp dir is gone (observed on windows-latest CI).
+    context.dotEnvLoader.stopWatching();
     await clearLock();
     server.close();
   });
