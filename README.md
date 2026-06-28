@@ -87,8 +87,8 @@ Reqly exposes these tools directly to your AI agent:
 |------|-------------|
 | `list_collections` | Lists all collections and requests in the project |
 | `create_collection` | Scaffolds a new collection |
-| `create_request` | Adds a request to a collection. Supports `{{variables}}`, assertions, pre/post scripts, auth, multipart bodies. |
-| `run_request` | Fires a request and returns status, body, headers, latency, assertions, diff, and contract violations |
+| `create_request` | Adds a request to a collection. Supports `{{variables}}`, assertions, pre/post scripts, auth, multipart bodies, and persistently turning off specific headers/params. |
+| `run_request` | Fires a request and returns status, body, headers, latency, assertions (with pass/fail tests), diff, and contract violations |
 | `run_collection` | Fires all requests in a collection sequentially |
 | `get_response` | Retrieves the last stored (truncated) response for a request |
 | `get_response_full` | Retrieves the last untruncated response |

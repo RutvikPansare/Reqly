@@ -33,11 +33,11 @@ Reqly is an execution engine, not an AI product. The AI always lives outside Req
 ## What's Built
 - **Core Engine:** HTTP executor (with >50KB response truncation), Collection Management (YAML), Environment substitution, Auth profiles.
 - **MCP Server:** Tools to create, list, run requests/collections, manage environments and variables (create/get/set/delete), retrieve full untruncated responses, and manage proxy.
-- **Local UI:** Left icon navigation rail (Collections / Environments / History / Capture / Settings) driving switchable sidebar panels, Request Editor with params/headers/body/auth/assertions, Response Viewer with syntax highlighting and assertions results, Settings panel (placeholder for future preferences), Multiple Tabs support for parallel editing. Variable autocomplete triggers on `{{` in all text inputs and textareas to quickly inject environment variables.
+- **Local UI:** Left icon navigation rail (Collections / Environments / History / Capture / Settings) driving switchable sidebar panels, Request Editor with params/headers/body/auth/assertions (featuring persistent tickbox toggling for params and headers), Response Viewer with syntax highlighting and assertions results ("Tests" tab), Settings panel (placeholder for future preferences), Multiple Tabs support for parallel editing. Variable autocomplete triggers on `{{` in all text inputs and textareas to quickly inject environment variables.
 - **Differentiators:** 
   - **Auto-Capture Proxy:** Captures outbound dev traffic and saves requests.
   - **Public Webhook Tunnel:** Exposes `localhost` via `localtunnel` to catch incoming webhooks from external services (Stripe, etc.) and save them directly into your collections.
-  - **Test Assertions:** Verify response status, latency, and JSON body paths.
+  - **Test Assertions:** Verify response status, latency, and JSON body paths. Results displayed persistently in the Response Viewer UI.
   - **Collection Runner:** Sequentially run all requests in a collection with pass/fail tracking.
   - **Request Chaining:** Downstream requests can access previous response data via `{{requestName.response.path}}`.
 - **Environment Editor:** Full CRUD for environments and variables from the UI nav rail - create, rename-by-recreate, edit variables inline, delete with confirmation. Backed by `POST/PUT/DELETE /api/environments`.
