@@ -19,6 +19,15 @@ reqly setup
 
 Homebrew is macOS-only. On Windows or Linux, use the npm command above.
 
+Quick start (five steps, under 2 minutes):
+```bash
+npm i -g @rutvikpansare123/reqly
+cd my-project
+reqly init
+reqly setup cursor
+```
+Then ask Cursor: "list my Reqly collections".
+
 ## The fastest way to start
 
 Don't wait for traffic capture - if the agent can read the project's source, tell it directly:
@@ -122,6 +131,7 @@ requests:
 ## UI and CLI
 
 - **UI:** The visual UI is available at `http://localhost:4242`.
-- **CLI Runner:** Run tests with `reqly run <collection> [request] --reporter pretty`. Supports `--reporter json` and `--reporter tap` for CI/CD.
-- **Flow CLI Runner:** Run a flow with `reqly run-flow <name> --reporter pretty`. Same `json`/`tap` reporters. `--data-row '{"key":"value"}'` runs a single ad-hoc row instead of iterating the flow's saved data table. Exit code 0 if every step passes, 1 otherwise.
-- **Flow CI Export:** `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml` (creates the directory if needed) - a workflow that installs Reqly, starts it, and runs the flow on push/pull_request. Add a manual "Start server" step before "Run flow" if the flow hits a local API. MCP tool `export_flow_ci` does the same and returns the written path.
+- **CLI Runner:** Run tests with `reqly run <collection> [request] --reporter pretty`. Supports `--reporter json`, `--reporter tap`, and `--reporter junit` for CI/CD.
+- **Flow CLI Runner:** Run a flow with `reqly run-flow <name> --reporter pretty`. Same `json`/`tap`/`junit` reporters. `--data-row '{"key":"value"}'` runs a single ad-hoc row instead of iterating the flow's saved data table. Exit code 0 if every step passes, 1 otherwise.
+- **JUnit XML Reporter:** `--reporter junit` writes a standard `<testsuite>`/`<testcase>` XML document to stdout - redirect it for CI: `reqly run my-collection --reporter junit > results.xml`. Each assertion on a request becomes one `<testcase>`; a request with no assertions is one implicit testcase that fails if status >= 500. Failed testcases get a `<failure message="...">` element with the assertion/error message.
+- **Flow CI Export:** `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml` (creates the directory if needed) - a workflow that installs Reqly, starts it, runs the flow with `--reporter junit > results.xml`, and uploads `results.xml` via `actions/upload-artifact@v4`. Add a manual "Start server" step before "Run flow" if the flow hits a local API. MCP tool `export_flow_ci` does the same and returns the written path.

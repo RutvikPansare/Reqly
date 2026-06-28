@@ -6,6 +6,10 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-28 - JUnit reporter uses `--reporter junit`, not `--format junit`
+
+T-135's spec text said `--format junit`, but the CLI's `--format` flag was already in use by `export-flow` to pick the generated CI workflow type (`github-actions`), while `--reporter` was already the flag selecting `run`/`run-flow` output shape (`pretty`/`json`/`tap`). Adding a second flag with overlapping meaning would have been confusing and inconsistent with the existing convention. Implemented junit as a fourth `--reporter` value instead, alongside `pretty`/`json`/`tap`.
+
 ## 2026-06-27 - Network error messages append the underlying cause code (e.g. `fetch failed (ECONNREFUSED)`)
 
 `http-executor.ts`'s catch blocks used to throw `RequestError(err.message)` verbatim. undici's `fetch` collapses connection failures into a generic `"fetch failed"` TypeError with the real reason in `err.cause.code` - so agents and the UI alike only ever saw "fetch failed" with no actionable detail. Added `formatNetworkError(err)` to append `(CODE)` when present. This is a response-body format change visible to MCP tool callers (`run_request` etc.) as well as the UI, but it's strictly additive (more detail, same prefix) so no consumer should break - flagging here since it touches the shape of an error string that scripts/assertions could theoretically pattern-match on.

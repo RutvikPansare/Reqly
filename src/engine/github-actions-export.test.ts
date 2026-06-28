@@ -29,4 +29,15 @@ describe('generateGithubActionsWorkflow', () => {
     expect(yaml).toContain('name: checkout flow');
     expect(yaml).toContain('run: reqly run-flow checkout flow');
   });
+
+  it('runs the flow with --reporter junit redirected to results.xml', () => {
+    const yaml = generateGithubActionsWorkflow('my-flow');
+    expect(yaml).toContain('run: reqly run-flow my-flow --reporter junit > results.xml');
+  });
+
+  it('uploads results.xml as a build artifact', () => {
+    const yaml = generateGithubActionsWorkflow('my-flow');
+    expect(yaml).toContain('uses: actions/upload-artifact@v4');
+    expect(yaml).toContain('path: results.xml');
+  });
 });

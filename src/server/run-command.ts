@@ -14,6 +14,7 @@ import { EngineContext } from '../mcp/tools/types.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { AssertionResult } from '../types/assertion.js';
+import { toJUnit } from '../engine/reporters/junit.js';
 
 export async function handleRunCommand(
   parsed: ParsedArgs,
@@ -86,6 +87,20 @@ export async function handleRunCommand(
           console.log(`  error: ${failedAssert?.message}`);
           console.log(`  ...`);
         }
+      } else if (parsed.flags.reporter === 'junit') {
+        console.log(toJUnit({
+          collection: collectionName,
+          total: 1,
+          passed: passed ? 1 : 0,
+          failed: passed ? 0 : 1,
+          results: [{
+            requestName: req.name,
+            response: res,
+            assertions: assertionsResult || [],
+            passed,
+            duration: res.latency
+          }]
+        }));
       } else {
         console.log(`Running request: ${collectionName} > ${requestName}\n`);
         const mark = passed ? '✓' : '✗';
@@ -175,6 +190,8 @@ export async function handleRunCommand(
             console.log(`  ...`);
           }
         });
+      } else if (parsed.flags.reporter === 'junit') {
+        console.log(toJUnit(results));
       } else {
         console.log(`Running collection: ${collectionName}\n`);
         for (const r of results.results) {

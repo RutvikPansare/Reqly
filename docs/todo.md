@@ -9,6 +9,38 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
+### JUnit XML reporter + README refresh
+
+- [x] **T-135** JUnit XML reporter for `reqly run` and `reqly run-flow`
+  - Add `--format junit` to the CLI alongside existing `--format console` (default) and `--format json`.
+  - Output a standard JUnit XML `<testsuite>` / `<testcase>` document to stdout when `--format junit` is passed. Shape:
+    ```xml
+    <testsuite name="collection-name" tests="N" failures="F" time="T">
+      <testcase name="request-name :: assertion-label" classname="collection-name" time="T">
+        <!-- on failure only: -->
+        <failure message="expected 200, got 404">full diff or description</failure>
+      </testcase>
+    </testsuite>
+    ```
+  - Each assertion on a request = one `<testcase>`. A request with no assertions = one `<testcase>` that passes if status < 500.
+  - `time` attribute is seconds (float, 3dp).
+  - Write output to stdout so CI can redirect: `reqly run my-collection --format junit > results.xml`
+  - Update `src/server/run-command.ts` and `src/server/run-flow-command.ts` to branch on `parsed.flags.format`.
+  - Extract a `src/engine/reporters/junit.ts` module with a pure function `toJUnit(results): string` - no side effects, easy to test.
+  - TDD: `junit.test.ts` - at minimum: all-pass suite, suite with one failure, suite with multiple assertions per request, request with no assertions (implicit pass). Run against the existing result shape from `CollectionRunner`.
+  - Update the scaffolded GitHub Actions export (`github-actions-export.ts`) to pass `--format junit` and add an `actions/upload-artifact` step for `results.xml` in the generated workflow.
+  - Update `docs/llms.txt` and README CLI reference section to document `--format junit`.
+
+- [x] **T-136** README refresh - hero GIF, quick start, works-with logos, star chart
+  - **GIF**: Record a ~30s looping screen capture showing the core MCP workflow: agent types "create a collection for my Express API" -> Reqly MCP tool fires -> collection appears in the UI sidebar -> agent runs it -> response shown. Export as an optimised GIF or MP4 (use `ffmpeg` or Kap). Embed near the top of README, below the one-line description.
+    - If recording tooling isn't available, add a placeholder `docs/assets/demo.gif` path and an HTML comment `<!-- TODO: record demo GIF -->` so it's clear where it goes.
+  - **Badges row** (top of README, one line): npm version badge, license badge, CI status badge (GitHub Actions). Use shields.io.
+  - **"Works with" logos**: add a row of small icons/text for Cursor, Claude Code, Gemini CLI, VS Code (Claude extension). Can use simple text links or SVG badges - no need for custom graphics.
+  - **Install block**: make sure `npm install -g reqly` is visible without scrolling, in a fenced code block, immediately after the one-sentence description.
+  - **Quick start section**: five steps max, copy-pasteable. `npm i -g reqly` -> `cd my-project` -> `reqly init` -> `reqly setup cursor` -> "Ask Cursor: list my Reqly collections". Should take under 2 minutes.
+  - **Star history**: add a `[![Star History Chart](https://api.star-history.com/svg?repos=RutvikPansare/Reqly&type=Date)](https://star-history.com/#RutvikPansare/Reqly)` block near the bottom. Renders as a live chart on GitHub.
+  - **Sync**: after updating README.md, apply the same install/quick-start/CLI changes to `docs/llms.txt` so agents reading that file stay current.
+
 ### M5 - Windows Support
 
 ### Project switcher MCP tools + UI

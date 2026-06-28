@@ -1,6 +1,19 @@
 # Reqly
 
+[![npm version](https://img.shields.io/npm/v/@rutvikpansare123/reqly.svg)](https://www.npmjs.com/package/@rutvikpansare123/reqly)
+[![license](https://img.shields.io/npm/l/@rutvikpansare123/reqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
+[![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
+
 Your AI agent builds and tests your APIs. Reqly is the execution engine.
+
+```bash
+npm install -g @rutvikpansare123/reqly
+```
+
+<!-- TODO: record demo GIF - agent prompt -> MCP tool fires -> collection appears in sidebar -> run -> response shown -->
+![Reqly demo](docs/assets/demo.gif)
+
+**Works with:** [Cursor](https://cursor.com) · [Claude Code](https://claude.com/claude-code) · [Gemini CLI](https://github.com/google-gemini/gemini-cli) · [VS Code](https://code.visualstudio.com) (Claude extension)
 
 Tell your agent in Cursor or Claude Code:
 
@@ -31,6 +44,17 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 2. "Run the collection and check for failures" → agent calls run_collection, assertions pass/fail
 3. "Write an e2e flow for the login → checkout path" → agent calls create_flow + add_flow_step, runs it
 ```
+
+## Quick start
+
+```bash
+npm i -g @rutvikpansare123/reqly
+cd my-project
+reqly init
+reqly setup cursor
+```
+
+Then ask Cursor: "list my Reqly collections". Under 2 minutes, no manual YAML.
 
 ## Quick Setup
 
@@ -288,7 +312,10 @@ Supports reporter formats and environments:
 ```bash
 reqly run users --env prod --reporter json
 reqly run users --reporter tap
+reqly run users --reporter junit > results.xml
 ```
+
+`--reporter junit` writes a standard JUnit XML `<testsuite>`/`<testcase>` document to stdout - redirect it to a file for your CI to pick up. Each assertion on a request becomes one `<testcase>`; a request with no assertions is one implicit testcase that fails only if its status is >= 500.
 
 ### Running Flows
 
@@ -296,6 +323,7 @@ reqly run users --reporter tap
 reqly run-flow "Login Flow"
 reqly run-flow "Login Flow" --reporter json
 reqly run-flow "Login Flow" --reporter tap
+reqly run-flow "Login Flow" --reporter junit > results.xml
 reqly run-flow "Signup Flow" --data-row '{"email":"test@example.com"}'
 ```
 
@@ -305,7 +333,7 @@ reqly run-flow "Signup Flow" --data-row '{"email":"test@example.com"}'
 reqly export-flow "Login Flow" --format github-actions
 ```
 
-Writes `.github/workflows/Login Flow.yml` (creates the directory if needed) that installs Reqly, starts it, and runs the flow on push and pull request. Add a "Start server" step before "Run flow" if the flow hits a local API.
+Writes `.github/workflows/Login Flow.yml` (creates the directory if needed) that installs Reqly, starts it, runs the flow with `--reporter junit > results.xml`, and uploads `results.xml` as a build artifact on push and pull request. Add a "Start server" step before "Run flow" if the flow hits a local API.
 
 ### Mock server
 
@@ -327,3 +355,7 @@ POST /api/mock/start   { collection, port? }
 POST /api/mock/stop
 GET  /api/mock/status
 ```
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=RutvikPansare/Reqly&type=Date)](https://star-history.com/#RutvikPansare/Reqly)

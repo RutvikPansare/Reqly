@@ -18,6 +18,12 @@ jobs:
       - name: Start Reqly
         run: reqly start --project-dir . &
       - name: Run flow
-        run: reqly run-flow ${flowName}
+        run: reqly run-flow ${flowName} --reporter junit > results.xml
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results
+          path: results.xml
 `;
 }

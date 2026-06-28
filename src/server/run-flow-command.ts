@@ -13,6 +13,7 @@ import { EngineContext } from '../mcp/tools/types.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { StepResult, RowResult, FlowRunResult } from '../types/index.js';
+import { toJUnitFromFlow } from '../engine/reporters/junit.js';
 
 function printStep(r: StepResult) {
   const mark = r.passed ? '✓' : '✗';
@@ -115,6 +116,8 @@ export async function handleRunFlowCommand(
       console.log(JSON.stringify(result, null, 2));
     } else if (parsed.flags.reporter === 'tap') {
       reportTap(result);
+    } else if (parsed.flags.reporter === 'junit') {
+      console.log(toJUnitFromFlow(result));
     } else {
       reportPretty(result);
     }
