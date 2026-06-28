@@ -6,14 +6,6 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
-## 2026-06-28 - `terminal.test.ts` skipped on `windows-latest` CI only
-
-After fixing the undici/Node-22 issue, `windows-latest` still failed: `node-pty`'s conpty backend calls `AttachConsole`, which throws because GitHub's Windows runner has no console window attached to the test process (no TTY in headless CI). This is an environment limitation, not a code bug - real Windows dev machines and self-hosted runners with a console are unaffected. Skipped the suite with `describe.skipIf(process.platform === 'win32' && !!process.env.CI)` rather than mocking `node-pty` (would stop testing the real PTY behavior the Windows desktop terminal feature depends on) or dropping the Windows CI matrix leg entirely (still want ubuntu-equivalent coverage of everything else on Windows).
-
-## 2026-06-28 - CI bumped to Node 22, `engines.node >=22.19.0` added
-
-`undici@8.5.0` requires Node `>=22.19.0` (`npm view undici@8.5.0 engines`). CI was pinned to Node 20, so every run crashed with `webidl.util.markAsUncloneable is not a function` on any test file importing `undici` (auth-manager, capture-inbound, run-adhoc, switch-project, terminal). Bumped `.github/workflows/ci.yml` to `node-version: 22` and added `engines.node` to `package.json` so a future downgrade fails fast at `npm install` instead of failing obscurely in CI. Also fixed `cli-parser.test.ts`'s `resolveProjectDir` tests, which hardcoded POSIX-style expected paths (`/home/user/...`) - these always failed on `windows-latest` since `path.resolve` returns native Windows paths; rewrote expectations to build via `path.resolve` so they're platform-agnostic instead of POSIX-only.
-
 ## 2026-06-28 - JUnit reporter uses `--reporter junit`, not `--format junit`
 
 T-135's spec text said `--format junit`, but the CLI's `--format` flag was already in use by `export-flow` to pick the generated CI workflow type (`github-actions`), while `--reporter` was already the flag selecting `run`/`run-flow` output shape (`pretty`/`json`/`tap`). Adding a second flag with overlapping meaning would have been confusing and inconsistent with the existing convention. Implemented junit as a fourth `--reporter` value instead, alongside `pretty`/`json`/`tap`.

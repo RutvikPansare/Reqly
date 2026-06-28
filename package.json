@@ -7,9 +7,6 @@
     "reqly": "dist/server/index.js"
   },
   "type": "module",
-  "engines": {
-    "node": ">=22.19.0"
-  },
   "files": [
     "dist",
     "packages/reqly-middleware/src/core.ts",

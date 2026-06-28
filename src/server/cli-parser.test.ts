@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import * as path from 'path';
 import { parseArgs, resolveProjectDir } from './cli-parser.js';
 
 describe('cli-parser', () => {
@@ -112,32 +111,30 @@ describe('cli-parser', () => {
 
 describe('resolveProjectDir', () => {
   it('falls back to cwd when neither flag nor env var is set', () => {
-    const cwd = path.resolve('/home/user/project');
-    expect(resolveProjectDir({ cwd })).toBe(cwd);
+    expect(resolveProjectDir({ cwd: '/home/user/project' })).toBe('/home/user/project');
   });
 
   it('uses REQLY_PROJECT_DIR env var when no flag is given', () => {
-    expect(resolveProjectDir({ env: '/home/user/project', cwd: '/' })).toBe(path.resolve('/', '/home/user/project'));
+    expect(resolveProjectDir({ env: '/home/user/project', cwd: '/' })).toBe('/home/user/project');
   });
 
   it('prefers --project-dir flag over the env var', () => {
-    expect(resolveProjectDir({ flag: '/flag/dir', env: '/env/dir', cwd: '/' })).toBe(path.resolve('/', '/flag/dir'));
+    expect(resolveProjectDir({ flag: '/flag/dir', env: '/env/dir', cwd: '/' })).toBe('/flag/dir');
   });
 
   it('resolves a relative flag against cwd', () => {
-    const cwd = path.resolve('/home/user/project');
-    expect(resolveProjectDir({ flag: '../sibling', cwd })).toBe(path.resolve(cwd, '../sibling'));
+    expect(resolveProjectDir({ flag: '../sibling', cwd: '/home/user/project' })).toBe('/home/user/sibling');
   });
 
   it('uses configActiveProject when no flag or env var is set', () => {
-    expect(resolveProjectDir({ configActiveProject: '/home/user/tellero', cwd: '/' })).toBe(path.resolve('/', '/home/user/tellero'));
+    expect(resolveProjectDir({ configActiveProject: '/home/user/tellero', cwd: '/' })).toBe('/home/user/tellero');
   });
 
   it('prefers env var over configActiveProject', () => {
-    expect(resolveProjectDir({ env: '/env/dir', configActiveProject: '/config/dir', cwd: '/' })).toBe(path.resolve('/', '/env/dir'));
+    expect(resolveProjectDir({ env: '/env/dir', configActiveProject: '/config/dir', cwd: '/' })).toBe('/env/dir');
   });
 
   it('prefers flag over configActiveProject', () => {
-    expect(resolveProjectDir({ flag: '/flag/dir', configActiveProject: '/config/dir', cwd: '/' })).toBe(path.resolve('/', '/flag/dir'));
+    expect(resolveProjectDir({ flag: '/flag/dir', configActiveProject: '/config/dir', cwd: '/' })).toBe('/flag/dir');
   });
 });
