@@ -105,14 +105,25 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
 
   useEffect(() => {
     if (request) {
-      setUrl(request.url || '');
+      let initialUrl = request.url || '';
       setMethod(request.method || 'GET');
-      const initialParams = parseParams(request.url || '');
+      const initialParams = parseParams(initialUrl);
+      if (request.params) {
+        Object.entries(request.params).forEach(([k, v]) => {
+          initialParams.push({ key: k, value: String(v), enabled: true });
+        });
+      }
       if (request.disabledParams) {
         request.disabledParams.forEach((p: any) => {
           initialParams.push({ key: p.key, value: p.value, enabled: false });
         });
       }
+      if (request.params && Object.keys(request.params).length > 0) {
+        const qIndex = initialUrl.indexOf('?');
+        const base = qIndex === -1 ? initialUrl : initialUrl.slice(0, qIndex);
+        initialUrl = updateUrlWithParams(base, initialParams);
+      }
+      setUrl(initialUrl);
       setParamsList(initialParams);
 
       const hl: KeyValuePair[] = [];
