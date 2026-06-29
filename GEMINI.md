@@ -149,8 +149,19 @@ Before declaring any task "complete", output a short checklist confirming living
 - [ ] `todo.md` (removed task)
 - [ ] `done.md` (added task)
 - [ ] `knowledge.md` (updated if task added or changed a user-facing feature)
+- [ ] `README.md` (updated if task added a new feature, tool, or changed install/usage - keep the MCP tools table and quick-start accurate)
+- [ ] `docs/llms.txt` (updated if task added or changed any MCP tool, CLI command, or variable resolution behaviour - AI agents read this file to understand Reqly)
 - [ ] `docs/decision-log.md` (logged any new architecture calls)
 - [ ] `roadmap.md` (checked if milestone is now complete, promoted next if so)
+
+### MCP Coverage Rule (MANDATORY)
+Every new feature that adds data, a new operation, or changes script/variable behaviour MUST ship MCP tool coverage in the same task. Agents can only use what MCP exposes - a feature with no MCP tool is invisible to the agent ecosystem Reqly is built for.
+
+Concretely:
+- New response fields (e.g. `testResults`, `contractViolations`) must appear in the relevant MCP tool's return shape and be documented in the tool `description`.
+- New operations (e.g. duplicate collection, export docs) must have a corresponding MCP tool or extend an existing one with a new parameter.
+- Changes to variable resolution, script sandbox, or auth precedence must be reflected in the descriptions of any tool that invokes those paths (`run_request`, `run_collection`, `get_variables`, etc.).
+- The tool `description` is the feature's API contract for agents. Treat it with the same discipline as a public API - never leave it stale.
 
 ### 4. General Principles
 - Prefer simple, readable, maintainable code.

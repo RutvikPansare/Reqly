@@ -22,6 +22,7 @@ import { SaveToCollectionModal } from './components/SaveToCollectionModal';
 import { SplitPane } from './components/SplitPane';
 import { BottomBar, BottomPanel, useConsoleStats, type BottomTab } from './components/BottomPanel';
 import { EmptyStateNudge } from './components/EmptyStateNudge';
+import { ShortcutsPalette } from './components/ShortcutsPalette';
 
 interface TabData {
   id: string;
@@ -90,6 +91,7 @@ function App() {
   useServerEvents();
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [activePanel, setActivePanel] = useLocalStorage<NavPanel>(ACTIVE_PANEL_KEY, 'collections');
 
   useEffect(() => {
@@ -97,6 +99,14 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setShowSearch(s => !s);
+        return;
+      }
+      if (e.key === '?') {
+        const target = e.target as HTMLElement;
+        const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable;
+        if (isTyping) return;
+        e.preventDefault();
+        setShowShortcuts(s => !s);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -698,6 +708,7 @@ function App() {
           onClose={() => setShowSearch(false)}
         />
       )}
+      {showShortcuts && <ShortcutsPalette onClose={() => setShowShortcuts(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {runningCollection && (
         <CollectionRunnerPanel collectionName={runningCollection} onClose={() => setRunningCollection(null)} />

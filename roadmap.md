@@ -3,6 +3,8 @@
 Horizons: **Now** = active focus · **Next** = queued · **Later** = on the radar.  
 When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md` tagged with the milestone name.
 
+> **Build rule (mandatory on every task):** Every feature must ship three things together: (1) the implementation, (2) MCP tool coverage - new response fields in the tool return shape, new operations as new/extended tools, updated tool descriptions; (3) doc updates - `README.md`, `docs/llms.txt`, and `knowledge.md`. A feature that skips any of these is not done.
+
 ---
 
 ## M1 - Done: Core Engine
@@ -48,7 +50,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M4 - Now: Growth
+## M4 - Done: Growth
 
 **Goal:** Distribution and the features that give developers a reason to switch from Postman/Bruno. Paid tier comes from CI/CD and team workflows - not cloud sync, since collections are already in git.
 
@@ -70,11 +72,11 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
   - [x] T-090: engine + MCP for auth (precedence logic, 3 MCP tools, Express routes)
   - [x] T-091: UI for auth (Auth tab in CollectionSettingsModal, Inherited panel shows source=collection)
 
-- [ ] Teaching agents how to use the app and create collections using response chaining, also using variables whenever possible for base urls, client ids etc; provide an example collection with full env variable usage in the package that acts as a guide for agents
+- [x] Teaching agents how to use the app and create collections using response chaining, also using variables whenever possible for base urls, client ids etc; provide an example collection with full env variable usage in the package that acts as a guide for agents - shipped as the `reqly init` starter collection (collection variables, postScript extraction, request chaining, a flow) plus the `reqly://getting-started` MCP resource pointing agents at the same patterns on first connect.
 
 - [x] **T-077** OAuth 2.0 authorization code flow - full PKCE flow, auto token refresh, UI editor for client credentials + "Authorize" button
 
-- [ ] **T-152 Keyboard shortcuts palette** - searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor); consistent with the shortcuts already wired for `cmd+enter` / `cmd+s`
+- [x] **T-152 Keyboard shortcuts palette** - searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor); consistent with the shortcuts already wired for `cmd+enter` / `cmd+s`
 
 - [x] **Environment import/export** - import Postman environment JSON; export any active environment as a `.json` file; both via UI env switcher dropdown and MCP tool `import_environment` / `export_environment`
 

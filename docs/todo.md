@@ -9,46 +9,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
-### JUnit XML reporter + README refresh
-
-- [x] **T-135** JUnit XML reporter for `reqly run` and `reqly run-flow`
-  - Add `--format junit` to the CLI alongside existing `--format console` (default) and `--format json`.
-  - Output a standard JUnit XML `<testsuite>` / `<testcase>` document to stdout when `--format junit` is passed. Shape:
-    ```xml
-    <testsuite name="collection-name" tests="N" failures="F" time="T">
-      <testcase name="request-name :: assertion-label" classname="collection-name" time="T">
-        <!-- on failure only: -->
-        <failure message="expected 200, got 404">full diff or description</failure>
-      </testcase>
-    </testsuite>
-    ```
-  - Each assertion on a request = one `<testcase>`. A request with no assertions = one `<testcase>` that passes if status < 500.
-  - `time` attribute is seconds (float, 3dp).
-  - Write output to stdout so CI can redirect: `reqly run my-collection --format junit > results.xml`
-  - Update `src/server/run-command.ts` and `src/server/run-flow-command.ts` to branch on `parsed.flags.format`.
-  - Extract a `src/engine/reporters/junit.ts` module with a pure function `toJUnit(results): string` - no side effects, easy to test.
-  - TDD: `junit.test.ts` - at minimum: all-pass suite, suite with one failure, suite with multiple assertions per request, request with no assertions (implicit pass). Run against the existing result shape from `CollectionRunner`.
-  - Update the scaffolded GitHub Actions export (`github-actions-export.ts`) to pass `--format junit` and add an `actions/upload-artifact` step for `results.xml` in the generated workflow.
-  - Update `docs/llms.txt` and README CLI reference section to document `--format junit`.
-
-- [x] **T-136** README refresh - hero GIF, quick start, works-with logos, star chart
-  - **GIF**: Record a ~30s looping screen capture showing the core MCP workflow: agent types "create a collection for my Express API" -> Reqly MCP tool fires -> collection appears in the UI sidebar -> agent runs it -> response shown. Export as an optimised GIF or MP4 (use `ffmpeg` or Kap). Embed near the top of README, below the one-line description.
-    - If recording tooling isn't available, add a placeholder `docs/assets/demo.gif` path and an HTML comment `<!-- TODO: record demo GIF -->` so it's clear where it goes.
-  - **Badges row** (top of README, one line): npm version badge, license badge, CI status badge (GitHub Actions). Use shields.io.
-  - **"Works with" logos**: add a row of small icons/text for Cursor, Claude Code, Gemini CLI, VS Code (Claude extension). Can use simple text links or SVG badges - no need for custom graphics.
-  - **Install block**: make sure `npm install -g reqly` is visible without scrolling, in a fenced code block, immediately after the one-sentence description.
-  - **Quick start section**: five steps max, copy-pasteable. `npm i -g reqly` -> `cd my-project` -> `reqly init` -> `reqly setup cursor` -> "Ask Cursor: list my Reqly collections". Should take under 2 minutes.
-  - **Star history**: add a `[![Star History Chart](https://api.star-history.com/svg?repos=RutvikPansare/Reqly&type=Date)](https://star-history.com/#RutvikPansare/Reqly)` block near the bottom. Renders as a live chart on GitHub.
-  - **Sync**: after updating README.md, apply the same install/quick-start/CLI changes to `docs/llms.txt` so agents reading that file stay current.
-
-### Right-click context menus - duplicate actions
-
-### M5 - Windows Support
-
-### Project switcher MCP tools + UI
-
-### Agent onboarding nudge (empty state)
-
 ### M5 - Desktop App (Electron)
 
 **Architecture principle (mandatory for all Electron tasks):**
@@ -122,15 +82,6 @@ The existing `reqly start` server is never modified. Electron is a launcher and 
   - **Add to `reqly setup` output** so users know about it: "Tip: run `reqly app` to open the UI in your browser at any time."
   - **No breaking changes:** `reqly start`, `reqly run`, all other commands unaffected.
 
-### M4 completion
-
-- [ ] **T-152** Keyboard shortcuts palette
-  - Searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor)
-  - Triggered by `?` key anywhere in the UI (outside text inputs); dismissed by Escape or `?` again
-  - Consistent with existing `cmd+enter` (fire request) and `cmd+s` (save) shortcuts already wired
-  - Show shortcut label + key combo per row; no backend change needed
-  - Pure UI; no TDD required
-
 ### M6 - Script Power + Developer UX
 
 - [ ] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts
@@ -140,6 +91,7 @@ The existing `reqly start` server is never modified. Electron is a launcher and 
   - Existing YAML assertions are untouched; `test()` is purely additive
   - Script sandbox receives: `test`, `expect`, `reqly.response` (status, body, headers, latency), `reqly.setEnvVar`, `reqly.getEnvVar`
   - Named test results included in JUnit XML output from `reqly run --format junit`
+  - **MCP:** `run_request` and `run_collection` response shape gains a `testResults` array: `[{ name: string, passed: boolean, error?: string }]` - one entry per `test()` call in the script; update tool descriptions to document this field
   - TDD required: `script-runner.test.ts` - test() pass, test() fail, expect() pass, expect() throws, multiple tests per script, mix with env var ops
 
 - [ ] **T-144** `req` object in pre-run scripts - full Bruno-compatible API
@@ -181,6 +133,7 @@ The existing `reqly start` server is never modified. Electron is a launcher and 
   - Stored in memory on the server keyed by collection name; cleared on server restart
   - Resolves in the existing precedence chain: collection vars > env vars > .env file
   - Use case: storing a token from a login request and reusing it across subsequent requests in the same collection without polluting the environment
+  - **MCP:** extend `get_variables` to include runtime script vars with `source: "script"` so agents can inspect what the last script run set; update tool description accordingly
   - TDD required: `collection-vars.test.ts` - setVar persists across requests in same collection, getVar returns undefined if not set, isolated between collections
 
 - [ ] **T-155** `require()` in scripts - safelisted Node built-ins
@@ -196,6 +149,7 @@ The existing `reqly start` server is never modified. Electron is a launcher and 
   - `reqly.sleep(ms)` - pauses execution for `ms` milliseconds before the next request fires; useful for rate-limited APIs
   - All three are no-ops when running a single request outside the collection runner (no error thrown)
   - `setNextRequest` with an unknown name throws immediately with a clear message listing valid request names
+  - **MCP:** `run_collection` response gains a `stoppedEarly: boolean` field and a `jumpedTo?: string` field so agents know if a script halted or redirected the run; update `run_collection` tool description
   - TDD required: `flow-control.test.ts` - setNextRequest skips to correct request, runner.stop() halts remaining, sleep() delays by expected duration, no-op outside runner
 
 - [ ] **T-157** Extended Chai assertions: `jsonSchema` and `jsonBody`
@@ -203,6 +157,7 @@ The existing `reqly start` server is never modified. Electron is a launcher and 
   - `jsonBody` Chai plugin: `expect(res.getBody()).to.have.jsonBody({ id: 1 })` - partial deep match; passes if the response contains all the specified keys/values, ignores extra fields
   - Both registered as Chai plugins in the sandbox setup before any script runs
   - On failure, error message shows: expected schema / actual body excerpt for jsonSchema; expected subset / actual body for jsonBody
+  - **MCP:** results from `jsonSchema` and `jsonBody` assertions appear in the same `testResults` array introduced in T-143 - no separate field needed; update `run_request` tool description to note Chai plugin assertions are included
   - TDD required: `chai-plugins.test.ts` - jsonSchema pass, jsonSchema fail (wrong type), jsonSchema fail (missing required), jsonBody pass with extra fields, jsonBody fail
 
 ### M7 - Data & CI Power

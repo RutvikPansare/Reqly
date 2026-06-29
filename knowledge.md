@@ -6,6 +6,24 @@ Reference material - slow-moving. Read it to stay aligned; don't churn it.
 For what to build next, see the Roadmap section in CLAUDE.md / GEMINI.md (direction) and docs/todo.md (active work).
 -->
 
+## Rules for Agents Building Reqly (MANDATORY)
+
+These apply on every task, no exceptions. Full detail in CLAUDE.md / GEMINI.md.
+
+**1. MCP first.** Every new feature that adds data, an operation, or changes script/variable behaviour must ship MCP tool coverage in the same task. A feature with no MCP tool is invisible to the agent ecosystem. New response fields go in the tool's return shape; new operations get a new tool or extend an existing one with a documented parameter.
+
+**2. Update public-facing docs on every task.** Before marking a task done:
+- `README.md` - update the features section and MCP tools table if anything changed
+- `docs/llms.txt` - keep the agent-facing reference current with new tools, CLI commands, and variable resolution rules
+- `knowledge.md` - update "What's Built" for any user-facing feature
+These are not optional polish steps. Agents and users read these files to understand what Reqly can do. Stale docs mean the feature effectively doesn't exist.
+
+**3. TDD for engine and MCP.** All code in `src/engine/` and `src/mcp/` must have tests before implementation. UI components may use visual verification.
+
+**4. Never expand scope silently.** Add new `T-NNN` tasks to `docs/todo.md` for anything discovered mid-task; don't absorb it into the current task.
+
+---
+
 ## Core Philosophy
 Reqly is an execution engine, not an AI product. The AI always lives outside Reqly. Its job is to expose reliable, well-typed tools that any AI agent can call.
 
@@ -43,6 +61,7 @@ Reqly is an execution engine, not an AI product. The AI always lives outside Req
 - **Environment Editor:** Full CRUD for environments and variables from the UI nav rail - create, rename-by-recreate, edit variables inline, delete with confirmation. Backed by `POST/PUT/DELETE /api/environments`.
 - **Collection Manager UI:** Full CRUD from sidebar - right-click context menus on collections (Add Request, Rename, Delete) and requests (Rename, Duplicate, Delete), inline rename via Enter/Escape, +New collection input. Backed by existing `/api/collections` CRUD endpoints.
 - **Request History:** In-memory log (last 200) of every fired request - timestamp, method, URL, status, latency. History panel in nav rail lists newest first, click to load request into editor, Clear button. Backed by `GET/DELETE /api/history`. Appended on adhoc runs, MCP `run_request`, and collection runs.
+- **Keyboard Shortcuts Palette:** Press `?` anywhere outside a text input to open a searchable drawer (`ShortcutsPalette.tsx`) listing every shortcut grouped by Request/Navigation/Editor. Escape or `?` again closes it.
 - **Search / Command Palette:** ⌘K / Ctrl+K overlay searches across collection names, request names, and URLs. Keyboard-navigable (arrow keys, Enter, Escape). Results grouped by type, click opens request in editor. Runs over in-memory `GET /api/collections` - no backend search index. Trigger button in the top bar is a wide (`w-72`) pill sitting left-of-center, not crammed against Settings.
 - **Request Tabs:** Closeable X buttons, unsaved-changes dot indicator (per-tab saved snapshot diff), active-tab blue underline, left/right scroll arrows for overflow. Live edits flow back from RequestEditor via `onChange` for dirty tracking.
 - **Variables Tab:** Read-only tab in the request editor showing the active environment's variables (Key as `{{name}}`, Value, source = active env name). Helps debug unresolved variables. Editing stays in the Environments panel.
