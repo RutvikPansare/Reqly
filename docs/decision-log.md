@@ -6,6 +6,16 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-29 - Desktop installers ship unsigned for v1
+
+Mac: no Apple Developer account ($99/year) for v1 - notarization isn't worth the cost before there's traction. `electron-builder.yml` deliberately omits `hardenedRuntime`/`entitlements`/`gatekeeperAssess` since those only matter for notarization. Users see "cannot be opened because the developer cannot be verified" on first launch; workaround is right-click > Open > Open anyway (one-time, well-known to the dev audience). Homebrew tap users bypass this entirely. Revisit when there's budget for a Developer account.
+
+Windows: no EV certificate ($300-500/year) for the same reason. SmartScreen shows "Unknown publisher"; workaround is "More info" > "Run anyway". The warning clears automatically once the installer accumulates download reputation (roughly a few hundred downloads). Binaries are still signed with Sigstore/cosign (free, GitHub identity-based) for tamper-evidence even though it doesn't buy SmartScreen trust. Revisit EV signing once traction justifies it.
+
+## 2026-06-29 - Desktop app requires the `reqly` CLI pre-installed, doesn't bundle it
+
+Bundling Node + the compiled server into the Electron app (so DMG/EXE users need nothing else installed) was considered but rejected for v1 - it roughly doubles the packaging surface (cross-platform Node binary bundling, keeping it in sync with the npm package) for a problem that has a one-line workaround. Instead `packages/desktop/src/main.ts` detects `reqly` on PATH via `which`/`where` before attempting to spawn it, and shows a one-time setup screen ("Install Reqly CLI first: npm install -g reqly-app") if missing, rather than hanging on the loading screen for 10s. Revisit bundling if "install the CLI first" proves to be a real adoption blocker.
+
 ## 2026-06-28 - `switch-project.test.ts` stops the dotenv watcher in `afterEach`
 
 `POST /api/switch-project`'s "re-points dotEnvLoader" test starts a real chokidar watcher (via the handler's `context.dotEnvLoader.watch()`) on a temp dir, then the test deletes that dir before the watcher is ever stopped. On `windows-latest` CI the orphaned watcher threw an async `EPERM` during the *next* test, crashing the run despite every assertion passing (590/590 green, 1 stray error). Added `context.dotEnvLoader.stopWatching()` to the describe block's `afterEach` - mirrors what the real `switch_project` handler already does correctly before creating a new watcher.

@@ -122,5 +122,6 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
   }
 
   console.log('\nDone! Restart your AI tool and try saying "list my Reqly collections".');
+  console.log('Tip: run `reqly app` to open the UI in your browser at any time.');
   return 0;
 }

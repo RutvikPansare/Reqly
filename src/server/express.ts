@@ -1204,6 +1204,32 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.get('/api/app/login-item', async (req, res) => {
+    const supported = !!process.env.REQLY_DESKTOP;
+    if (!supported) return res.json({ enabled: false, supported: false });
+    try {
+      const data = await fs.readFile(globalConfigPath, 'utf-8');
+      const cfg = JSON.parse(data);
+      res.json({ enabled: !!cfg.launchAtLogin, supported: true });
+    } catch {
+      res.json({ enabled: false, supported: true });
+    }
+  });
+
+  app.post('/api/app/login-item', async (req, res) => {
+    const supported = !!process.env.REQLY_DESKTOP;
+    if (!supported) return res.json({ enabled: false, supported: false });
+    const enabled = !!req.body.enabled;
+    let currentConfig: any = {};
+    try {
+      currentConfig = JSON.parse(await fs.readFile(globalConfigPath, 'utf-8'));
+    } catch { /* no existing config */ }
+    currentConfig.launchAtLogin = enabled;
+    await fs.mkdir(path.dirname(globalConfigPath), { recursive: true });
+    await fs.writeFile(globalConfigPath, JSON.stringify(currentConfig, null, 2));
+    res.json({ enabled, supported: true });
+  });
+
   app.get('/api/collections/:name/export', async (req, res) => {
     try {
       const name = decodeURIComponent(req.params.name);

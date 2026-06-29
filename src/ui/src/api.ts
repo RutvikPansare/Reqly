@@ -465,3 +465,19 @@ export async function updateDotenvFiles(files: string[]) {
   if (!res.ok) throw new Error('Failed to update dotenv files');
   return res.json();
 }
+
+export async function fetchLoginItem(): Promise<{ enabled: boolean; supported: boolean }> {
+  const res = await fetch('/api/app/login-item');
+  if (!res.ok) throw new Error('Failed to fetch login item setting');
+  return res.json();
+}
+
+export async function updateLoginItem(enabled: boolean): Promise<{ enabled: boolean; supported: boolean }> {
+  const res = await fetch('/api/app/login-item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error('Failed to update login item setting');
+  return res.json();
+}

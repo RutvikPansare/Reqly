@@ -96,7 +96,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ---
 
-## M5 - Now: Windows Support + Desktop App
+## M5 - Done: Windows Support + Desktop App
 
 **Goal:** Remove the two biggest friction points for non-Mac developers and non-CLI-comfortable users. Sequencing: Windows support first (2 weeks), then Electron desktop app (3-4 weeks). Both are prerequisite to meaningful adoption outside the Mac/CLI niche.
 
@@ -115,15 +115,15 @@ All Windows Support items shipped (T-115 through T-119).
 **Why Electron over Tauri for V1:** the Reqly server is already Node.js - it runs naturally inside Electron's main process with no language boundary. Tauri requires Rust and gives a smaller bundle (5-15MB vs 150MB) but adds 4-6 weeks of complexity. Ship Electron now, consider Tauri for V2.
 
 - [x] **Electron wrapper** (T-120) - `packages/desktop/` Electron main process spawns `reqly start` as a child (only if no server is already running), opens a `BrowserWindow` on `http://localhost:4242` after a readiness poll, hides-not-quits on close, and kills the server on quit only if it spawned it. Zero `src/` changes.
-- [ ] **System tray** - tray icon with menu: "Open Reqly", "Active project: \<path\>", "Stop Reqly", "Quit". On double-click: open/focus the browser window.
-- [ ] **Auto-start on login** - opt-in toggle in Settings. Uses `app.setLoginItemSettings()` on Mac, registry key on Windows.
-- [ ] **Auto-updater** - `electron-updater` checks GitHub Releases on startup, prompts to install in the background. Required for users who installed via DMG/EXE rather than npm.
-- [ ] **Installers** - DMG for Mac (via `electron-builder`), NSIS installer for Windows. Code-signed on both platforms - Apple Developer account ($99/year) for Mac notarization; EV certificate (~$400/year) for Windows SmartScreen clearance. Without signing, users see security warnings on first run.
-- [ ] **`reqly app` CLI command** - opens the Electron window if running, launches it if not. Bridges the CLI and desktop app workflows.
+- [x] **System tray** (T-121) - tray icon with menu: "Open Reqly", "Active project: \<path\>", "Launch at login", "Quit". On double-click: open/focus the browser window.
+- [x] **Auto-start on login** (T-122) - opt-in toggle in Settings. Uses `app.setLoginItemSettings()`, persisted to `~/.reqly/config.json`.
+- [x] **Auto-updater** (T-123) - `electron-updater` checks GitHub Releases on startup, prompts to install in the background. Required for users who installed via DMG/EXE rather than npm.
+- [x] **Installers** (T-124) - DMG/ZIP for Mac, NSIS installer for Windows (via `electron-builder`), unsigned for v1 (no Apple Developer account / EV cert yet - documented bypass in README FAQ and `docs/decision-log.md`). `release.yml` builds and publishes to GitHub Releases on `v*` tags.
+- [x] **`reqly app` CLI command** (T-125) - opens the running server's URL in the system default browser; works for both CLI-started and desktop-app-started servers. Prints a "not running" hint and exits 1 if no server is up.
 
 ---
 
-## M6 - Next: Script Power + Developer UX
+## M6 - Now: Script Power + Developer UX
 
 **Goal:** Close the scripting gap versus Bruno and Postman. Developers switching from those tools expect Chai-style test assertions, a pre-script `req` object for dynamic signing, and variable autocomplete. These are daily-driver features that directly affect the decision to switch.
 

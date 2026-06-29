@@ -27,6 +27,7 @@ import { handleSetupCommand } from './setup-command.js';
 import { handleUseCommand } from './use-command.js';
 import { handleStatusCommand } from './status-command.js';
 import { handleStopCommand } from './stop-command.js';
+import { handleAppCommand } from './app-command.js';
 import { handleExecCommand } from './exec-command.js';
 import { handleImportCommand } from './import-command.js';
 import { handleInitCommand } from './init-command.js';
@@ -56,6 +57,11 @@ async function main() {
 
   if (parsed.command === 'stop') {
     const exitCode = await handleStopCommand();
+    process.exit(exitCode);
+  }
+
+  if (parsed.command === 'app') {
+    const exitCode = await handleAppCommand();
     process.exit(exitCode);
   }
 

@@ -3,7 +3,7 @@ import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
 import { Modal, ModalFooter } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { fetchDotenvFiles, updateDotenvFiles } from '../api';
+import { fetchDotenvFiles, updateDotenvFiles, fetchLoginItem, updateLoginItem } from '../api';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -14,10 +14,28 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [newFile, setNewFile] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loginItemSupported, setLoginItemSupported] = useState(false);
+  const [launchAtLogin, setLaunchAtLogin] = useState(false);
 
   useEffect(() => {
     fetchDotenvFiles().then(data => setFiles(data.files)).catch(console.error);
+    fetchLoginItem().then(data => {
+      setLoginItemSupported(data.supported);
+      setLaunchAtLogin(data.enabled);
+    }).catch(console.error);
   }, []);
+
+  const toggleLaunchAtLogin = async () => {
+    const next = !launchAtLogin;
+    setLaunchAtLogin(next);
+    try {
+      await updateLoginItem(next);
+    } catch (e) {
+      console.error(e);
+      setLaunchAtLogin(!next);
+      alert('Failed to update launch at login setting');
+    }
+  };
 
   const move = (i: number, dir: -1 | 1) => {
     const next = [...files];
@@ -92,6 +110,15 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           <Button variant="secondary" onClick={add}><Plus size={13} /> Add</Button>
         </div>
       </div>
+
+      {loginItemSupported && (
+        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
+            <input type="checkbox" checked={launchAtLogin} onChange={toggleLaunchAtLogin} />
+            Launch at login
+          </label>
+        </div>
+      )}
 
       <ModalFooter>
         {saved && <span className="text-xs self-center mr-2" style={{ color: 'var(--accent)' }}>Saved</span>}

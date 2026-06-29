@@ -479,6 +479,24 @@ Yes. Any MCP-compatible client works: Cursor, Claude Code, Claude Desktop, Gemin
 </details>
 
 <details>
+<summary><strong>macOS says the desktop app "cannot be opened because the developer cannot be verified" - is this safe?</strong></summary>
+<br>
+Yes. The Reqly desktop app ships unsigned for now (no Apple Developer account yet) - this is macOS Gatekeeper's standard warning for any unsigned app, not a sign of anything wrong. Right-click the app, choose <strong>Open</strong>, then <strong>Open anyway</strong> in the dialog. This is a one-time step per machine. Installing via the Homebrew cask bypasses this warning entirely.
+</details>
+
+<details>
+<summary><strong>Windows SmartScreen says "Unknown publisher" when I run the installer - is this safe?</strong></summary>
+<br>
+Yes. The installer is unsigned for now (no EV certificate yet) - this is SmartScreen's standard warning for any new, low-download installer. Click <strong>More info</strong>, then <strong>Run anyway</strong>. The warning disappears automatically once the installer accumulates enough download reputation. Binaries are still signed with Sigstore/cosign for tamper-evidence even without SmartScreen trust.
+</details>
+
+<details>
+<summary><strong>I installed the desktop app but it says "Reqly CLI not found" - what do I do?</strong></summary>
+<br>
+The desktop app is a launcher and window around the same <code>reqly</code> CLI server - it doesn't bundle Node or the server itself. Install the CLI globally first: <code>npm install -g reqly-app</code>, then reopen the desktop app.
+</details>
+
+<details>
 <summary><strong>My agent is looking for collections in the wrong directory. What do I do?</strong></summary>
 <br>
 This happens when your AI tool launches the Reqly process from a different working directory than your project. Fix it one of three ways:
@@ -595,6 +613,7 @@ Scripts run in an isolated context with no filesystem or network access - they c
 ```bash
 reqly stop        # stops the running instance
 reqly status      # check if an instance is running and which project it's on
+reqly app         # opens the running instance's UI in your browser
 ```
 
 Or press Ctrl+C in the terminal where Reqly is running. Reqly writes a lock file at <code>~/.reqly/running.json</code> to track the running instance - <code>reqly stop</code> reads this to find and signal the process.

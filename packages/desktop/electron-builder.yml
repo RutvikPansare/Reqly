@@ -1,0 +1,16 @@
+appId: com.reqly.app
+productName: Reqly
+directories:
+  output: packages/desktop/release
+files:
+  - packages/desktop/dist/**
+  - node_modules/**
+mac:
+  category: public.app-category.developer-tools
+  target: [dmg, zip]
+win:
+  target: [nsis]
+publish:
+  provider: github
+  owner: RutvikPansare
+  repo: Reqly

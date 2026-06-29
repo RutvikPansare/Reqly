@@ -1,5 +1,6 @@
-import { app, BrowserWindow } from 'electron';
-import { spawn, ChildProcess } from 'child_process';
+import { app, BrowserWindow, Tray, Menu, nativeImage, dialog } from 'electron';
+import { autoUpdater } from 'electron-updater';
+import { spawn, spawnSync, ChildProcess } from 'child_process';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -21,6 +22,7 @@ const LOCK_PATH = path.join(os.homedir(), '.reqly', 'running.json');
 // quit, so `spawnedServer` stays null in that case.
 let spawnedServer: ChildProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 let isQuitting = false;
 
 // Probes the server with a single GET. Resolves true on any HTTP response
@@ -52,6 +54,61 @@ function lockFilePointsToLiveServer(): boolean {
   }
 }
 
+// Reads the lock file's projectDir for the tray label. Truncated to the last
+// 2 path segments so long paths don't blow out the menu width.
+function readActiveProjectLabel(): string {
+  try {
+    const raw = fs.readFileSync(LOCK_PATH, 'utf8');
+    const lock = JSON.parse(raw) as { projectDir?: string };
+    if (!lock.projectDir) return 'Active project: unknown';
+    const segments = lock.projectDir.split(path.sep).filter(Boolean);
+    const tail = segments.slice(-2).join(path.sep);
+    return `Active project: ${tail || lock.projectDir}`;
+  } catch {
+    return 'Active project: not running';
+  }
+}
+
+function showAndFocus(): void {
+  if (!mainWindow) { createWindow(); return; }
+  mainWindow.show();
+  mainWindow.focus();
+  if (process.platform === 'darwin') app.dock?.show();
+}
+
+function buildTrayMenu(): Menu {
+  return Menu.buildFromTemplate([
+    { label: 'Open Reqly', click: showAndFocus },
+    { label: readActiveProjectLabel(), enabled: false },
+    { type: 'separator' },
+    {
+      label: 'Launch at login',
+      type: 'checkbox',
+      checked: app.getLoginItemSettings().openAtLogin,
+      click: (item) => { app.setLoginItemSettings({ openAtLogin: item.checked }); },
+    },
+    { type: 'separator' },
+    { label: 'Quit', click: () => app.quit() },
+  ]);
+}
+
+function createTray(): void {
+  const iconPath = path.join(__dirname, '..', 'assets', 'tray-icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
+  tray = new Tray(icon);
+  tray.setToolTip('Reqly');
+  tray.setContextMenu(buildTrayMenu());
+
+  // Rebuild on every click so the active-project label is never stale - the
+  // user may have switched projects (via the UI or another CLI session)
+  // since the menu was last opened.
+  tray.on('click', () => {
+    tray?.setContextMenu(buildTrayMenu());
+    showAndFocus();
+  });
+  tray.on('double-click', showAndFocus);
+}
+
 function loadingHtml(message: string): string {
   return `data:text/html,${encodeURIComponent(`
     <html>
@@ -65,6 +122,18 @@ function loadingHtml(message: string): string {
     </html>`)}`;
 }
 
+// Detects the `reqly` CLI on PATH without spawning the real server. We don't
+// bundle Node/the server into the Electron app (T-124) - the user is expected
+// to have installed the CLI globally (`npm install -g reqly-app`), so we need
+// to tell the difference between "not running yet" and "not installed at all"
+// before attempting to spawn it.
+function reqlyCliIsInstalled(): boolean {
+  const probe = process.platform === 'win32' ? spawnSync('where', ['reqly']) : spawnSync('which', ['reqly']);
+  return probe.status === 0;
+}
+
+let cliMissing = false;
+
 async function spawnServerIfNeeded(): Promise<void> {
   const alreadyRunning = lockFilePointsToLiveServer() || (await probeServer());
   if (alreadyRunning) {
@@ -72,8 +141,18 @@ async function spawnServerIfNeeded(): Promise<void> {
     return;
   }
 
+  if (!reqlyCliIsInstalled()) {
+    console.error('[reqly-desktop] `reqly` CLI not found on PATH - cannot spawn the server.');
+    cliMissing = true;
+    return;
+  }
+
   console.log('[reqly-desktop] No server detected - spawning `reqly start`.');
-  spawnedServer = spawn('reqly', ['start'], { stdio: 'pipe', detached: false });
+  spawnedServer = spawn('reqly', ['start'], {
+    stdio: 'pipe',
+    detached: false,
+    env: { ...process.env, REQLY_DESKTOP: '1' },
+  });
   spawnedServer.stdout?.on('data', d => console.log(`[reqly] ${d.toString().trim()}`));
   spawnedServer.stderr?.on('data', d => console.error(`[reqly] ${d.toString().trim()}`));
   spawnedServer.on('error', err => {
@@ -84,6 +163,11 @@ async function spawnServerIfNeeded(): Promise<void> {
 // Polls the server every 200ms for up to 10s, then loads the UI. If the server
 // never comes up the window stays on the loading screen with an error note.
 async function waitForServerAndLoad(win: BrowserWindow): Promise<void> {
+  if (cliMissing) {
+    await win.loadURL(loadingHtml('Reqly CLI not found. Install it first: npm install -g reqly-app, then reopen this app.'));
+    return;
+  }
+
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     if (await probeServer()) {
@@ -118,9 +202,47 @@ function createWindow(): void {
   waitForServerAndLoad(mainWindow);
 }
 
+// Syncs the OS "launch at login" registration with the user's stored
+// preference in ~/.reqly/config.json (set via the Settings UI toggle, T-122).
+// Runs on every startup so the OS state never drifts from the saved choice.
+function syncLoginItemFromConfig(): void {
+  try {
+    const configPath = path.join(os.homedir(), '.reqly', 'config.json');
+    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    app.setLoginItemSettings({ openAtLogin: !!cfg.launchAtLogin });
+  } catch {
+    // No config yet - leave the OS default (not registered) untouched.
+  }
+}
+
+autoUpdater.on('update-downloaded', async () => {
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    message: 'Update downloaded. Restart now?',
+    buttons: ['Restart', 'Later'],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (response === 0) autoUpdater.quitAndInstall();
+});
+
 app.whenReady().then(async () => {
+  syncLoginItemFromConfig();
   await spawnServerIfNeeded();
   createWindow();
+  createTray();
+  if (process.platform === 'darwin') app.dock?.hide();
+
+  // Checks GitHub Releases for a newer DMG/EXE build and downloads it in the
+  // background. Never restarts without explicit consent - 'update-downloaded'
+  // below shows a Restart/Later dialog and only calls quitAndInstall() if the
+  // user clicks Restart. npm-global installs (`npm i -g getreqly`) are NOT
+  // covered by this - they get updates via `npm update -g`. Do not remove
+  // this call thinking it's redundant with that path; the two are
+  // independent distribution channels.
+  autoUpdater.checkForUpdates().catch(err => {
+    console.error('[reqly-desktop] Update check failed:', err.message);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
