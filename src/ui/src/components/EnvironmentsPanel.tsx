@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight, Pencil, Trash2 } from 'lucide-react';
-import { fetchEnvironments, createEnvironment, updateEnvironment, deleteEnvironment, setActiveEnvironment } from '../api';
+import { fetchEnvironments, createEnvironment, updateEnvironment, deleteEnvironment, duplicateEnvironment, setActiveEnvironment } from '../api';
 import { Modal, ModalFooter } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -24,6 +24,9 @@ export function EnvironmentsPanel() {
   // Delete confirmation
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+  // Right-click context menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; name: string } | null>(null);
+
   const loadData = () => {
     fetchEnvironments().then(data => {
       setEnvironments(data.environments || []);
@@ -36,6 +39,18 @@ export function EnvironmentsPanel() {
     window.addEventListener('reqly-reload', loadData);
     return () => window.removeEventListener('reqly-reload', loadData);
   }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu]);
 
   const toVars = (env: any): EnvVar[] => {
     const vars: EnvVar[] = [];
@@ -115,6 +130,16 @@ export function EnvironmentsPanel() {
     }
   };
 
+  const handleDuplicate = async (name: string) => {
+    try {
+      await duplicateEnvironment(name);
+      loadData();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to duplicate environment');
+    }
+  };
+
   const handleDelete = async (name: string) => {
     try {
       await deleteEnvironment(name);
@@ -175,6 +200,7 @@ export function EnvironmentsPanel() {
                   style={{ background: isActive ? 'var(--surface-3)' : 'transparent' }}
                   onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-3)'; }}
                   onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                  onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, name: env.name }); }}
                 >
                   <div className="flex items-center flex-1 overflow-hidden">
                     <button
@@ -284,6 +310,33 @@ export function EnvironmentsPanel() {
           })}
         </ul>
       </div>
+
+      {/* Right-click context menu */}
+      {contextMenu && (
+        <div
+          className="fixed rounded py-1 z-50 text-sm min-w-[130px]"
+          style={{ top: contextMenu.y, left: contextMenu.x, background: 'var(--surface-2)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            className="w-full text-left px-4 py-1.5 transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            onClick={() => { handleDuplicate(contextMenu.name); setContextMenu(null); }}
+          >
+            Duplicate
+          </button>
+          <button
+            className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            onClick={() => { setConfirmDelete(contextMenu.name); setContextMenu(null); }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       {confirmDelete && (

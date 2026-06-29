@@ -8,8 +8,8 @@ import * as http from 'http';
 import * as crypto from 'crypto';
 import multer from 'multer';
 import { EngineContext } from '../mcp/tools/types.js';
-import { CollectionManager } from '../engine/collection-manager.js';
-import { EnvironmentManager } from '../engine/environment-manager.js';
+import { CollectionManager, CollectionNotFoundError } from '../engine/collection-manager.js';
+import { EnvironmentManager, EnvironmentNotFoundError } from '../engine/environment-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { writeLock, readLock } from './lock.js';
@@ -312,6 +312,19 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Duplicates the whole collection folder. Named "clone" (not "duplicate") to
+  // avoid colliding with the existing /duplicate route above, which duplicates
+  // a single request inside a collection.
+  app.post('/api/collections/:name/clone', async (req, res) => {
+    try {
+      const copy = await context.collectionManager.duplicateCollection(req.params.name);
+      res.json(copy);
+    } catch (e: any) {
+      const status = e instanceof CollectionNotFoundError ? 404 : 500;
+      res.status(status).json({ error: e.message });
     }
   });
 
@@ -780,6 +793,16 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/environments/duplicate', async (req, res) => {
+    try {
+      const copy = await context.environmentManager.duplicateEnvironment(req.body.name);
+      res.json(copy);
+    } catch (e: any) {
+      const status = e instanceof EnvironmentNotFoundError ? 404 : 500;
+      res.status(status).json({ error: e.message });
     }
   });
 

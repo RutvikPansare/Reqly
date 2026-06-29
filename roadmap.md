@@ -74,7 +74,7 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 - [x] **T-077** OAuth 2.0 authorization code flow - full PKCE flow, auto token refresh, UI editor for client credentials + "Authorize" button
 
-- [ ] **Keyboard shortcuts palette** - searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor); consistent with the shortcuts already wired for `cmd+enter` / `cmd+s`
+- [ ] **T-152 Keyboard shortcuts palette** - searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor); consistent with the shortcuts already wired for `cmd+enter` / `cmd+s`
 
 - [x] **Environment import/export** - import Postman environment JSON; export any active environment as a `.json` file; both via UI env switcher dropdown and MCP tool `import_environment` / `export_environment`
 
@@ -121,7 +121,27 @@ All Windows Support items shipped (T-115 through T-119).
 
 ---
 
-## M6 - Later: Inbound Capture
+## M6 - Next: Script Power + Developer UX
+
+**Goal:** Close the scripting gap versus Bruno and Postman. Developers switching from those tools expect Chai-style test assertions, a pre-script `req` object for dynamic signing, and variable autocomplete. These are daily-driver features that directly affect the decision to switch.
+
+- [ ] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts - add Chai BDD API to the script sandbox; each `test('label', fn)` call produces a named pass/fail result shown in a "Tests" sub-tab alongside existing YAML assertions; named results included in JUnit XML output; existing YAML assertions untouched
+- [ ] **T-144** `req` object in pre-run scripts - expose `req.url`, `req.method`, `req.headers`, `req.body` (readable and mutable) before the request fires; primary use case is HMAC signing and dynamic auth header injection
+- [ ] **T-145** Variable `{{` autocomplete in URL bar, header value fields, and body editor - dropdown appears on `{{` showing all available variables with source label (env, collection, .env); pure UI, no backend change
+- [ ] **T-146** History panel: clicking an entry restores the saved response body into the response viewer - currently only repopulates the request editor; body is already stored in `HistoryEntry` (up to 10KB); show a "historical" badge so the user knows it's not a live result
+
+---
+
+## M7 - Later: Data & CI Power
+
+**Goal:** Parameterized testing and collection documentation. Both deepen the CI integration story: data-driven runs mean one collection tests dozens of inputs in GitHub Actions; docs export means collections double as living API references committed alongside the code.
+
+- [ ] **T-147** Data-driven testing - `reqly run <collection> --data data.csv` (or `.json`) runs the collection once per row; each row's keys inject as variables; JUnit XML emits one `<testsuite>` per row so CI can distinguish failures by input; MCP tool `run_collection` gets an optional `dataFile` param
+- [ ] **T-149** Collection documentation export - `reqly export docs <collection>` generates a clean markdown API reference from the collection YAML (method, URL, params, headers, body schema, example responses); default output to `docs/api/<collection>.md`; extend `export_collection` MCP tool with `format: "docs"`; no external deps, pure string templating
+
+---
+
+## M8 - Later: Inbound Capture
 
 **Goal:** Capture calls coming INTO the user's own app (not outbound). The current proxy captures what the app sends to external APIs. This milestone captures what clients (browsers, mobile, other servers) send to the user's own endpoints.
 
@@ -187,9 +207,11 @@ Once the Electron DMG from M5 (T-124) is published to GitHub Releases, add a Hom
 
 ## Later: Protocol Expansion
 
-**Why post-M4:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
+**Why post-M7:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
 
-- [ ] **WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` requests.
+- [ ] **T-151 WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` / `type: sse` requests.
+- [ ] **T-150 gRPC** - First-class gRPC alongside REST and GraphQL. Load `.proto` file per collection; method picker populated from service definition; input editor for request message (JSON form); response viewer shows decoded message. Unary RPCs for v1, streaming in v2. `type: grpc` in collection YAML with `protoFile`, `service`, `method`, `message` fields.
+- [ ] **T-148 Client certificates / mTLS** - Per-collection or per-request client cert (PEM cert + key pair). Cert paths stored in collection YAML, files stored in `~/.reqly/certs/` (never committed). HTTP executor passes cert to `undici` dispatcher at request time. "Certificate" tab in collection settings and request Auth tab.
 - [ ] **MQTT / Socket.IO** - Additional realtime protocol support for IoT and event-driven apps.
 - [ ] **Multipart body editor** - File upload support with per-part content types, filename, and mime type. Essential for testing file upload endpoints.
 - [ ] **Shared requests** - URL-shareable requests with embed options - useful for sharing a repro case with a teammate or filing a bug report.

@@ -58,6 +58,8 @@ import * as listSpecOperations from './tools/list-spec-operations.js';
 import * as validateResponse from './tools/validate-response.js';
 import * as getProject from './tools/get-project.js';
 import * as switchProject from './tools/switch-project.js';
+import * as duplicateCollection from './tools/duplicate-collection.js';
+import * as duplicateEnvironment from './tools/duplicate-environment.js';
 
 const tools = [
   runRequest,
@@ -112,6 +114,8 @@ const tools = [
   validateResponse,
   getProject,
   switchProject,
+  duplicateCollection,
+  duplicateEnvironment,
 ];
 
 import { z } from 'zod';

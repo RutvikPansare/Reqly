@@ -109,6 +109,31 @@ export class EnvironmentManager {
     await this.saveStore(store);
   }
 
+  async duplicateEnvironment(name: string): Promise<Environment> {
+    const store = await this.loadStore();
+    const source = store.environments.find(e => e.name === name);
+    if (!source) {
+      throw new EnvironmentNotFoundError(`Environment ${name} not found`);
+    }
+
+    let copyName = `Copy of ${name}`;
+    let suffix = 0;
+    while (store.environments.some(e => e.name === copyName)) {
+      suffix += 1;
+      copyName = `Copy of ${name} (${suffix})`;
+    }
+
+    const env: Environment = {
+      id: `env-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: copyName,
+      variables: { ...source.variables },
+    };
+
+    store.environments.push(env);
+    await this.saveStore(store);
+    return env;
+  }
+
   async deleteEnvironment(name: string): Promise<void> {
     const store = await this.loadStore();
     const exists = store.environments.some(e => e.name === name);

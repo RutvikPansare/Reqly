@@ -130,6 +130,35 @@ describe('CollectionManager', () => {
     await expect(manager.renameCollection('Missing', 'NewName')).rejects.toThrow(CollectionNotFoundError);
   });
 
+  it('should duplicate a collection under "Copy of <name>", preserving its requests', async () => {
+    await manager.createCollection('TestCol');
+    await manager.addRequest('TestCol', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+
+    const result = await manager.duplicateCollection('TestCol');
+
+    expect(result.name).toBe('Copy of TestCol');
+    const copy = await manager.getCollection('Copy of TestCol');
+    expect(copy.requests).toHaveLength(1);
+    expect(copy.requests[0].name).toBe('GetUser');
+    // Original untouched
+    const original = await manager.getCollection('TestCol');
+    expect(original.requests).toHaveLength(1);
+  });
+
+  it('should increment the suffix on name collision when duplicating a collection', async () => {
+    await manager.createCollection('TestCol');
+    await manager.createCollection('Copy of TestCol');
+
+    const result = await manager.duplicateCollection('TestCol');
+
+    expect(result.name).toBe('Copy of TestCol (1)');
+    await expect(manager.getCollection('Copy of TestCol (1)')).resolves.toBeTruthy();
+  });
+
+  it('should throw when duplicating a missing collection', async () => {
+    await expect(manager.duplicateCollection('Missing')).rejects.toThrow(CollectionNotFoundError);
+  });
+
   it('should duplicate a request under a new name', async () => {
     await manager.createCollection('TestCol');
     await manager.addRequest('TestCol', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });

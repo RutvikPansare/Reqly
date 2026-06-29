@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateRequest, exportCollection, deleteExample } from '../api';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, exportCollection, deleteExample } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
@@ -326,6 +326,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const handleDeleteCol = async (col: string) => {
     await deleteCollection(col);
+    loadData();
+  };
+
+  const handleDuplicateCol = async (col: string) => {
+    await duplicateCollection(col);
     loadData();
   };
 
@@ -705,6 +710,15 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                 onClick={() => { exportCollection(contextMenu.col, 'openapi').catch(console.error); setContextMenu(null); }}
               >
                 Export as OpenAPI
+              </button>
+              <button
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { handleDuplicateCol(contextMenu.col); setContextMenu(null); }}
+              >
+                Duplicate
               </button>
               <button
                 className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"

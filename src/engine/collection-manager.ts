@@ -230,6 +230,23 @@ export class CollectionManager {
     await fs.rename(oldPath, newPath);
   }
 
+  async duplicateCollection(name: string): Promise<Collection> {
+    const srcPath = path.join(this.baseDir, name);
+    if (!existsSync(srcPath)) {
+      throw new CollectionNotFoundError(`Collection ${name} not found`);
+    }
+
+    let copyName = `Copy of ${name}`;
+    let suffix = 0;
+    while (existsSync(path.join(this.baseDir, copyName))) {
+      suffix += 1;
+      copyName = `Copy of ${name} (${suffix})`;
+    }
+
+    await fs.cp(srcPath, path.join(this.baseDir, copyName), { recursive: true });
+    return this.getCollection(copyName);
+  }
+
   async duplicateRequest(collectionName: string, requestName: string, newName: string): Promise<void> {
     const original = await this.getRequest(collectionName, requestName);
     const copy: CollectionRequest = { ...original, name: newName };

@@ -43,33 +43,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ### Right-click context menus - duplicate actions
 
-- [ ] **T-141** Duplicate collection and environment - backend + UI gaps
-  - Request duplicate is already fully implemented (backend endpoint + `handleDuplicateReq` in `CollectionsPanel.tsx` + `duplicateRequest` in `api.ts`). Collection and environment duplicate are missing. Environments have no context menu at all.
-
-  **What's already done (do not reimplement):**
-  - Request duplicate: `duplicateRequest` in `api.ts`, `handleDuplicateReq` in `CollectionsPanel.tsx`, wired into the existing request context menu.
-  - Collection context menu: already exists with rename, delete, settings, export. Just missing "Duplicate".
-  - Request context menu: already exists with rename, duplicate, delete.
-
-  **What needs to be built:**
-
-  1. `POST /api/collections/:name/duplicate` (backend, TDD required)
-     - Deep-copies the collection directory to `"Copy of <name>"` (increment suffix if collision)
-     - Returns `{ name: "Copy of <name>" }`
-     - TDD: `duplicate-collection.test.ts` - success, name collision increments, source not found 404
-
-  2. `duplicateCollection(name)` in `src/ui/src/api.ts` - calls the new endpoint
-
-  3. Wire "Duplicate" into the existing collection context menu in `CollectionsPanel.tsx` - same pattern as the existing export/rename/delete items already there
-
-  4. `POST /api/environments/duplicate` (backend, TDD required)
-     - Body: `{ name: string }`
-     - Creates `"Copy of <name>"` environment with the same variables (increment if collision)
-     - Returns `{ name: "Copy of <name>" }`
-     - TDD: `duplicate-environment.test.ts` - success, name collision, source not found 404
-
-  5. Right-click context menu for environments in `EnvironmentsPanel.tsx` - currently has no context menu at all, only a plain delete button. Add `onContextMenu` to each environment row, render a floating menu with: Duplicate (wired), Rename (wired - rename already works via `updateEnvironment`), Delete (move existing delete button logic here). Dismiss on click-outside or Escape.
-
 - [ ] **T-142** Move request between collections - drag and drop + right-click "Move to"
   - Two ways to trigger the same underlying move operation: drag-and-drop in the sidebar and a "Move to" option in the existing request context menu.
 

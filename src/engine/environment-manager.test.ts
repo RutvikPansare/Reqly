@@ -84,6 +84,30 @@ describe('EnvironmentManager', () => {
     expect(await manager.getActiveEnvironment()).toBeNull();
   });
 
+  it('should duplicate an environment under "Copy of <name>", preserving its variables', async () => {
+    await manager.createEnvironment('dev', { host: 'localhost' });
+
+    const result = await manager.duplicateEnvironment('dev');
+
+    expect(result.name).toBe('Copy of dev');
+    expect(result.variables).toEqual({ host: 'localhost' });
+    const original = await manager.getEnvironment('dev');
+    expect(original.variables).toEqual({ host: 'localhost' });
+  });
+
+  it('should increment the suffix on name collision when duplicating an environment', async () => {
+    await manager.createEnvironment('dev', {});
+    await manager.createEnvironment('Copy of dev', {});
+
+    const result = await manager.duplicateEnvironment('dev');
+
+    expect(result.name).toBe('Copy of dev (1)');
+  });
+
+  it('should throw when duplicating a missing environment', async () => {
+    await expect(manager.duplicateEnvironment('missing')).rejects.toThrow();
+  });
+
   describe('import/export (Postman format)', () => {
     const postmanEnv = {
       id: 'abc-123',

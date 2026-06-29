@@ -38,6 +38,16 @@ export const deleteEnvironment = async (name: string) => {
   return res.json();
 };
 
+export const duplicateEnvironment = async (name: string) => {
+  const res = await fetch('/api/environments/duplicate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  if (!res.ok) throw new Error('Failed to duplicate environment');
+  return res.json();
+};
+
 export async function getCollectionVariables(collectionName: string): Promise<Record<string, string>> {
   const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/variables`);
   if (!res.ok) throw new Error('Failed to fetch collection variables');
@@ -177,6 +187,14 @@ export async function duplicateRequest(collectionName: string, requestName: stri
     body: JSON.stringify({ requestName, newName })
   });
   if (!res.ok) throw new Error('Failed to duplicate request');
+  return res.json();
+}
+
+export async function duplicateCollection(name: string) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(name)}/clone`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error('Failed to duplicate collection');
   return res.json();
 }
 
