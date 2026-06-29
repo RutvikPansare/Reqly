@@ -253,6 +253,27 @@ export class CollectionManager {
     await this.addRequest(collectionName, copy);
   }
 
+  async moveRequest(collectionName: string, requestName: string, targetCollection: string): Promise<{ name: string; collection: string }> {
+    const original = await this.getRequest(collectionName, requestName);
+
+    const targetPath = path.join(this.baseDir, targetCollection);
+    if (!existsSync(targetPath)) {
+      throw new CollectionNotFoundError(`Collection ${targetCollection} not found`);
+    }
+
+    let finalName = requestName;
+    let suffix = 0;
+    while (existsSync(path.join(targetPath, `${finalName}.yaml`))) {
+      suffix += 1;
+      finalName = `${requestName} (${suffix})`;
+    }
+
+    await this.addRequest(targetCollection, { ...original, name: finalName });
+    await this.deleteRequest(collectionName, requestName);
+
+    return { name: finalName, collection: targetCollection };
+  }
+
   async saveExample(
     collectionName: string,
     requestName: string,

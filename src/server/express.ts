@@ -8,7 +8,7 @@ import * as http from 'http';
 import * as crypto from 'crypto';
 import multer from 'multer';
 import { EngineContext } from '../mcp/tools/types.js';
-import { CollectionManager, CollectionNotFoundError } from '../engine/collection-manager.js';
+import { CollectionManager, CollectionNotFoundError, RequestNotFoundError } from '../engine/collection-manager.js';
 import { EnvironmentManager, EnvironmentNotFoundError } from '../engine/environment-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
@@ -324,6 +324,20 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       res.json(copy);
     } catch (e: any) {
       const status = e instanceof CollectionNotFoundError ? 404 : 500;
+      res.status(status).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/collections/:collection/requests/:request/move', async (req, res) => {
+    try {
+      const result = await context.collectionManager.moveRequest(
+        req.params.collection,
+        req.params.request,
+        req.body.targetCollection
+      );
+      res.json(result);
+    } catch (e: any) {
+      const status = (e instanceof CollectionNotFoundError || e instanceof RequestNotFoundError) ? 404 : 500;
       res.status(status).json({ error: e.message });
     }
   });

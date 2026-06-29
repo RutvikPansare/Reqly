@@ -126,9 +126,14 @@ All Windows Support items shipped (T-115 through T-119).
 **Goal:** Close the scripting gap versus Bruno and Postman. Developers switching from those tools expect Chai-style test assertions, a pre-script `req` object for dynamic signing, and variable autocomplete. These are daily-driver features that directly affect the decision to switch.
 
 - [ ] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts - add Chai BDD API to the script sandbox; each `test('label', fn)` call produces a named pass/fail result shown in a "Tests" sub-tab alongside existing YAML assertions; named results included in JUnit XML output; existing YAML assertions untouched
-- [ ] **T-144** `req` object in pre-run scripts - expose `req.url`, `req.method`, `req.headers`, `req.body` (readable and mutable) before the request fires; primary use case is HMAC signing and dynamic auth header injection
+- [ ] **T-144** `req` object in pre-run scripts - full Bruno-compatible req API: `req.getUrl()` / `req.setUrl(url)`, `req.getMethod()` / `req.setMethod(method)`, `req.getHeaders()` / `req.getHeader(name)` / `req.setHeader(name, value)` / `req.removeHeader(name)`, `req.getBody()` / `req.setBody(body)`, `req.setTimeout(ms)`, `req.setMaxRedirects(n)`; all mutations take effect on the outbound request before it fires; primary use cases: HMAC signing, dynamic timestamps, conditional auth header injection
 - [ ] **T-145** Variable `{{` autocomplete in URL bar, header value fields, and body editor - dropdown appears on `{{` showing all available variables with source label (env, collection, .env); pure UI, no backend change
 - [ ] **T-146** History panel: clicking an entry restores the saved response body into the response viewer - currently only repopulates the request editor; body is already stored in `HistoryEntry` (up to 10KB); show a "historical" badge so the user knows it's not a live result
+- [ ] **T-153** Bruno script compatibility layer - expose `res.getStatus()`, `res.getBody()`, `res.getHeader(name)`, `res.getResponseTime()` as aliases in the post-run sandbox so Bruno scripts paste in and run without changes; show a one-page "Script API" nudge in the UI when a Bruno collection is imported mapping `bru.*` to `reqly.*` equivalents
+- [ ] **T-154** Collection-scoped variables in scripts - `reqly.setVar(key, value)` / `reqly.getVar(key)` for variables scoped to the collection (not the environment); survives environment switches; resolves between collection vars and env vars in the existing precedence chain; available in both pre and post scripts
+- [ ] **T-155** `require()` in scripts - allow `require()` with a safelist of built-in Node modules: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`; covers the primary use case (HMAC signing via `crypto`) without opening arbitrary filesystem or network access; unsupported modules throw a clear error naming the safelist
+- [ ] **T-156** Script flow control - `reqly.setNextRequest(name)` jumps to a named request in the collection runner (skipping everything between); `reqly.runner.stop()` halts the collection run entirely; `reqly.sleep(ms)` adds a delay before the next step; all three are no-ops when running a single request outside the collection runner
+- [ ] **T-157** Extended Chai assertions - `jsonSchema` assertion validates response body against a JSON Schema object via Ajv (already a project dependency - zero new deps); `jsonBody` assertion does a readable partial-match check (`expect(res.getBody()).to.have.jsonBody({ id: 1 })` passes even if the response has extra fields); both exposed as Chai plugins added to the sandbox on startup
 
 ---
 
@@ -141,29 +146,37 @@ All Windows Support items shipped (T-115 through T-119).
 
 ---
 
-## M8 - Later: Inbound Capture
+## Later: Protocol Expansion
 
-**Goal:** Capture calls coming INTO the user's own app (not outbound). The current proxy captures what the app sends to external APIs. This milestone captures what clients (browsers, mobile, other servers) send to the user's own endpoints.
+**Why post-M7:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
 
-**Important context:** for AI-native developers (the primary Reqly user), the preferred workflow is NOT traffic capture at all - it's having the AI agent read the codebase and write the collection directly via `create_collection` and `create_request` MCP tools. The agent already knows every route, request shape, and auth requirement from the code. Inbound capture is for cases where the codebase is too complex, undocumented, or the developer prefers to capture real traffic instead.
-
-- [x] **Middleware SDK** *(priority)* - Tiny npm package (`reqly-middleware`) added once to Express/Fastify/Next.js. Captures every inbound request server-side, forwards a copy to the local Reqly instance. Works for all traffic: browser, mobile, webhooks, server-to-server. One line: `app.use(reqlyMiddleware())`. Works for local dev only (middleware phones home to `localhost:4242` - production capture requires the webhook tunnel from M4). Once shipped, update `README.md` and `llms.txt` to document this as a capture option alongside the AI-writes-collection workflow.
-
-- [ ] **Chrome Extension** *(lower priority, after middleware)* - Intercepts XHR/fetch via `chrome.webRequest` API, sends copies to `localhost:4242/capture`. Zero code change. Works for any hosted app the developer browses. Limitation: browser traffic only - no mobile, webhooks, or server-to-server.
-
-**Note on the current proxy:** the existing auto-capture proxy (M3) captures OUTBOUND calls - what the user's app sends to external APIs (Stripe, Shopify, etc.). M5 is the complement: what comes IN.
+- [ ] **T-151 WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` / `type: sse` requests.
+- [ ] **T-150 gRPC** - First-class gRPC alongside REST and GraphQL. Load `.proto` file per collection; method picker populated from service definition; input editor for request message (JSON form); response viewer shows decoded message. Unary RPCs for v1, streaming in v2. `type: grpc` in collection YAML with `protoFile`, `service`, `method`, `message` fields.
+- [ ] **T-148 Client certificates / mTLS** - Per-collection or per-request client cert (PEM cert + key pair). Cert paths stored in collection YAML, files stored in `~/.reqly/certs/` (never committed). HTTP executor passes cert to `undici` dispatcher at request time. "Certificate" tab in collection settings and request Auth tab.
+- [ ] **MQTT / Socket.IO** - Additional realtime protocol support for IoT and event-driven apps.
+- [ ] **Multipart body editor** - File upload support with per-part content types, filename, and mime type. Essential for testing file upload endpoints.
+- [ ] **Shared requests** - URL-shareable requests with embed options - useful for sharing a repro case with a teammate or filing a bug report.
 
 ---
 
-## Later: Homebrew Cask (Electron app via Homebrew)
+## Later: VS Code Extension
 
-Once the Electron DMG from M5 (T-124) is published to GitHub Releases, add a Homebrew cask so Mac users can install the desktop app with `brew install --cask reqly`. This is separate from the existing Homebrew formula (which installs the CLI via npm). The cask downloads the DMG directly from GitHub Releases and installs `Reqly.app` to `/Applications`. No Apple Developer account required for the cask itself - Homebrew installs it the same way a user would manually. One PR to `homebrew-reqly` repo adding `Casks/reqly.rb`.
+**Why post-Protocol Expansion:** Cursor (the primary Reqly user's tool) is VS Code-compatible, so this extension reaches them automatically. The extension is a distribution play - it surfaces existing capability natively inside the editor without adding new engine features. Worth building once the protocol surface is complete so the extension exposes the full product.
+
+**What makes it worth building over just using localhost:4242:** the native VS Code integrations (CodeLens, command palette, status bar, YAML validation) put Reqly exactly where the developer is writing code. Embedding the full web UI as a webview is not the goal - that's what Thunder Client does and it just feels like a browser inside VS Code.
+
+- [ ] **CodeLens provider** - detect `fetch()`, `axios()`, `got()`, and similar HTTP calls in JS/TS files. Show "Run with Reqly" inline above each call. On click: fire the matching saved request (or offer to create one) and show the response status + body inline below the line, similar to how VS Code shows test results inline.
+- [ ] **Collection tree view** - activity bar icon opens a sidebar panel with the collection tree: collection folders, requests, environments. Click a request to preview its config. Right-click context menu: Run, Duplicate, Delete. Talks to the running Reqly server at `localhost:4242` via the existing REST API.
+- [ ] **Status bar environment switcher** - persistent item in the VS Code status bar showing the active environment (e.g. "Reqly: dev"). Click to open a quick-pick dropdown and switch environment without leaving VS Code.
+- [ ] **Command palette** - register commands: `Reqly: Run request`, `Reqly: Run collection`, `Reqly: Switch environment`, `Reqly: Start proxy`, `Reqly: Open UI`. All keyboard-accessible via Cmd+Shift+P.
+- [ ] **YAML schema validation** - contribute a JSON schema for `.reqly/**/*.yaml` files. Red squiggles on wrong field names (e.g. `type:` instead of `field:` in assertions), autocomplete for operators and step types, hover documentation on each field.
+- [ ] **Marketplace publication** - publish to VS Code Marketplace as `reqly.reqly`. Works in Cursor, Windsurf, and any VS Code-compatible editor automatically.
 
 ---
 
 ## Later: Multi-Project Workspace
 
-**Why post-launch:** the single-project model works well for the initial target user. This becomes important when microservices developers start using Reqly across 5+ services and need to see everything simultaneously without switching.
+**Why post-VS Code Extension:** the single-project model works well for the initial target user. This becomes important when microservices developers start using Reqly across 5+ services and need to see everything simultaneously without switching. Needs a meaningful user base to validate the right design before investing in the complexity.
 
 **Competitive context:** Bruno partially solves this today - it lets you open multiple collection directories and they appear together in the sidebar. Postman and Insomnia solve it differently by abandoning project-directory scoping entirely (cloud workspace, all collections flat). The design target is Bruno parity as the floor (multi-directory sidebar) plus Reqly's agent-native layer on top (per-project MCP scoping, cross-project flows). No other tool has the full picture: local-first + git-native + multi-project + MCP server.
 
@@ -178,40 +191,32 @@ Once the Electron DMG from M5 (T-124) is published to GitHub Releases, add a Hom
 
 ---
 
+## M8 - Later: Inbound Capture
+
+**Goal:** Capture calls coming INTO the user's own app (not outbound). The current proxy captures what the app sends to external APIs. This milestone captures what clients (browsers, mobile, other servers) send to the user's own endpoints.
+
+**Important context:** for AI-native developers (the primary Reqly user), the preferred workflow is NOT traffic capture at all - it's having the AI agent read the codebase and write the collection directly via `create_collection` and `create_request` MCP tools. The agent already knows every route, request shape, and auth requirement from the code. Inbound capture is for cases where the codebase is too complex, undocumented, or the developer prefers to capture real traffic instead.
+
+- [x] **Middleware SDK** *(priority)* - Tiny npm package (`reqly-middleware`) added once to Express/Fastify/Next.js. Captures every inbound request server-side, forwards a copy to the local Reqly instance. Works for all traffic: browser, mobile, webhooks, server-to-server. One line: `app.use(reqlyMiddleware())`. Works for local dev only (middleware phones home to `localhost:4242` - production capture requires the webhook tunnel from M4). Once shipped, update `README.md` and `llms.txt` to document this as a capture option alongside the AI-writes-collection workflow.
+
+- [ ] **Chrome Extension** *(lower priority, after middleware)* - Intercepts XHR/fetch via `chrome.webRequest` API, sends copies to `localhost:4242/capture`. Zero code change. Works for any hosted app the developer browses. Limitation: browser traffic only - no mobile, webhooks, or server-to-server.
+
+**Note on the current proxy:** the existing auto-capture proxy (M3) captures OUTBOUND calls - what the user's app sends to external APIs (Stripe, Shopify, etc.). M8 is the complement: what comes IN.
+
+---
+
+## Later: Homebrew Cask (Electron app via Homebrew)
+
+Fast follow-on to M5 (T-124). Once the Electron DMG is published to GitHub Releases, add a Homebrew cask so Mac users can install the desktop app with `brew install --cask reqly`. This is separate from the existing Homebrew formula (which installs the CLI via npm). The cask downloads the DMG directly from GitHub Releases and installs `Reqly.app` to `/Applications`. No Apple Developer account required for the cask itself. One PR to `homebrew-reqly` repo adding `Casks/reqly.rb`.
+
+---
+
 ## Later: Team Secrets Layer
 
-**Why post-launch:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). A secrets layer solves that.
+**Why last:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). This milestone makes sense only after there is a paying team user base to justify it - V1 is integrations with existing secret managers (no infrastructure cost), V2 is a hosted vault (significant infrastructure investment).
 
 **V1 approach - integrate with existing secret managers, no custom cloud:** Build on tools teams already have rather than building a full vault from scratch. This is 4-6 weeks of integration work vs 3-6 months of cloud infrastructure. Custom vault comes later once there's revenue to justify it.
 
 - [ ] **1Password integration** - read secret values from a 1Password vault via the 1Password SDK (`@1password/sdk`). Developers reference `{{op://vault/item/field}}` in collection variables. Reqly resolves it at request time. MCP tool `get_secret` returns the resolved value. Zero custom cloud required.
 - [ ] **HashiCorp Vault / AWS Secrets Manager integration** - same pattern for enterprise teams. Read-only access, key referenced in collection YAML, resolved at request time. Priority driven by user demand.
 - [ ] **Team Secrets Vault (V2)** - Reqly-hosted encrypted vault for teams who don't have a dedicated secret manager. Encrypted at rest, access-controlled per team member. First true cloud infrastructure Reqly builds. Gated on having a paid user base to justify the infrastructure cost.
-
----
-
-## Later: VS Code Extension
-
-**Why post-M5:** Cursor (the primary Reqly user's tool) is VS Code-compatible, so this extension reaches them automatically. But it's a polish milestone - it doesn't unlock new capability, it just surfaces existing capability natively inside the editor. Worth building once there are users to justify the extension marketplace maintenance overhead.
-
-**What makes it worth building over just using localhost:4242:** the native VS Code integrations (CodeLens, command palette, status bar, YAML validation) put Reqly exactly where the developer is writing code. Embedding the full web UI as a webview is not the goal - that's what Thunder Client does and it just feels like a browser inside VS Code.
-
-- [ ] **CodeLens provider** - detect `fetch()`, `axios()`, `got()`, and similar HTTP calls in JS/TS files. Show "Run with Reqly" inline above each call. On click: fire the matching saved request (or offer to create one) and show the response status + body inline below the line, similar to how VS Code shows test results inline.
-- [ ] **Collection tree view** - activity bar icon opens a sidebar panel with the collection tree: collection folders, requests, environments. Click a request to preview its config. Right-click context menu: Run, Duplicate, Delete. Talks to the running Reqly server at `localhost:4242` via the existing REST API.
-- [ ] **Status bar environment switcher** - persistent item in the VS Code status bar showing the active environment (e.g. "Reqly: dev"). Click to open a quick-pick dropdown and switch environment without leaving VS Code.
-- [ ] **Command palette** - register commands: `Reqly: Run request`, `Reqly: Run collection`, `Reqly: Switch environment`, `Reqly: Start proxy`, `Reqly: Open UI`. All keyboard-accessible via Cmd+Shift+P.
-- [ ] **YAML schema validation** - contribute a JSON schema for `.reqly/**/*.yaml` files. Red squiggles on wrong field names (e.g. `type:` instead of `field:` in assertions), autocomplete for operators and step types, hover documentation on each field.
-- [ ] **Marketplace publication** - publish to VS Code Marketplace as `reqly.reqly`. Works in Cursor, Windsurf, and any VS Code-compatible editor automatically.
-
----
-
-## Later: Protocol Expansion
-
-**Why post-M7:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
-
-- [ ] **T-151 WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` / `type: sse` requests.
-- [ ] **T-150 gRPC** - First-class gRPC alongside REST and GraphQL. Load `.proto` file per collection; method picker populated from service definition; input editor for request message (JSON form); response viewer shows decoded message. Unary RPCs for v1, streaming in v2. `type: grpc` in collection YAML with `protoFile`, `service`, `method`, `message` fields.
-- [ ] **T-148 Client certificates / mTLS** - Per-collection or per-request client cert (PEM cert + key pair). Cert paths stored in collection YAML, files stored in `~/.reqly/certs/` (never committed). HTTP executor passes cert to `undici` dispatcher at request time. "Certificate" tab in collection settings and request Auth tab.
-- [ ] **MQTT / Socket.IO** - Additional realtime protocol support for IoT and event-driven apps.
-- [ ] **Multipart body editor** - File upload support with per-part content types, filename, and mime type. Essential for testing file upload endpoints.
-- [ ] **Shared requests** - URL-shareable requests with embed options - useful for sharing a repro case with a teammate or filing a bug report.

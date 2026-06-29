@@ -172,6 +172,49 @@ describe('CollectionManager', () => {
     expect(copy.method).toBe('GET');
   });
 
+  describe('moveRequest', () => {
+    it('should move a request to another collection, removing it from the source', async () => {
+      await manager.createCollection('Source');
+      await manager.createCollection('Target');
+      await manager.addRequest('Source', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+
+      const result = await manager.moveRequest('Source', 'GetUser', 'Target');
+
+      expect(result).toEqual({ name: 'GetUser', collection: 'Target' });
+      const moved = await manager.getRequest('Target', 'GetUser');
+      expect(moved.url).toBe('http://x.com');
+      await expect(manager.getRequest('Source', 'GetUser')).rejects.toThrow(RequestNotFoundError);
+    });
+
+    it('should append a numeric suffix on name collision in the target collection', async () => {
+      await manager.createCollection('Source');
+      await manager.createCollection('Target');
+      await manager.addRequest('Source', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://source.com' });
+      await manager.addRequest('Target', { id: 'r2', name: 'GetUser', method: 'GET', url: 'http://target.com' });
+
+      const result = await manager.moveRequest('Source', 'GetUser', 'Target');
+
+      expect(result).toEqual({ name: 'GetUser (1)', collection: 'Target' });
+      const moved = await manager.getRequest('Target', 'GetUser (1)');
+      expect(moved.url).toBe('http://source.com');
+      // Original in target untouched
+      const original = await manager.getRequest('Target', 'GetUser');
+      expect(original.url).toBe('http://target.com');
+    });
+
+    it('should throw when the source request is missing', async () => {
+      await manager.createCollection('Source');
+      await manager.createCollection('Target');
+      await expect(manager.moveRequest('Source', 'Missing', 'Target')).rejects.toThrow(RequestNotFoundError);
+    });
+
+    it('should throw when the target collection is missing', async () => {
+      await manager.createCollection('Source');
+      await manager.addRequest('Source', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+      await expect(manager.moveRequest('Source', 'GetUser', 'MissingTarget')).rejects.toThrow(CollectionNotFoundError);
+    });
+  });
+
   it('should round-trip a graphql type request through YAML', async () => {
     await manager.createCollection('GQL');
     const gqlReq: CollectionRequest = {

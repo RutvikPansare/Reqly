@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, exportCollection, deleteExample } from '../api';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, moveRequest, exportCollection, deleteExample } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
 import { CollectionSettingsModal } from './CollectionSettingsModal';
+import { Modal, ModalFooter } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface CollectionsPanelProps {
   activeRequest: any;
@@ -263,6 +265,12 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     | null
   >(null);
 
+  // Drag-and-drop move + "Move to" modal
+  const [draggedReq, setDraggedReq] = useState<{ col: string; req: string } | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [moveModal, setMoveModal] = useState<{ col: string; req: string } | null>(null);
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
+
   const loadData = () => {
     fetchCollections().then(setCollections).catch(console.error);
     fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); setLastMcpActivityAt(d.lastMcpActivityAt ?? null); }).catch(() => {});
@@ -322,6 +330,21 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const handleDuplicateReq = async (col: string, req: string) => {
     await duplicateRequest(col, req, `${req} Copy`);
     loadData();
+  };
+
+  const handleMoveReq = async (col: string, req: string, targetCollection: string) => {
+    if (col === targetCollection) return;
+    try {
+      const result = await moveRequest(col, req, targetCollection);
+      const updated = await fetchCollections();
+      setCollections(updated);
+      const targetCol = updated.find((c: any) => c.name === result.collection);
+      const movedReq = targetCol?.requests.find((r: any) => r.name === result.name);
+      if (movedReq) onSelectRequest(movedReq, result.collection);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to move request');
+    }
   };
 
   const handleDeleteCol = async (col: string) => {
@@ -466,12 +489,31 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
             <div key={col.name} className="select-none">
               <div
                 className="flex items-center justify-between group rounded px-1.5 py-1 cursor-pointer transition-colors"
-                style={{ background: 'transparent' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                style={{
+                  background: dragOverCol === col.name ? 'rgba(37,99,235,0.18)' : 'transparent',
+                  border: dragOverCol === col.name ? '1px solid #3b82f6' : '1px solid transparent',
+                }}
+                onMouseEnter={e => { if (dragOverCol !== col.name) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                onMouseLeave={e => { if (dragOverCol !== col.name) e.currentTarget.style.background = 'transparent'; }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setContextMenu({ x: e.pageX, y: e.pageY, type: 'col', col: col.name });
+                }}
+                onDragOver={e => {
+                  if (!draggedReq || draggedReq.col === col.name) return;
+                  e.preventDefault();
+                  setDragOverCol(col.name);
+                }}
+                onDragLeave={() => setDragOverCol(prev => (prev === col.name ? null : prev))}
+                onDrop={e => {
+                  e.preventDefault();
+                  setDragOverCol(null);
+                  const raw = e.dataTransfer.getData('application/json');
+                  if (!raw) return;
+                  const source = JSON.parse(raw);
+                  if (source.col === col.name) return;
+                  handleMoveReq(source.col, source.req, col.name);
+                  setDraggedReq(null);
                 }}
               >
                 <div
@@ -577,6 +619,14 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                             e.preventDefault();
                             setContextMenu({ x: e.pageX, y: e.pageY, type: 'req', col: col.name, req: req.name });
                           }}
+                          draggable={!isRenaming}
+                          onDragStart={e => {
+                            const payload = { col: col.name, req: req.name };
+                            e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDraggedReq(payload);
+                          }}
+                          onDragEnd={() => { setDraggedReq(null); setDragOverCol(null); }}
                         >
                           <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
                           {isRenaming ? (
@@ -762,6 +812,15 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                 Duplicate
               </button>
               <button
+                className="w-full text-left px-4 py-1.5 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                onClick={() => { setMoveModal({ col: contextMenu.col, req: contextMenu.req }); setContextMenu(null); }}
+              >
+                Move to...
+              </button>
+              <button
                 className="w-full text-left px-4 py-1.5 text-red-400 hover:text-red-300 transition-colors"
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -784,6 +843,46 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
       {settingsFor && (
         <CollectionSettingsModal collectionName={settingsFor} onClose={() => setSettingsFor(null)} />
+      )}
+
+      {moveModal && (
+        <Modal title="Move to collection" onClose={() => { setMoveModal(null); setMoveTarget(null); }} width="w-[360px]">
+          <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto">
+            {collections.filter(c => c.name !== moveModal.col).length === 0 && (
+              <p className="text-xs italic px-1" style={{ color: 'var(--text-muted)' }}>No other collections to move to.</p>
+            )}
+            {collections.filter(c => c.name !== moveModal.col).map(c => (
+              <div
+                key={c.name}
+                onClick={() => setMoveTarget(c.name)}
+                className="text-sm px-2 py-1.5 rounded cursor-pointer transition-colors"
+                style={{
+                  background: moveTarget === c.name ? 'var(--surface-3)' : 'transparent',
+                  color: moveTarget === c.name ? 'var(--text-primary)' : 'var(--text-secondary)',
+                }}
+                onMouseEnter={e => { if (moveTarget !== c.name) e.currentTarget.style.background = 'var(--surface-3)'; }}
+                onMouseLeave={e => { if (moveTarget !== c.name) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {c.name}
+              </div>
+            ))}
+          </div>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => { setMoveModal(null); setMoveTarget(null); }}>Cancel</Button>
+            <Button
+              variant="primary"
+              disabled={!moveTarget}
+              onClick={async () => {
+                if (!moveTarget) return;
+                await handleMoveReq(moveModal.col, moveModal.req, moveTarget);
+                setMoveModal(null);
+                setMoveTarget(null);
+              }}
+            >
+              Move
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

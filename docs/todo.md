@@ -43,34 +43,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ### Right-click context menus - duplicate actions
 
-- [ ] **T-142** Move request between collections - drag and drop + right-click "Move to"
-  - Two ways to trigger the same underlying move operation: drag-and-drop in the sidebar and a "Move to" option in the existing request context menu.
-
-  **Backend (TDD required):**
-
-  - `POST /api/collections/:collection/requests/:request/move`
-    - Body: `{ targetCollection: string }`
-    - Reads the request YAML from the source collection, writes it to the target collection directory, deletes the source file
-    - If a request with the same name already exists in the target, append ` (1)`, ` (2)` etc. to avoid collision
-    - Returns `{ name: string, collection: string }` - the final name and target collection
-    - TDD: `move-request.test.ts` - success path, name collision resolution, source not found 404, target collection not found 404
-
-  - Add `moveRequest(collection, request, targetCollection)` to `src/ui/src/api.ts`
-
-  **UI - drag and drop:**
-
-  - Add `draggable={true}` and `onDragStart` to each request row in `CollectionsPanel.tsx`. Store `{ col, req }` in the drag event via `dataTransfer.setData('application/json', ...)`.
-  - Add `onDragOver` (call `e.preventDefault()`) and `onDrop` to each collection header row. On drop: read the source `{ col, req }` from `dataTransfer`, call `POST /api/collections/:col/requests/:req/move` with `{ targetCollection: droppedOnCol }`, then refresh.
-  - Visual feedback during drag: highlight the collection header the user is hovering over with a 1px blue border or subtle background tint (`bg-blue-900/30`). Remove highlight on `onDragLeave` and `onDrop`.
-  - Do not allow dropping onto the same collection the request came from - no-op and no highlight if `sourcecol === targetCol`.
-
-  **UI - "Move to" in context menu:**
-
-  - Add "Move to..." as a new item in the existing request context menu in `CollectionsPanel.tsx`, below "Duplicate" and above "Delete".
-  - On click: open a small inline modal (reuse the existing `Modal` component) titled "Move to collection".
-  - Modal contents: a list of all collections except the current one, rendered as clickable rows. Single-click selects, a "Move" confirm button fires the API call. "Cancel" closes without action.
-  - After successful move: close modal, refresh collections list, open the request in its new collection automatically (same behaviour as clicking it in the sidebar).
-
 ### M5 - Windows Support
 
 ### Project switcher MCP tools + UI
@@ -149,3 +121,129 @@ The existing `reqly start` server is never modified. Electron is a launcher and 
   - **Simpler first implementation:** just open `http://localhost:4242` in the default browser if a server is running, or print "Reqly is not running. Start it with: reqly start" if not. This works for both CLI users (browser opens) and Electron users (Electron intercepts the URL if it's registered as the handler, otherwise browser opens which is also fine).
   - **Add to `reqly setup` output** so users know about it: "Tip: run `reqly app` to open the UI in your browser at any time."
   - **No breaking changes:** `reqly start`, `reqly run`, all other commands unaffected.
+
+### M4 completion
+
+- [ ] **T-152** Keyboard shortcuts palette
+  - Searchable `?` drawer listing all shortcuts with groups (Request, Navigation, Editor)
+  - Triggered by `?` key anywhere in the UI (outside text inputs); dismissed by Escape or `?` again
+  - Consistent with existing `cmd+enter` (fire request) and `cmd+s` (save) shortcuts already wired
+  - Show shortcut label + key combo per row; no backend change needed
+  - Pure UI; no TDD required
+
+### M6 - Script Power + Developer UX
+
+- [ ] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts
+  - Add `test('label', fn)` and `expect()` (Chai BDD) to the post-run script sandbox
+  - Each `test()` call produces a named pass/fail result shown in a "Tests" sub-tab in the response viewer alongside existing YAML assertions
+  - Chai API: `.to.equal`, `.to.have.property`, `.to.include`, `.to.be.above`, `.to.deep.equal` - match Chai exactly, not a custom DSL
+  - Existing YAML assertions are untouched; `test()` is purely additive
+  - Script sandbox receives: `test`, `expect`, `reqly.response` (status, body, headers, latency), `reqly.setEnvVar`, `reqly.getEnvVar`
+  - Named test results included in JUnit XML output from `reqly run --format junit`
+  - TDD required: `script-runner.test.ts` - test() pass, test() fail, expect() pass, expect() throws, multiple tests per script, mix with env var ops
+
+- [ ] **T-144** `req` object in pre-run scripts - full Bruno-compatible API
+  - Expose the full Bruno req method API in pre-run scripts:
+    - `req.getUrl()` / `req.setUrl(url)`
+    - `req.getMethod()` / `req.setMethod(method)`
+    - `req.getHeaders()` / `req.getHeader(name)` / `req.setHeader(name, value)` / `req.removeHeader(name)`
+    - `req.getBody()` / `req.setBody(body)`
+    - `req.setTimeout(ms)` / `req.setMaxRedirects(n)`
+  - All mutations take effect on the outbound request before it fires
+  - Primary use cases: HMAC signing, dynamic timestamps, conditional auth header injection
+  - The executor reads the mutated req state after the pre-script completes
+  - TDD required: `pre-script.test.ts` - getUrl, setUrl, setHeader, removeHeader, setBody, setTimeout; verify mutations are reflected in the fired request
+
+- [ ] **T-145** Variable `{{` autocomplete in URL bar, header value fields, and body editor
+  - Dropdown appears when user types `{{` in URL bar, any header value input, or the body editor
+  - Shows all available variable names with source label (env, collection, .env)
+  - Selecting an entry completes `{{varName}}` pattern
+  - Variable list already available client-side from existing API calls - no backend change needed
+  - Pure UI; no TDD required
+
+- [ ] **T-146** History panel: clicking an entry restores the saved response body
+  - Currently clicking a history entry only populates method + URL in the request editor; does not load the saved response
+  - After the fix: load body (and status/latency) from the `HistoryEntry` into the response viewer panel
+  - Show a "historical" muted badge with the original timestamp so the user knows it's not a live result
+  - Body is already stored in `HistoryEntry` (up to 10KB) - no backend change needed
+  - Pure UI fix; no TDD required
+
+- [ ] **T-153** Bruno script compatibility layer
+  - Expose `res.getStatus()`, `res.getBody()`, `res.getHeader(name)`, `res.getResponseTime()` as aliases in the post-run script sandbox - Bruno scripts should paste in and run without modification
+  - Also expose `bru.setEnvVar()` / `bru.getEnvVar()` as aliases for `reqly.setEnvVar()` / `reqly.getEnvVar()` so the `bru.*` namespace works out of the box
+  - Show a one-page "Script migration" nudge in the UI when a Bruno collection is imported: a table mapping `bru.*` and `res.*` to their `reqly.*` equivalents
+  - No backend change; aliases wired in the sandbox setup
+  - TDD required: `script-compat.test.ts` - res.getStatus() returns status, res.getBody() returns body, bru.setEnvVar() sets env var, bru.getEnvVar() reads it
+
+- [ ] **T-154** Collection-scoped variables in scripts (`reqly.setVar` / `reqly.getVar`)
+  - `reqly.setVar(key, value)` and `reqly.getVar(key)` in both pre and post scripts
+  - Scoped to the collection - survives environment switches, isolated from other collections
+  - Stored in memory on the server keyed by collection name; cleared on server restart
+  - Resolves in the existing precedence chain: collection vars > env vars > .env file
+  - Use case: storing a token from a login request and reusing it across subsequent requests in the same collection without polluting the environment
+  - TDD required: `collection-vars.test.ts` - setVar persists across requests in same collection, getVar returns undefined if not set, isolated between collections
+
+- [ ] **T-155** `require()` in scripts - safelisted Node built-ins
+  - Allow `require()` inside pre and post scripts with a safelist of built-in Node modules: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`
+  - Covers the primary use case: `const { createHmac } = require('crypto')` for HMAC signing
+  - Modules outside the safelist throw a clear error: "require('module-name') is not allowed in Reqly scripts. Allowed modules: crypto, buffer, path, url, querystring, util"
+  - No npm module resolution - built-ins only; no filesystem access via `require()`
+  - TDD required: `script-require.test.ts` - require('crypto') works, require('fs') throws with message, require('axios') throws with message
+
+- [ ] **T-156** Script flow control for collection runner
+  - `reqly.setNextRequest(name)` - jumps to the named request in the collection run, skipping everything between; name must match a request in the same collection
+  - `reqly.runner.stop()` - halts the collection run immediately; remaining requests are skipped, not failed
+  - `reqly.sleep(ms)` - pauses execution for `ms` milliseconds before the next request fires; useful for rate-limited APIs
+  - All three are no-ops when running a single request outside the collection runner (no error thrown)
+  - `setNextRequest` with an unknown name throws immediately with a clear message listing valid request names
+  - TDD required: `flow-control.test.ts` - setNextRequest skips to correct request, runner.stop() halts remaining, sleep() delays by expected duration, no-op outside runner
+
+- [ ] **T-157** Extended Chai assertions: `jsonSchema` and `jsonBody`
+  - `jsonSchema` Chai plugin: `expect(res.getBody()).to.have.jsonSchema({ type: 'object', required: ['id'] })` - validates response body against a JSON Schema; Ajv is already a project dependency so no new packages needed
+  - `jsonBody` Chai plugin: `expect(res.getBody()).to.have.jsonBody({ id: 1 })` - partial deep match; passes if the response contains all the specified keys/values, ignores extra fields
+  - Both registered as Chai plugins in the sandbox setup before any script runs
+  - On failure, error message shows: expected schema / actual body excerpt for jsonSchema; expected subset / actual body for jsonBody
+  - TDD required: `chai-plugins.test.ts` - jsonSchema pass, jsonSchema fail (wrong type), jsonSchema fail (missing required), jsonBody pass with extra fields, jsonBody fail
+
+### M7 - Data & CI Power
+
+- [ ] **T-147** Data-driven testing: CSV/JSON collection runner
+  - `reqly run <collection> --data data.csv` (or `data.json`) runs the collection once per row
+  - Each row's keys become variables for that run at env-var precedence level
+  - CSV: first row is header (variable names), subsequent rows are data sets
+  - JSON: array of objects, each object is one data set
+  - Console output: one labeled result block per row ("Row 1 / Row 2...")
+  - JUnit XML: one `<testsuite>` per row so CI can distinguish failures by input set
+  - MCP tool `run_collection` gets an optional `dataFile` param
+  - TDD required: `data-runner.test.ts` - CSV parse, JSON parse, variable injection per row, multi-row output shape, JUnit shape
+
+- [ ] **T-149** Collection documentation export
+  - `reqly export docs <collection>` generates a clean markdown API reference from the collection YAML
+  - Structure: H1 = collection name, H2 per request, table for headers/params, fenced code block for body + example responses
+  - Default output path: `docs/api/<collection>.md`; `--output <path>` to override
+  - Also available as `POST /api/collections/:name/export?format=docs`
+  - Extend existing `export_collection` MCP tool with `format: "docs"` option alongside existing `postman` and `openapi`
+  - No external deps - pure string templating from existing collection YAML
+  - TDD required: `docs-exporter.test.ts` - collection with no requests, collection with headers/body/examples, output path resolution
+
+### Protocol Expansion (Later)
+
+- [ ] **T-151** WebSocket / SSE support
+  - `type: websocket` and `type: sse` request types stored in collection YAML alongside REST requests
+  - UI: persistent connection panel with live message stream; send messages (WebSocket); read event stream (SSE)
+  - MCP tool `run_request` handles both types; response is the first message or first N events for MCP consumers
+
+- [ ] **T-150** gRPC support
+  - `type: grpc` in collection YAML with `protoFile`, `service`, `method`, `message` fields
+  - `.proto` file stored at `.reqly/collections/<name>/service.proto`
+  - UI: method picker dropdown populated from proto service definition; JSON-form input for request message; response viewer shows decoded message
+  - Unary RPCs for v1; streaming in v2
+  - MCP tool `run_request` handles `type: grpc` transparently
+
+- [ ] **T-148** Client certificates / mTLS
+  - Per-collection or per-request client certificate (PEM cert + key pair)
+  - Cert paths referenced in collection YAML; actual files stored in `~/.reqly/certs/` (never committed)
+  - UI: "Certificate" tab in collection settings modal and request Auth tab; file picker for cert + key
+  - HTTP executor passes cert to `undici` dispatcher at request time
+  - `set_collection_auth` MCP tool extended with `type: mtls` and cert path params
+  - TDD required: `cert-loader.test.ts` - cert file read, invalid path error, cert passed through to executor options

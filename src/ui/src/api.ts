@@ -190,6 +190,16 @@ export async function duplicateRequest(collectionName: string, requestName: stri
   return res.json();
 }
 
+export async function moveRequest(collectionName: string, requestName: string, targetCollection: string) {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}/move`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetCollection })
+  });
+  if (!res.ok) throw new Error('Failed to move request');
+  return res.json();
+}
+
 export async function duplicateCollection(name: string) {
   const res = await fetch(`/api/collections/${encodeURIComponent(name)}/clone`, {
     method: 'POST'
