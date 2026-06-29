@@ -114,7 +114,7 @@ All Windows Support items shipped (T-115 through T-119).
 
 **Why Electron over Tauri for V1:** the Reqly server is already Node.js - it runs naturally inside Electron's main process with no language boundary. Tauri requires Rust and gives a smaller bundle (5-15MB vs 150MB) but adds 4-6 weeks of complexity. Ship Electron now, consider Tauri for V2.
 
-- [ ] **Electron wrapper** - Reqly server spawns as a child process from Electron's main process. `BrowserWindow` opens pointing at `http://localhost:4242`. On close: minimise to tray rather than quit (server keeps running).
+- [x] **Electron wrapper** (T-120) - `packages/desktop/` Electron main process spawns `reqly start` as a child (only if no server is already running), opens a `BrowserWindow` on `http://localhost:4242` after a readiness poll, hides-not-quits on close, and kills the server on quit only if it spawned it. Zero `src/` changes.
 - [ ] **System tray** - tray icon with menu: "Open Reqly", "Active project: \<path\>", "Stop Reqly", "Quit". On double-click: open/focus the browser window.
 - [ ] **Auto-start on login** - opt-in toggle in Settings. Uses `app.setLoginItemSettings()` on Mac, registry key on Windows.
 - [ ] **Auto-updater** - `electron-updater` checks GitHub Releases on startup, prompts to install in the background. Required for users who installed via DMG/EXE rather than npm.

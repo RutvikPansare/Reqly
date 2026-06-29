@@ -1,0 +1,16 @@
+{
+  "name": "reqly-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron desktop wrapper for the Reqly localhost server",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "npm run build && electron .",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "typescript": "^5.0.0"
+  }
+}

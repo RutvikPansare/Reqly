@@ -14,16 +14,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 **Architecture principle (mandatory for all Electron tasks):**
 The existing `reqly start` server is never modified. Electron is a launcher and a window - nothing more. The server runs on `localhost:4242` exactly as it does today. CLI users (`reqly start`, `reqly run`, MCP connections) are completely unaffected whether or not the Electron app is installed. The `BrowserWindow` just opens `http://localhost:4242` in a chromium frame. No embedded server, no IPC for API calls, no Electron-specific code paths in `src/server/` or `src/engine/`.
 
-- [ ] **T-120** Electron wrapper and server process
-  - **Package layout:** create `packages/desktop/` as a new workspace package. Keep it entirely separate from `src/`. The root `package.json` already has `"workspaces": ["packages/*"]` so it will be picked up automatically.
-  - **Entry point:** `packages/desktop/src/main.ts` - the Electron main process. Compile with `tsc` or `esbuild` into `packages/desktop/dist/main.js`.
-  - **Server spawn:** on `app.whenReady()`, check if a Reqly server is already running by doing a quick `GET http://localhost:4242/api/ping` (or reading `~/.reqly/running.json` lock file). If already running (user started via CLI), skip spawn - just open the window. If not running, spawn: `child_process.spawn('reqly', ['start'], { stdio: 'pipe', detached: false })`. Store the child reference. Pipe child stdout/stderr to `console.log` for debugging in Electron DevTools.
-  - **BrowserWindow:** `new BrowserWindow({ width: 1280, height: 800, webPreferences: { nodeIntegration: false, contextIsolation: true } })` then `win.loadURL('http://localhost:4242')`. No preload script needed - the UI is a plain web app served by Express, not an Electron-bundled app. Poll `http://localhost:4242` with a 200ms interval for up to 10 seconds before loading - show a plain "Starting Reqly..." html string in the window while waiting.
-  - **Window close behaviour:** intercept `win.on('close', e => { e.preventDefault(); win.hide(); })`. The server keeps running. Window is just hidden, not destroyed.
-  - **Quit behaviour:** `app.on('before-quit')` - if Electron spawned the server child (not a pre-existing instance), kill it: `child.kill('SIGTERM')`, wait up to 3 seconds, then `child.kill('SIGKILL')` if still alive. If the server was pre-existing (user started via CLI), do NOT kill it on quit.
-  - **Dev script:** `packages/desktop/package.json` scripts: `"dev": "electron ."` (points at compiled main.js), `"build": "tsc && electron-builder"`.
-  - **No changes to `src/` at all.** Verify by running `npm test` from the root - all existing tests must still pass.
-
 - [ ] **T-121** System tray icon
   - **Tray setup:** in `main.ts`, after `app.whenReady()`, create `new Tray(iconPath)`. Use a 16x16 (Mac) / 32x32 (Windows) PNG. Store icon assets at `packages/desktop/assets/tray-icon.png` and `tray-icon@2x.png`.
   - **Context menu items:**
