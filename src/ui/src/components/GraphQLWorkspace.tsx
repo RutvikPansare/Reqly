@@ -670,7 +670,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                           extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
                           onChange={setQuery}
                           onCreateEditor={view => { editorViewRef.current = view; }}
-                          className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-r [&_.cm-gutters]:!border-[var(--border)]"
+                          className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
                         />
                       </div>
                     </div>
@@ -685,7 +685,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                   theme="dark"
                   extensions={[json(), varCompletionExtension]}
                   onChange={setVariables}
-                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded overflow-hidden border border-[var(--border)] [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-r [&_.cm-gutters]:!border-[var(--border)]"
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded overflow-hidden border border-[var(--border)]"
                 />
               </div>
             ) : (
