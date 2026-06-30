@@ -11,7 +11,7 @@ describe('exportToDocs', () => {
     };
     
     const out = exportToDocs(col);
-    expect(out).toBe('# Empty\\n\\nAn empty collection\\n');
+    expect(out).toBe('# Empty\n\nAn empty collection\n');
   });
 
   test('exports collection with headers, body, and examples', () => {
