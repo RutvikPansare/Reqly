@@ -151,7 +151,11 @@ async function main() {
       // reassigns it to a new instance scoped to the new project dir.
       const scriptVars = collectionName && context.scriptVariableStore ? context.scriptVariableStore.getAll(collectionName) : {};
       const onScriptVarSet = collectionName && context.scriptVariableStore ? (k: string, v: string) => context.scriptVariableStore!.set(collectionName, k, v) : undefined;
-      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), cwd, undefined, scriptVars, onScriptVarSet, runnerContext);
+      // baseDir for scriptFile resolution: collection folder when in a collection context, else project root
+      const scriptBaseDir = collectionName
+        ? path.join(context.collectionManager.getBaseDir(), collectionName)
+        : cwd;
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), scriptBaseDir, undefined, scriptVars, onScriptVarSet, runnerContext);
     }
   };
 

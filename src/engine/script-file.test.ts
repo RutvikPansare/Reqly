@@ -32,13 +32,15 @@ afterEach(() => {
 });
 
 const baseReq = { name: 'test', method: 'GET' as const, url: 'http://localhost/test' };
+const mkEnv = (): { id: string; name: string; variables: Record<string, string> } =>
+  ({ id: 'e1', name: 'test', variables: {} });
 
 describe('postScriptFile - T-161', () => {
   it('executes script from file', async () => {
     const script = `reqly.setEnvVar('fileScriptRan', 'yes');`;
     fs.writeFileSync(path.join(tmpDir, 'post.js'), script);
 
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     await execute({ ...baseReq, postScriptFile: 'post.js' }, env, undefined, true, 50000, {}, undefined, {}, tmpDir);
     expect(env.variables.fileScriptRan).toBe('yes');
   });
@@ -47,7 +49,7 @@ describe('postScriptFile - T-161', () => {
     const script = `reqly.setEnvVar('preRan', 'yes');`;
     fs.writeFileSync(path.join(tmpDir, 'pre.js'), script);
 
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     await execute({ ...baseReq, preScriptFile: 'pre.js' }, env, undefined, true, 50000, {}, undefined, {}, tmpDir);
     expect(env.variables.preRan).toBe('yes');
   });
@@ -55,7 +57,7 @@ describe('postScriptFile - T-161', () => {
   it('inline postScript wins over postScriptFile when both set', async () => {
     fs.writeFileSync(path.join(tmpDir, 'post.js'), `reqly.setEnvVar('source', 'file');`);
 
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     const result = await execute(
       { ...baseReq, postScript: `reqly.setEnvVar('source', 'inline');`, postScriptFile: 'post.js' },
       env, undefined, true, 50000, {}, undefined, {}, tmpDir
@@ -68,7 +70,7 @@ describe('postScriptFile - T-161', () => {
   it('inline preScript wins over preScriptFile when both set', async () => {
     fs.writeFileSync(path.join(tmpDir, 'pre.js'), `reqly.setEnvVar('source', 'file');`);
 
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     const result = await execute(
       { ...baseReq, preScript: `reqly.setEnvVar('source', 'inline');`, preScriptFile: 'pre.js' },
       env, undefined, true, 50000, {}, undefined, {}, tmpDir
@@ -78,7 +80,7 @@ describe('postScriptFile - T-161', () => {
   });
 
   it('file not found returns clear error in consoleLogs', async () => {
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     const result = await execute(
       { ...baseReq, postScriptFile: 'nonexistent.js' },
       env, undefined, true, 50000, {}, undefined, {}, tmpDir
@@ -91,7 +93,7 @@ describe('postScriptFile - T-161', () => {
     const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reqly-outside-'));
     fs.writeFileSync(path.join(outsideDir, 'evil.js'), `reqly.setEnvVar('pwned', 'yes');`);
 
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     const result = await execute(
       { ...baseReq, postScriptFile: '../evil.js' },
       env, undefined, true, 50000, {}, undefined, {}, tmpDir
@@ -106,7 +108,7 @@ describe('postScriptFile - T-161', () => {
     fs.mkdirSync(path.join(tmpDir, 'scripts'));
     fs.writeFileSync(path.join(tmpDir, 'scripts', 'post.js'), `reqly.setEnvVar('nested', 'ok');`);
 
-    const env = { variables: {} as Record<string, string> };
+    const env = mkEnv();
     await execute(
       { ...baseReq, postScriptFile: 'scripts/post.js' },
       env, undefined, true, 50000, {}, undefined, {}, tmpDir

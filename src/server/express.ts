@@ -1128,7 +1128,10 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       }
 
       const dotEnvVars = context.dotEnvLoader.getVariablesRecord();
-      const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+      // scriptFile resolution: use collection folder so preScriptFile/postScriptFile paths resolve correctly
+      const scriptBaseDir = collectionName
+        ? path.join(context.collectionManager.getBaseDir(), collectionName)
+        : path.dirname(context.collectionManager.getBaseDir());
       let maxBodyBytes = 50 * 1024;
       try {
         const cfg = JSON.parse(await fs.readFile(globalConfigPath, 'utf-8'));
@@ -1137,7 +1140,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
       const response = await executeHttp(
         config, env, auth, undefined, maxBodyBytes,
-        collectionVars, collectionAuth, dotEnvVars, projectRoot, resolvedFiles
+        collectionVars, collectionAuth, dotEnvVars, scriptBaseDir, resolvedFiles
       );
       context.responseStore.set(requestConfig.name, response);
       context.historyStore.append(requestConfig, response);
