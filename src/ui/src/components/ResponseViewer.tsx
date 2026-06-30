@@ -349,7 +349,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
                 }
                 contentEl = (
                   <div className="p-1.5 flex flex-col flex-1 h-full min-h-0 min-w-0 w-full">
-                    <CollapsibleJson label="Response Body" data={parsed} filter={bodyFilter} accent="#7dd3fc" />
+                    <CollapsibleJson label="Response Body" data={parsed} filter={bodyFilter} accent="#7dd3fc" className="h-full" />
                   </div>
                 );
               } else {

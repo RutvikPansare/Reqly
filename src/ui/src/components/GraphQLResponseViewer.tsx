@@ -179,6 +179,7 @@ export function GraphQLResponseViewer({ response, isSending, request }: Props) {
             defaultOpen={!hasErrors}
             accent="#86efac"
             filter={bodyFilter}
+            className="flex-1"
           />
         )}
 
@@ -189,6 +190,7 @@ export function GraphQLResponseViewer({ response, isSending, request }: Props) {
             defaultOpen={false}
             accent="#94a3b8"
             filter={bodyFilter}
+            className="flex-1"
           />
         )}
 

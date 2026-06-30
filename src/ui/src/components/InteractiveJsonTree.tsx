@@ -94,7 +94,7 @@ export function InteractiveJsonTree({ data, name, isLast = true, defaultOpen = t
   );
 }
 
-export function CollapsibleJson({ label, data, defaultOpen = true, accent, filter = '' }: { label: string; data: unknown; defaultOpen?: boolean; accent?: string; filter?: string }) {
+export function CollapsibleJson({ label, data, defaultOpen = true, accent, filter = '', className = '' }: { label: string; data: unknown; defaultOpen?: boolean; accent?: string; filter?: string; className?: string }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState(false);
   const json = JSON.stringify(data, null, 2);
@@ -118,7 +118,7 @@ export function CollapsibleJson({ label, data, defaultOpen = true, accent, filte
   };
 
   return (
-    <div className="border border-[var(--border)] rounded flex flex-col min-h-0 shrink min-w-0 w-full overflow-hidden">
+    <div className={`border border-[var(--border)] rounded flex flex-col min-h-0 shrink min-w-0 w-full overflow-hidden ${open ? className : ''}`}>
       <div
         className="flex items-center gap-1.5 w-full px-3 py-2 text-xs font-semibold text-left transition-colors shrink-0 sticky top-0 z-10 group"
         style={{ background: 'var(--surface-2)' }}
@@ -143,7 +143,7 @@ export function CollapsibleJson({ label, data, defaultOpen = true, accent, filte
       </div>
       {open && (
         <div
-          className="p-3 overflow-auto"
+          className="p-3 overflow-auto flex-1"
           style={{ background: 'var(--surface-1)', color: 'var(--text-secondary)' }}
         >
           {hasFilter ? (
