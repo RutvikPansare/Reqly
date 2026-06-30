@@ -2,6 +2,11 @@
 
 ## 2026-06-30
 
+- [x] **T-165** Fix Windows CI failure in `cli-parser.test.ts`
+  - **Bug:** `resolveProjectDir` test hardcoded the expected path as `'/some/project'`, which failed on Windows where `path.resolve` normalizes it to a Windows drive letter (e.g. `D:\some\project`).
+  - **Fix:** Swapped the expectation string to use `path.resolve('/', '/some/project')` so the test adapts dynamically to the platform running it.
+  - CI now passes successfully across all operating systems.
+
 - [x] **T-164** Fix literal `\n` characters in Markdown API documentation export
   - **Bug:** `exportToDocs` in `src/engine/exporter.ts` joined lines with the string literal `'\\n'` instead of actual newline `'\n'`, causing the exported `.md` file to output single line strings with literal `\n` visible in the content.
   - **Fix:** Swapped `\\n` to `\n` in the `lines.join('\n')` statement at the end of the exporter.

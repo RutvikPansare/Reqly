@@ -166,7 +166,7 @@ describe('resolveProjectDir', () => {
 
   it('valid absolute path passes through with configSource=flag', () => {
     const r = resolveProjectDir({ flag: '/some/project', cwd: '/' });
-    expect(r.dir).toBe('/some/project');
+    expect(r.dir).toBe(path.resolve('/', '/some/project'));
     expect(r.configSource).toBe('flag');
     expect(r.fallbackReason).toBeUndefined();
   });
