@@ -64,6 +64,32 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   const [queryFile, setQueryFile] = useState<string>(initialRequest?.graphql?.queryFile ?? '');
   const [useQueryFile, setUseQueryFile] = useState<boolean>(!!initialRequest?.graphql?.queryFile);
 
+  const isDirty = useMemo(() => {
+    if (!initialRequest) {
+      return !!(url.trim() || query.trim());
+    }
+    if (url !== (initialRequest.url ?? '')) return true;
+    if (query !== (initialRequest.graphql?.query ?? '')) return true;
+    if (variables !== (initialRequest.graphql?.variables ? JSON.stringify(initialRequest.graphql.variables, null, 2) : '')) return true;
+    
+    const savedHeaders = initialRequest.headers || {};
+    const currentEnabled = Object.fromEntries(headers.filter(h => h.enabled && h.key.trim()).map(h => [h.key, h.value]));
+    if (JSON.stringify(savedHeaders) !== JSON.stringify(currentEnabled)) return true;
+    
+    return false;
+  }, [initialRequest, url, query, variables, headers]);
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
+
   useEffect(() => {
     fetchCollections().then((cols: any[]) => {
       setCollections(cols.map((c: any) => c.name));

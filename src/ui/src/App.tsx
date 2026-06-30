@@ -105,13 +105,14 @@ function App() {
         const target = e.target as HTMLElement;
         const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable;
         if (isTyping) return;
-        e.preventDefault();
         setShowShortcuts(s => !s);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+
 
   const [tabs, setTabs] = useState<TabData[]>(() => {
     const restored = rehydrateTabs();
@@ -121,6 +122,18 @@ function App() {
     return [t];
   });
   const [activeTabId, setActiveTabId] = useLocalStorage<string>(ACTIVE_TAB_KEY, tabs[0]?.id || 'default');
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasDirtyTabs = tabs.some(isDirty);
+      if (hasDirtyTabs) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [tabs]);
   const [runningCollection, setRunningCollection] = useState<string | null>(null);
   const [saveModal, setSaveModal] = useState<{ tabId: string; request: any } | null>(null);
   const [bottomOpen, setBottomOpen] = useState(false);
@@ -131,7 +144,7 @@ function App() {
   const [renameTabValue, setRenameTabValue] = useState('');
   const [selectedFlowName, setSelectedFlowName] = useState<string | null>(null);
   const [flowLastResults, setFlowLastResults] = useState<Record<string, any>>({});
-  const [graphqlRequest, setGraphqlRequest] = useState<any>(null);
+  const [graphqlRequest, setGraphqlRequest] = useLocalStorage<any>('reqly.graphqlRequest', null);
 
   const startTabRename = (id: string, currentName: string) => {
     setRenamingTabId(id);

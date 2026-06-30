@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, moveRequest, exportCollection, deleteExample } from '../api';
 import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
 import { CollectionSettingsModal } from './CollectionSettingsModal';
@@ -239,8 +240,8 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   const [collections, setCollections] = useState<any[]>([]);
   const [projectPath, setProjectPath] = useState<string>('');
   const [lastMcpActivityAt, setLastMcpActivityAt] = useState<number | null>(null);
-  const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
-  const [expandedReqs, setExpandedReqs] = useState<Record<string, boolean>>({});
+  const [expandedCols, setExpandedCols] = useLocalStorage<Record<string, boolean>>('reqly.expandedCols', {});
+  const [expandedReqs, setExpandedReqs] = useLocalStorage<Record<string, boolean>>('reqly.expandedReqs', {});
 
   const [creatingCol, setCreatingCol] = useState(false);
   const [newColName, setNewColName] = useState('');
