@@ -660,7 +660,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 min-h-0 flex flex-col p-2 pt-0">
+                    <div className="flex-1 min-h-0 flex flex-col p-2">
                       <div className="flex-1 min-h-0 rounded border border-[var(--border)] overflow-hidden">
                         <CodeMirror
                           value={query}
@@ -677,7 +677,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                 </div>
               </div>
             ) : bodyTab === 'variables' ? (
-              <div className="flex-1 min-h-0 p-2 pt-0">
+              <div className="flex-1 min-h-0 p-2">
                 <CodeMirror
                   value={variables}
                   height="100%"
