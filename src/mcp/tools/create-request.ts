@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'create_request',
-  description: "Adds a request to an existing collection. When to use: for each endpoint found while reading route handler source - infer method, URL, headers, and body shape from the handler, TypeScript types, Zod schemas, and validation middleware are the most reliable sources. Preferred pattern: call create_collection first if the collection doesn't exist yet, then one create_request call per endpoint. CRITICAL: Use {{baseUrl}} or {{token}} for environment variables if you detect them in the codebase, rather than hardcoding values like http://localhost:3000. Prefer placing query parameters in the `params` object rather than hardcoding them into the `url`. For multipart/form-data requests set body.type to 'multipart' and provide body.parts. File parts use filePath (relative to the project root - the file must exist at run time). Text parts use value.",
+  description: "Adds a request to an existing collection. When to use: for each endpoint found while reading route handler source - infer method, URL, headers, and body shape from the handler, TypeScript types, Zod schemas, and validation middleware are the most reliable sources. Preferred pattern: call create_collection first if the collection doesn't exist yet, then one create_request call per endpoint. CRITICAL: Use {{baseUrl}} or {{token}} for environment variables if you detect them in the codebase, rather than hardcoding values like http://localhost:3000. Prefer placing query parameters in the `params` object rather than hardcoding them into the `url`. For multipart/form-data requests set body.type to 'multipart' and provide body.parts. File parts use filePath (relative to the project root - the file must exist at run time). Text parts use value. For complex scripts (multi-line, no JSON escaping headache): write the .js file first with write_file (e.g. '.reqly/collections/auth/scripts/login-post.js'), then reference it via postScriptFile: 'scripts/login-post.js' - the engine reads the file at run time so edits are instant without touching the YAML.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -80,8 +80,10 @@ export const definition: ToolDefinition = {
               required: ['field', 'operator', 'value'],
             },
           },
-          preScript: { type: 'string', description: 'JavaScript executed before the request fires. Has access to env (read/write) and request (read-only).' },
-          postScript: { type: 'string', description: 'JavaScript executed after the response is received. Has access to env (read/write), request, and response (read-only).' },
+          preScript: { type: 'string', description: 'JavaScript executed before the request fires. Has access to env (read/write) and request (read-only). Wins over preScriptFile if both set.' },
+          postScript: { type: 'string', description: 'JavaScript executed after the response is received. Has access to env (read/write), request, and response (read-only). Wins over postScriptFile if both set.' },
+          preScriptFile: { type: 'string', description: 'Path to a .js file relative to the collection folder (e.g. "scripts/pre.js"). Engine reads the file at run time - edits are picked up without touching the YAML. Preferred agent pattern for complex scripts: write_file(".reqly/collections/<name>/scripts/pre.js", script) then set preScriptFile: "scripts/pre.js". No ../path-traversal allowed.' },
+          postScriptFile: { type: 'string', description: 'Path to a .js file relative to the collection folder (e.g. "scripts/post.js"). Engine reads the file at run time - edits are picked up without touching the YAML. Preferred agent pattern for complex scripts: write_file(".reqly/collections/<name>/scripts/post.js", script) then set postScriptFile: "scripts/post.js". No ../path-traversal allowed.' },
           specOperationId: { type: 'string', description: 'OpenAPI operationId for contract validation, used when the collection has a spec configured (set_collection_spec) and the request URL does not cleanly map to a spec path. Get valid values from list_spec_operations.' }
         },
         required: ['id', 'name', 'method', 'url']

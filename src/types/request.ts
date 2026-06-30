@@ -51,6 +51,8 @@ export interface RequestConfig {
   graphql?: GraphQLConfig;
   preScript?: string;
   postScript?: string;
+  preScriptFile?: string;
+  postScriptFile?: string;
   // Explicit mock-server route path. When set, overrides the path inferred
   // from `url` by the mock server (T-101). e.g. '/v1/charges', '/users/:id'.
   mockPath?: string;

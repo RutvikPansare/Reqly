@@ -13,6 +13,8 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 
 
+- [x] **T-161** `preScriptFile` / `postScriptFile` - script file references in requests
+
 ### M7 - Data & CI Power
 
 - [ ] **T-147** Data-driven testing: CSV/JSON collection runner

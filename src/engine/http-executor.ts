@@ -22,6 +22,20 @@ function formatNetworkError(err: any): string {
 
 import { resolveVariables } from './variable-substitutor.js';
 
+// Resolve a scriptFile reference to its content, enforcing that the resolved
+// path stays within baseDir (no path traversal). Returns the script string on
+// success, or an error message string prefixed with '[error]' on failure.
+function resolveScriptFile(scriptFile: string, baseDir: string): { script?: string; error?: string } {
+  const resolved = path.resolve(baseDir, scriptFile);
+  if (!resolved.startsWith(path.resolve(baseDir) + path.sep) && resolved !== path.resolve(baseDir)) {
+    return { error: `[error] Script file '${scriptFile}' is outside the collection folder - path traversal rejected` };
+  }
+  if (!fs.existsSync(resolved)) {
+    return { error: `[error] Script file not found: ${scriptFile}` };
+  }
+  return { script: fs.readFileSync(resolved, 'utf8') };
+}
+
 
 export async function execute(
   config: RequestConfig,
@@ -68,15 +82,26 @@ export async function execute(
 
   // Run preScript before substitution so env mutations and req mutations are
   // both picked up before variable resolution and fetch options are built.
-  if (config.preScript) {
-    const { consoleLogs: pre } = runScript(config.preScript, { 
-      env: envVars, 
-      request: config as unknown as Record<string, unknown>, 
-      req: reqMut as unknown as Record<string, unknown>,
-      scriptVars,
-      onScriptVarSet
-    });
-    consoleLogs.push(...pre);
+  // Inline preScript wins over preScriptFile; warn if both are set.
+  {
+    let preScriptSrc: string | undefined = config.preScript;
+    if (config.preScript && config.preScriptFile) {
+      consoleLogs.push('[warn] Both preScript and preScriptFile are set - preScript takes precedence');
+    } else if (config.preScriptFile && baseDir) {
+      const { script, error } = resolveScriptFile(config.preScriptFile, baseDir);
+      if (error) { consoleLogs.push(error); }
+      else { preScriptSrc = script; }
+    }
+    if (preScriptSrc) {
+      const { consoleLogs: pre } = runScript(preScriptSrc, {
+        env: envVars,
+        request: config as unknown as Record<string, unknown>,
+        req: reqMut as unknown as Record<string, unknown>,
+        scriptVars,
+        onScriptVarSet
+      });
+      consoleLogs.push(...pre);
+    }
   }
 
   let url = resolveVariables(reqMut._url, layers);
@@ -182,9 +207,18 @@ export async function execute(
       latency,
       timestamp: new Date().toISOString(),
     };
-    if (config.postScript) {
+    {
+      let postScriptSrc: string | undefined = config.postScript;
+      if (config.postScript && config.postScriptFile) {
+        consoleLogs.push('[warn] Both postScript and postScriptFile are set - postScript takes precedence');
+      } else if (config.postScriptFile && baseDir) {
+        const { script, error } = resolveScriptFile(config.postScriptFile, baseDir);
+        if (error) { consoleLogs.push(error); }
+        else { postScriptSrc = script; }
+      }
+      if (postScriptSrc) {
       const envVarsForScript = env?.variables || {};
-      const { consoleLogs: post, testResults, flowControl } = runScript(config.postScript, {
+      const { consoleLogs: post, testResults, flowControl } = runScript(postScriptSrc, {
         env: envVarsForScript,
         request: config as unknown as Record<string, unknown>,
         response: multipartResult as unknown as Record<string, unknown>,
@@ -192,9 +226,13 @@ export async function execute(
         onScriptVarSet,
         runnerContext,
       });
-      if (post.length > 0) multipartResult.consoleLogs = post;
+      if (post.length > 0) multipartResult.consoleLogs = [...consoleLogs, ...post];
+      else if (consoleLogs.length > 0) multipartResult.consoleLogs = consoleLogs;
       if (testResults.length > 0) multipartResult.testResults = testResults;
       if (runnerContext) (multipartResult as any)._flowControl = flowControl;
+      } else if (consoleLogs.length > 0) {
+        multipartResult.consoleLogs = consoleLogs;
+      }
     }
     return multipartResult;
   }
@@ -339,18 +377,28 @@ export async function execute(
     timestamp: new Date().toISOString(),
   };
 
-  if (config.postScript) {
-    const { consoleLogs: post, testResults, flowControl } = runScript(config.postScript, {
-      env: envVars,
-      request: config as unknown as Record<string, unknown>,
-      response: result as unknown as Record<string, unknown>,
-      scriptVars,
-      onScriptVarSet,
-      runnerContext,
-    });
-    consoleLogs.push(...post);
-    if (testResults.length > 0) result.testResults = testResults;
-    if (runnerContext) (result as any)._flowControl = flowControl;
+  {
+    let postScriptSrc: string | undefined = config.postScript;
+    if (config.postScript && config.postScriptFile) {
+      consoleLogs.push('[warn] Both postScript and postScriptFile are set - postScript takes precedence');
+    } else if (config.postScriptFile && baseDir) {
+      const { script, error } = resolveScriptFile(config.postScriptFile, baseDir);
+      if (error) { consoleLogs.push(error); }
+      else { postScriptSrc = script; }
+    }
+    if (postScriptSrc) {
+      const { consoleLogs: post, testResults, flowControl } = runScript(postScriptSrc, {
+        env: envVars,
+        request: config as unknown as Record<string, unknown>,
+        response: result as unknown as Record<string, unknown>,
+        scriptVars,
+        onScriptVarSet,
+        runnerContext,
+      });
+      consoleLogs.push(...post);
+      if (testResults.length > 0) result.testResults = testResults;
+      if (runnerContext) (result as any)._flowControl = flowControl;
+    }
   }
 
   if (consoleLogs.length > 0) result.consoleLogs = consoleLogs;

@@ -1,5 +1,16 @@
 # Reqly - Done
 
+## 2026-06-29
+
+- [x] **T-161** `preScriptFile` / `postScriptFile` - script file references in requests
+  - Added `preScriptFile` and `postScriptFile` optional fields to `RequestConfig` in `src/types/request.ts`
+  - `resolveScriptFile()` helper in `http-executor.ts`: resolves path relative to `baseDir`, rejects `../` traversal, returns clear `[error]` on file-not-found
+  - Wired into both preScript and postScript call sites in `http-executor.ts` (main branch + multipart branch); inline script wins with a `[warn]` logged if both set
+  - `create_request` MCP tool schema updated: `preScriptFile` and `postScriptFile` params with agent workflow guidance in descriptions; tool-level description updated with write_file pattern
+  - `llms.txt`, `knowledge.md` updated with file script behaviour and security constraint
+  - 7 TDD tests in `src/engine/script-file.test.ts`: execute from file, preScript file, inline wins (both directions), file-not-found error, path traversal rejection, nested subfolder allowed
+  - 698/698 tests pass
+
 ## 2026-06-29 (M6 bug fixes)
 
 - [x] **T-159** Fix T-143 UI gap: Tests tab not rendering `testResults` from `test()` calls
