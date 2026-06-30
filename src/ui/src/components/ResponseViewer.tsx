@@ -160,7 +160,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
     );
   }
 
-  const { status, latency, body, headers, diff, contractViolations, contractMatch } = response || {};
+  const { status, latency, body, headers, diff, contractViolations, contractMatch, _isHistorical, _timestamp } = response || {};
   const hasDiff = diff && (diff.statusChanged || diff.latencyDelta !== 0 || diff.bodyChanges?.length > 0);
   const isError = status >= 400;
   const hasContract = contractMatch != null;
@@ -207,6 +207,11 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
             <span style={{ color: 'var(--text-muted)' }}>{latency || 0} ms</span>
             {bodyBytes > 0 && (
               <span style={{ color: 'var(--text-muted)' }}>{formatSize(bodyBytes)}</span>
+            )}
+            {_isHistorical && _timestamp && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider" style={{ background: 'var(--surface-3)', color: 'var(--text-muted)' }}>
+                Historical • {new Date(_timestamp).toLocaleString()}
+              </span>
             )}
             {body != null && typeof body === 'object' && (
               <button

@@ -37,7 +37,19 @@ export function HistoryPanel({ onSelectRequest }: HistoryPanelProps) {
 
   const handleClick = (entry: HistoryEntry) => {
     onSelectRequest(
-      { name: entry.requestName || 'Untitled', method: entry.method, url: entry.url },
+      {
+        name: entry.requestName || 'Untitled',
+        method: entry.method,
+        url: entry.url,
+        _isHistory: true,
+        _historyResponse: {
+          status: entry.status,
+          latency: entry.latency,
+          body: entry.body,
+          _timestamp: entry.timestamp,
+          _isHistorical: true,
+        }
+      },
       entry.collectionName || ''
     );
   };

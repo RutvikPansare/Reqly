@@ -11,28 +11,7 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ### M6 - Script Power + Developer UX
 
-- [ ] **T-146** History panel: clicking an entry restores the saved response body
-  - Currently clicking a history entry only populates method + URL in the request editor; does not load the saved response
-  - After the fix: load body (and status/latency) from the `HistoryEntry` into the response viewer panel
-  - Show a "historical" muted badge with the original timestamp so the user knows it's not a live result
-  - Body is already stored in `HistoryEntry` (up to 10KB) - no backend change needed
-  - Pure UI fix; no TDD required
 
-- [ ] **T-153** Bruno script compatibility layer
-  - Expose `res.getStatus()`, `res.getBody()`, `res.getHeader(name)`, `res.getResponseTime()` as aliases in the post-run script sandbox - Bruno scripts should paste in and run without modification
-  - Also expose `bru.setEnvVar()` / `bru.getEnvVar()` as aliases for `reqly.setEnvVar()` / `reqly.getEnvVar()` so the `bru.*` namespace works out of the box
-  - Show a one-page "Script migration" nudge in the UI when a Bruno collection is imported: a table mapping `bru.*` and `res.*` to their `reqly.*` equivalents
-  - No backend change; aliases wired in the sandbox setup
-  - TDD required: `script-compat.test.ts` - res.getStatus() returns status, res.getBody() returns body, bru.setEnvVar() sets env var, bru.getEnvVar() reads it
-
-- [ ] **T-154** Collection-scoped variables in scripts (`reqly.setVar` / `reqly.getVar`)
-  - `reqly.setVar(key, value)` and `reqly.getVar(key)` in both pre and post scripts
-  - Scoped to the collection - survives environment switches, isolated from other collections
-  - Stored in memory on the server keyed by collection name; cleared on server restart
-  - Resolves in the existing precedence chain: collection vars > env vars > .env file
-  - Use case: storing a token from a login request and reusing it across subsequent requests in the same collection without polluting the environment
-  - **MCP:** extend `get_variables` to include runtime script vars with `source: "script"` so agents can inspect what the last script run set; update tool description accordingly
-  - TDD required: `collection-vars.test.ts` - setVar persists across requests in same collection, getVar returns undefined if not set, isolated between collections
 
 - [ ] **T-155** `require()` in scripts - safelisted Node built-ins
   - Allow `require()` inside pre and post scripts with a safelist of built-in Node modules: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`

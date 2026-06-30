@@ -271,6 +271,7 @@ export interface HistoryEntry {
   url: string;
   status: number;
   latency: number;
+  body?: string;
   requestName?: string;
   collectionName?: string;
 }

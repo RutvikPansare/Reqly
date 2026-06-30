@@ -13,7 +13,8 @@ reqly setup
 On macOS, Homebrew is also supported:
 ```bash
 brew tap RutvikPansare/reqly
-brew install reqly
+brew install reqly  # CLI only
+brew install --cask reqly  # Desktop App + CLI
 reqly setup
 ```
 
@@ -67,7 +68,7 @@ Reqly exposes the following MCP tools for AI agents:
 - `set_environment`: Switch active environment.
 - `create_environment`: Create a new named environment with variables.
 - `set_variable`: Set a variable on an environment.
-- `get_variables`: List variables for an environment.
+- `get_variables`: List variables for an environment. Pass an optional `collectionName` to also include runtime variables set by scripts in that collection (with `source: "script"`).
 - `delete_variable`: Remove a variable from an environment.
 - `start_proxy`: Start the auto-capture proxy server.
 - `stop_proxy`: Stop the auto-capture proxy server.
@@ -147,5 +148,5 @@ requests:
 - **JUnit XML Reporter:** `--reporter junit` writes a standard `<testsuite>`/`<testcase>` XML document to stdout - redirect it for CI: `reqly run my-collection --reporter junit > results.xml`. Each assertion on a request becomes one `<testcase>`; a request with no assertions is one implicit testcase that fails if status >= 500. Failed testcases get a `<failure message="...">` element with the assertion/error message.
 - **Flow CI Export:** `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml` (creates the directory if needed) - a workflow that installs Reqly, starts it, runs the flow with `--reporter junit > results.xml`, and uploads `results.xml` via `actions/upload-artifact@v4`. Add a manual "Start server" step before "Run flow" if the flow hits a local API. MCP tool `export_flow_ci` does the same and returns the written path.
 - **`reqly app`:** opens the running Reqly UI in the system default browser (`http://localhost:<port>` from the lock file). Prints "Reqly is not running. Start it with: reqly start" and exits 1 if no server is running. Works the same whether Reqly was started via the CLI or the Electron desktop app.
-- **Pre-run script sandbox (`preScript` field on a request):** runs JavaScript before the request fires. Mutations to the `req` object change the outbound request. Sandbox globals: `env` (read/write env vars), `request` (request config, read-only), `console.log/warn/error`, `req` (Bruno-compatible mutable request - `req.getUrl()`/`req.setUrl(url)`, `req.getMethod()`/`req.setMethod(method)`, `req.getHeaders()`/`req.getHeader(name)`/`req.setHeader(name, value)`/`req.removeHeader(name)`, `req.getBody()`/`req.setBody(body)`, `req.setTimeout(ms)`, `req.setMaxRedirects(n)`). Primary use cases: HMAC signing, dynamic timestamps, conditional auth header injection.
-- **Post-run script sandbox (`postScript` field on a request):** runs JavaScript after the HTTP response is received. Sandbox globals: `env` (read/write env vars), `request` (request config), `response` (response object), `console.log/warn/error`, `test(name, fn)` (Chai-style named assertion, produces a `testResults` entry), `expect` (Chai BDD - `.to.equal`, `.to.have.property`, `.to.include`, `.to.be.above`, `.to.deep.equal`), `reqly.response` (same as `response`), `reqly.setEnvVar(key, val)` / `reqly.getEnvVar(key)`. `test()` results appear in the `run_request` / `run_collection` response as `testResults: [{ name, passed, error? }]` and in JUnit XML output.
+- **Pre-run script sandbox (`preScript` field on a request):** runs JavaScript before the request fires. Mutations to the `req` object change the outbound request. Sandbox globals: `env` (read/write env vars), `request` (request config, read-only), `console.log/warn/error`, `req` (Bruno-compatible mutable request - `req.getUrl()`/`req.setUrl(url)`, `req.getMethod()`/`req.setMethod(method)`, `req.getHeaders()`/`req.getHeader(name)`/`req.setHeader(name, value)`/`req.removeHeader(name)`, `req.getBody()`/`req.setBody(body)`, `req.setTimeout(ms)`, `req.setMaxRedirects(n)`), `reqly.setVar(key, val)` / `reqly.getVar(key)` (read/write collection-scoped in-memory variables). Primary use cases: HMAC signing, dynamic timestamps, conditional auth header injection.
+- **Post-run script sandbox (`postScript` field on a request):** runs JavaScript after the HTTP response is received. Sandbox globals: `env` (read/write env vars), `request` (request config), `response` (response object), `console.log/warn/error`, `test(name, fn)` (Chai-style named assertion, produces a `testResults` entry), `expect` (Chai BDD - `.to.equal`, `.to.have.property`, `.to.include`, `.to.be.above`, `.to.deep.equal`), `reqly.response` (same as `response`), `reqly.setEnvVar(key, val)` / `reqly.getEnvVar(key)`, `reqly.setVar(key, val)` / `reqly.getVar(key)` (read/write collection-scoped in-memory variables). Bruno compatibility aliases: `res.getStatus()`, `res.getBody()`, `res.getHeader(name)`, `res.getResponseTime()`, `bru.setEnvVar(key, val)`, `bru.getEnvVar(key)`. `test()` results appear in the `run_request` / `run_collection` response as `testResults: [{ name, passed, error? }]` and in JUnit XML output.

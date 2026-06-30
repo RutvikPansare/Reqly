@@ -110,3 +110,5 @@ example/hoppscotch/
 example/insomnia/
 .claude/
 test-spec.yaml
+packages/desktop/release/
+packages/desktop/packages/

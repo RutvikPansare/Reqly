@@ -211,6 +211,8 @@ All Windows Support items shipped (T-115 through T-119).
 
 Fast follow-on to M5 (T-124). Once the Electron DMG is published to GitHub Releases, add a Homebrew cask so Mac users can install the desktop app with `brew install --cask reqly`. This is separate from the existing Homebrew formula (which installs the CLI via npm). The cask downloads the DMG directly from GitHub Releases and installs `Reqly.app` to `/Applications`. No Apple Developer account required for the cask itself. One PR to `homebrew-reqly` repo adding `Casks/reqly.rb`.
 
+- [ ] **T-158** Homebrew cask for Reqly.app - depends on T-124 DMG being published; one `Casks/reqly.rb` file + README update
+
 ---
 
 ## Later: Team Secrets Layer

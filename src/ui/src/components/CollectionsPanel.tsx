@@ -256,7 +256,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const [search, setSearch] = useState('');
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<{ name: string; format: string } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<
     | { x: number; y: number; type: 'col'; col: string }
@@ -833,10 +833,37 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         </div>
       )}
 
-      {importSuccess && (
+      {importSuccess && importSuccess.format === 'bruno' ? (
+        <Modal title="Bruno Script Migration" onClose={() => setImportSuccess(null)} width="w-[500px]">
+          <div className="p-2 space-y-4">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Reqly natively supports Bruno scripts. Here is how your <code>bru.*</code> and <code>res.*</code> aliases map to Reqly's engine:
+            </p>
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr style={{ color: 'var(--text-muted)' }}>
+                  <th className="pb-2 font-medium">Bruno</th>
+                  <th className="pb-2 font-medium">Reqly equivalent</th>
+                </tr>
+              </thead>
+              <tbody style={{ color: 'var(--text-secondary)' }}>
+                <tr><td className="py-1 border-b border-[var(--border)]"><code className="bg-[var(--surface-3)] px-1 rounded">res.getStatus()</code></td><td className="py-1 border-b border-[var(--border)]">Supported natively</td></tr>
+                <tr><td className="py-1 border-b border-[var(--border)]"><code className="bg-[var(--surface-3)] px-1 rounded">res.getBody()</code></td><td className="py-1 border-b border-[var(--border)]">Supported natively</td></tr>
+                <tr><td className="py-1 border-b border-[var(--border)]"><code className="bg-[var(--surface-3)] px-1 rounded">res.getHeader(name)</code></td><td className="py-1 border-b border-[var(--border)]">Supported natively</td></tr>
+                <tr><td className="py-1 border-b border-[var(--border)]"><code className="bg-[var(--surface-3)] px-1 rounded">res.getResponseTime()</code></td><td className="py-1 border-b border-[var(--border)]">Supported natively</td></tr>
+                <tr><td className="py-1 border-b border-[var(--border)]"><code className="bg-[var(--surface-3)] px-1 rounded">bru.setEnvVar(k, v)</code></td><td className="py-1 border-b border-[var(--border)]"><code className="bg-[var(--surface-3)] px-1 rounded">reqly.setEnvVar(k, v)</code></td></tr>
+                <tr><td className="py-1"><code className="bg-[var(--surface-3)] px-1 rounded">bru.getEnvVar(k)</code></td><td className="py-1"><code className="bg-[var(--surface-3)] px-1 rounded">reqly.getEnvVar(k)</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <ModalFooter>
+            <Button variant="primary" onClick={() => setImportSuccess(null)}>Got it</Button>
+          </ModalFooter>
+        </Modal>
+      ) : importSuccess && (
         <SuccessToast
           message="Collection imported!"
-          sub={importSuccess}
+          sub={importSuccess.name}
           onDone={() => setImportSuccess(null)}
         />
       )}

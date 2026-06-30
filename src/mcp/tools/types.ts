@@ -9,6 +9,7 @@ import { FlowManager } from '../../engine/flow-manager.js';
 import { MockServer } from '../../engine/mock-server.js';
 import { DotEnvLoader } from '../../engine/dotenv-loader.js';
 import { SpecLoader } from '../../engine/spec-loader.js';
+import { ScriptVariableStore } from '../../engine/script-variables.js';
 import { HttpResponse, CollectionRequest, Environment, AuthProfile } from '../../types/index.js';
 
 export interface EngineContext {
@@ -23,7 +24,8 @@ export interface EngineContext {
   mockServer?: MockServer;
   dotEnvLoader: DotEnvLoader;
   specLoader: SpecLoader;
-  executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>, collectionAuth?: AuthProfile) => Promise<HttpResponse>;
+  scriptVariableStore: ScriptVariableStore;
+  executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>, collectionAuth?: AuthProfile, collectionName?: string) => Promise<HttpResponse>;
   execChildPid?: number;
   lastMcpActivityAt?: number | null;
   hasEverConnectedAgent?: boolean;

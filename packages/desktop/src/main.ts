@@ -185,6 +185,7 @@ function createWindow(): void {
     height: 800,
     backgroundColor: '#0a0a0a',
     webPreferences: { nodeIntegration: false, contextIsolation: true },
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
   });
 
   mainWindow.loadURL(loadingHtml('Starting Reqly...'));

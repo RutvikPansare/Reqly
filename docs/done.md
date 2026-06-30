@@ -1,6 +1,37 @@
 # Reqly - Done
 
+## 2026-06-30
+
+- [x] **T-158** Homebrew cask for Reqly.app
+  - Wired `icon.png` into `electron-builder.yml` for macOS and Windows builds.
+  - Confirmed tray PNG paths match `packages/desktop/src/main.ts`.
+  - Added `icon.png` as the `BrowserWindow` icon on Mac in `packages/desktop/src/main.ts`.
+  - Added TODO comment in `src/ui/index.html` to copy `icon.png` to `favicon.png`.
+  - Created Homebrew cask `reqly.rb` in `homebrew-reqly` tap directory.
+  - Updated `README.md` to add `brew install --cask reqly` for the Desktop App.
+
+- [x] **T-154** Collection-scoped variables in scripts (`reqly.setVar` / `reqly.getVar`)
+  - `reqly.setVar(key, value)` and `reqly.getVar(key)` available in both pre and post scripts.
+  - Variables are scoped to the collection, persist across requests in the same collection, and reside in in-memory storage.
+  - Implemented `ScriptVariableStore` and hooked it up in `EngineContext` inside `index.ts`.
+  - Hooked variable resolution into `http-executor` with correct precedence: script vars > collection vars > env vars > .env file.
+  - Extended `get_variables` MCP tool with an optional `collectionName` parameter to include runtime script vars with `source: "script"`, and updated the tool description.
+  - TDD: `collection-vars.test.ts` added and all tests passed (verifies persistence, returning undefined, and cross-collection isolation).
+
 ## 2026-06-29
+
+- [x] **T-153** Bruno script compatibility layer
+  - `script-runner.ts` sandbox now provides `res` with `getStatus()`, `getBody()`, `getHeader(name)`, and `getResponseTime()` when a `response` is available.
+  - Added `bru` object to the sandbox with `setEnvVar` and `getEnvVar` mapped directly to `reqly.setEnvVar` and `reqly.getEnvVar`.
+  - Added a "Bruno Script Migration" modal to the UI. It appears automatically when `App.tsx` dispatches `reqly-import-success` with `format === 'bruno'`, containing a table that maps `bru.*` and `res.*` APIs to Reqly equivalents.
+  - TDD: `script-compat.test.ts` added covering the 4 `res.*` methods and 2 `bru.*` methods.
+
+- [x] **T-146** History panel: clicking an entry restores the saved response body
+  - HistoryEntry type extended with `body?: string` in `src/ui/src/api.ts` to match engine types.
+  - `HistoryPanel.tsx` now builds an ephemeral `_isHistory` request wrapper passing `_historyResponse` (status, latency, body, timestamp).
+  - `App.tsx` intercepts `_isHistory` in `handleSelectRequestFromSidebar` and loads the saved response directly into the tab's response viewer.
+  - `ResponseViewer.tsx` displays a muted "Historical • <date>" badge to clearly differentiate from live responses.
+  - TDD not required per spec as this is a pure UI wiring task using existing backend data.
 
 - [x] **T-145** Variable `{{` autocomplete - already fully implemented in `VariableInput.tsx` (the shared component used for URL bar, header/param values via `KeyValueEditor`, and the json/raw body editor). `handleChange` detects `{{` + partial name with `/\{\{([a-zA-Z0-9_-]*)$/`, filters `variables` by the typed prefix, shows a positioned dropdown with `{{varName}}` + source type badge (env/collection/dotenv) + source name. Arrow keys/Enter/Tab select and insert; Escape closes. `insertVariable` splices `{{varName}}` at the cursor, preserving text after. All three surfaces already pass `availableVariables` (the merged collection+env+dotenv list built in `RequestEditor.tsx`). No code changes needed - verifying the feature was already complete and removing the task.
   - 643/643 tests unaffected.

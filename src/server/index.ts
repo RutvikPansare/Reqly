@@ -11,6 +11,7 @@ import { FlowManager } from '../engine/flow-manager.js';
 import { MockServer } from '../engine/mock-server.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { SpecLoader } from '../engine/spec-loader.js';
+import { ScriptVariableStore } from '../engine/script-variables.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -122,6 +123,7 @@ async function main() {
   const responseStore = new ResponseStore();
   const historyStore = new HistoryStore();
   const mockServer = new MockServer(collectionManager);
+  const scriptVariableStore = new ScriptVariableStore();
 
   // --env-file overrides the persisted file list for this session only (not saved to config).
   const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
@@ -141,12 +143,15 @@ async function main() {
     mockServer,
     dotEnvLoader,
     specLoader: new SpecLoader(),
-    executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth) => {
+    scriptVariableStore,
+    executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth, collectionName) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;
       // Read context.dotEnvLoader (not the closed-over local) - switch-project
       // reassigns it to a new instance scoped to the new project dir.
-      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), cwd);
+      const scriptVars = collectionName ? context.scriptVariableStore.getAll(collectionName) : {};
+      const onScriptVarSet = collectionName ? (k: string, v: string) => context.scriptVariableStore.set(collectionName, k, v) : undefined;
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), cwd, undefined, scriptVars, onScriptVarSet);
     }
   };
 

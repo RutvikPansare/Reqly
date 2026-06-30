@@ -32,7 +32,7 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
       await context.collectionManager.getCollectionAuth(args.collectionName),
       context.authManager,
     );
-    const res = await context.executeRequest(req, env || undefined, auth, shouldTruncate, undefined, collectionVars, collectionAuth);
+    const res = await context.executeRequest(req, env || undefined, auth, shouldTruncate, undefined, collectionVars, collectionAuth, args.collectionName);
 
     let assertionsResult = undefined;
     if (req.assertions && req.assertions.length > 0) {

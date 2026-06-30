@@ -33,11 +33,13 @@ export async function execute(
   collectionAuth?: AuthProfile,
   dotEnvVars: Record<string, string> = {},
   baseDir?: string,
-  resolvedFiles?: Record<string, Buffer>
+  resolvedFiles?: Record<string, Buffer>,
+  scriptVars: Record<string, string> = {},
+  onScriptVarSet?: (key: string, value: string) => void
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
-  // Layered scope chain: collection vars > env vars > .env-file vars.
-  const layers = [collectionVars, envVars, dotEnvVars];
+  // Layered scope chain: script vars > collection vars > env vars > .env-file vars.
+  const layers = [scriptVars, collectionVars, envVars, dotEnvVars];
   const consoleLogs: string[] = [];
 
   // Mutable req state that the preScript can mutate via req.setUrl() etc.
@@ -66,7 +68,13 @@ export async function execute(
   // Run preScript before substitution so env mutations and req mutations are
   // both picked up before variable resolution and fetch options are built.
   if (config.preScript) {
-    const { consoleLogs: pre } = runScript(config.preScript, { env: envVars, request: config as unknown as Record<string, unknown>, req: reqMut as unknown as Record<string, unknown> });
+    const { consoleLogs: pre } = runScript(config.preScript, { 
+      env: envVars, 
+      request: config as unknown as Record<string, unknown>, 
+      req: reqMut as unknown as Record<string, unknown>,
+      scriptVars,
+      onScriptVarSet
+    });
     consoleLogs.push(...pre);
   }
 
@@ -175,7 +183,13 @@ export async function execute(
     };
     if (config.postScript) {
       const envVarsForScript = env?.variables || {};
-      const { consoleLogs: post, testResults } = runScript(config.postScript, { env: envVarsForScript, request: config as unknown as Record<string, unknown>, response: multipartResult as unknown as Record<string, unknown> });
+      const { consoleLogs: post, testResults } = runScript(config.postScript, { 
+        env: envVarsForScript, 
+        request: config as unknown as Record<string, unknown>, 
+        response: multipartResult as unknown as Record<string, unknown>,
+        scriptVars,
+        onScriptVarSet
+      });
       if (post.length > 0) multipartResult.consoleLogs = post;
       if (testResults.length > 0) multipartResult.testResults = testResults;
     }
@@ -323,7 +337,13 @@ export async function execute(
   };
 
   if (config.postScript) {
-    const { consoleLogs: post, testResults } = runScript(config.postScript, { env: envVars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+    const { consoleLogs: post, testResults } = runScript(config.postScript, { 
+      env: envVars, 
+      request: config as unknown as Record<string, unknown>, 
+      response: result as unknown as Record<string, unknown>,
+      scriptVars,
+      onScriptVarSet
+    });
     consoleLogs.push(...post);
     if (testResults.length > 0) result.testResults = testResults;
   }

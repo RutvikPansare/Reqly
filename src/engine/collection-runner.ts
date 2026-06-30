@@ -61,7 +61,7 @@ export class CollectionRunner {
         // Layered scope: collection vars win over env vars on collision.
         const config = substituteConfig(request, [collectionVars, envVars], this.context.responseStore);
 
-        response = await this.context.executeRequest(config, options.environment, auth, undefined, undefined, collectionVars, collectionAuth);
+        response = await this.context.executeRequest(config, options.environment, auth, undefined, undefined, collectionVars, collectionAuth, collectionName);
         this.context.responseStore.set(request.name, response);
         this.context.historyStore.append(request, response, { collectionName: collectionName });
 

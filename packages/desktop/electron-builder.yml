@@ -1,15 +1,18 @@
 appId: com.reqly.app
 productName: Reqly
+electronVersion: 33.4.11
 directories:
-  output: packages/desktop/release
+  output: release
 files:
-  - packages/desktop/dist/**
-  - node_modules/**
+  - dist/**
+  - ../../node_modules/**
 mac:
   category: public.app-category.developer-tools
   target: [dmg, zip]
+  icon: assets/icon.png
 win:
   target: [nsis]
+  icon: assets/icon.png
 publish:
   provider: github
   owner: RutvikPansare

@@ -85,9 +85,12 @@ Reqly runs on macOS, Linux, and Windows.
 # On any platform via npm
 npm install -g getreqly
 
-# On macOS via Homebrew
+# On macOS via Homebrew (CLI only)
 brew tap RutvikPansare/reqly
 brew install reqly
+
+# On macOS via Homebrew (Desktop App + CLI)
+brew install --cask reqly
 ```
 
 Then wire it up to your AI tool:
@@ -601,6 +604,8 @@ reqly.setEnvVar('timestamp', Date.now().toString())
 // postScript - extract a value from the response into an env var
 const token = reqly.response.body.access_token
 reqly.setEnvVar('authToken', token)
+
+// You can also use reqly.setVar(key, val) / reqly.getVar(key) to store collection-scoped variables in memory
 ```
 
 Scripts run in an isolated context with no filesystem or network access - they can only interact with Reqly's variable store and the response object.

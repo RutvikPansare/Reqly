@@ -229,7 +229,7 @@ function App() {
         await importCollection(text, format);
       }
       window.dispatchEvent(new Event('reqly-reload'));
-      window.dispatchEvent(new CustomEvent('reqly-import-success', { detail: file.name.replace(/\.(json|bru|yaml|yml)$/i, '') }));
+      window.dispatchEvent(new CustomEvent('reqly-import-success', { detail: { name: file.name.replace(/\.(json|bru|yaml|yml)$/i, ''), format } }));
     } catch (err: any) {
       alert(err.message || 'Import failed');
     } finally {
@@ -334,6 +334,24 @@ function App() {
   };
 
   const handleSelectRequestFromSidebar = (req: any, col: string) => {
+    if (req._isHistory) {
+      const tabId = `${col}-${req.name}`;
+      const existing = tabs.find(t => t.id === tabId);
+      if (existing) {
+        updateTab(tabId, { response: req._historyResponse });
+        setActiveTabId(tabId);
+      } else {
+        const parentReq = { ...req };
+        delete parentReq._isHistory;
+        delete parentReq._historyResponse;
+        const t = makeTab({ ...parentReq, _collection: col });
+        t.id = tabId;
+        t.response = req._historyResponse;
+        setTabs(prev => [...prev, t]);
+        setActiveTabId(tabId);
+      }
+      return;
+    }
     if (req._isExample) {
       // Open (or focus) the parent request tab and show the example's saved response.
       const tabId = `${col}-${req.name}`;
@@ -389,12 +407,15 @@ function App() {
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
         {/* Wordmark - left */}
-        <h1
-          className="shrink-0 select-none"
-          style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', color: '#e4e4e7', lineHeight: 1 }}
-        >
-          Reqly
-        </h1>
+        <div className="flex items-center gap-2">
+          <img src="/favicon.png" alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+          <h1
+            className="shrink-0 select-none"
+            style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', color: '#e4e4e7', lineHeight: 1 }}
+          >
+            Reqly
+          </h1>
+        </div>
 
         {/* Search - absolutely centered */}
         <button
