@@ -187,10 +187,11 @@ All Windows Support items shipped (T-115 through T-119).
 
 **Goal:** add multiple project roots to one Reqly instance. Sidebar shows all projects grouped by name (project → collections → requests). Each project retains its own environment context, history, and flows. No cross-project request chaining - environment variables are the bridge. The MCP stdio transport stays per-project (already correct).
 
-- [ ] **Workspace model** - `reqly workspace add <path>` registers a project root. `reqly workspace list` shows all registered roots. The UI sidebar gets a project-level grouping layer above collections. Switching the "active project" (for MCP stdio sessions and the mock server) still uses the existing `switch-project` mechanism - workspace is a UI concept, not an engine change.
+- [ ] **Workspace model (`reqly-workspace.yml`)** - Introduce a git-committable workspace file that anchors a multi-project setup. It defines a `shared_env` (for cross-project secrets) and a list of *logical* project names (e.g., `auth-service`, `billing-service`). It avoids hardcoded file paths so it doesn't break when different team members organize their folders differently.
+- [ ] **Local Project Linking** - The UI and CLI resolve logical project names against the developer's local `~/.reqly/config.json`. If a workspace requires `auth-service` and it's not linked, Reqly prompts the user (or the AI agent) to run `reqly link auth-service <path>`. This decouples the shared team configuration from the individual developer's local machine setup.
 - [ ] **Per-project environment context** - when multiple projects are loaded, each project's requests resolve variables against that project's own environments. No cross-contamination.
 - [ ] **Unified history** - the history panel shows requests across all workspace projects, tagged with the project name.
-- [ ] **Cross-project flows** - a flow step can reference `project/collection/request` instead of just `collection/request`. The flow runner switches project context per step. This is the only cross-project feature worth building - agents can write e2e flows spanning a full microservices stack.
+- [ ] **Cross-project flows** - a flow step can reference `project/collection/request` instead of just `collection/request`. The flow runner switches project context per step. Since flows use logical project names, they can be checked into git in the workspace root and run flawlessly on any teammate's machine.
 
 ---
 
