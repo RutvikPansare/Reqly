@@ -15,7 +15,11 @@ import {
   getCollectionSpec,
   setCollectionSpec,
   deleteCollectionSpec,
+  fetchEnvironments,
+  fetchDotenvFiles,
 } from '../api';
+import { VariableInput } from './VariableInput';
+import type { VariableItem } from './VariableInput';
 
 interface CollectionSettingsModalProps {
   collectionName: string;
@@ -53,13 +57,53 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
   const [specSaving, setSpecSaving] = useState(false);
   const [specError, setSpecError] = useState('');
 
+  // Global variables for autocompletion
+  const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
+  const [activeEnvName, setActiveEnvName] = useState<string>('');
+  const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
+  const [dotenvVars, setDotenvVars] = useState<{ key: string; source: string }[]>([]);
+
+  const availableVariables: VariableItem[] = [
+    ...Object.entries(collectionVars).map(([k, v]) => ({
+      name: k,
+      sourceType: 'collection',
+      sourceName: collectionName,
+      value: v,
+    })),
+    ...Object.entries(activeEnvVars)
+      .filter(([k]) => !(k in collectionVars))
+      .map(([k, v]) => ({
+        name: k,
+        sourceType: 'env',
+        sourceName: activeEnvName || 'env',
+        value: v,
+      })),
+    ...dotenvVars
+      .filter((v) => !(v.key in collectionVars) && !(v.key in activeEnvVars))
+      .map((v) => ({
+        name: v.key,
+        sourceType: 'dotenv',
+        sourceName: v.source,
+        value: 'hidden',
+      })),
+  ];
+
   useEffect(() => {
     getCollectionVariables(collectionName).then((vars) => {
+      setCollectionVars(vars);
       const entries = Object.entries(vars);
       setPairs(entries.map(([key, value]) => ({ key, value, enabled: true })));
       setOriginalKeys(entries.map(([key]) => key));
       setVarsLoaded(true);
     }).catch(console.error);
+
+    fetchEnvironments().then((data: any) => {
+      const active = data.environments?.find((e: any) => e.name === data.active);
+      setActiveEnvName(active?.name || '');
+      setActiveEnvVars(active?.variables || {});
+    }).catch(console.error);
+
+    fetchDotenvFiles().then((data: any) => setDotenvVars(data.variables || [])).catch(console.error);
 
     Promise.all([
       getCollectionAuth(collectionName),
@@ -254,12 +298,13 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
               {authType === 'bearer' && (
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Token</label>
-                  <input
+                  <VariableInput
+                    variables={availableVariables}
                     disabled={!!authProfileId}
                     className={inputCls}
                     placeholder="Bearer token or {{variable}}"
                     value={authCreds.token || ''}
-                    onChange={e => setAuthCreds({ ...authCreds, token: e.target.value })}
+                    onChange={val => setAuthCreds({ ...authCreds, token: val })}
                   />
                 </div>
               )}
@@ -269,12 +314,13 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <label className="block text-sm text-gray-400 mb-1">Key Name</label>
-                      <input
+                      <VariableInput
+                        variables={availableVariables}
                         disabled={!!authProfileId}
                         className={inputCls}
                         placeholder="X-API-Key"
                         value={authCreds.keyName || ''}
-                        onChange={e => setAuthCreds({ ...authCreds, keyName: e.target.value })}
+                        onChange={val => setAuthCreds({ ...authCreds, keyName: val })}
                       />
                     </div>
                     <div className="w-40">
@@ -292,11 +338,12 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Value</label>
-                    <input
+                    <VariableInput
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className={inputCls}
                       value={authCreds.value || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, value: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, value: val })}
                     />
                   </div>
                 </>
@@ -306,21 +353,23 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="block text-sm text-gray-400 mb-1">Username</label>
-                    <input
+                    <VariableInput
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className={inputCls}
                       value={authCreds.username || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, username: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, username: val })}
                     />
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm text-gray-400 mb-1">Password</label>
-                    <input
+                    <VariableInput
                       type="password"
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className={inputCls}
                       value={authCreds.password || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, password: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, password: val })}
                     />
                   </div>
                 </div>
@@ -331,20 +380,20 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Client ID</label>
-                      <input disabled={!!authProfileId} className={inputCls} value={authCreds.clientId || ''} onChange={e => setAuthCreds({ ...authCreds, clientId: e.target.value })} />
+                      <VariableInput variables={availableVariables} disabled={!!authProfileId} className={inputCls} value={authCreds.clientId || ''} onChange={val => setAuthCreds({ ...authCreds, clientId: val })} />
                     </div>
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Client Secret</label>
-                      <input type="password" disabled={!!authProfileId} className={inputCls} value={authCreds.clientSecret || ''} onChange={e => setAuthCreds({ ...authCreds, clientSecret: e.target.value })} />
+                      <VariableInput type="password" variables={availableVariables} disabled={!!authProfileId} className={inputCls} value={authCreds.clientSecret || ''} onChange={val => setAuthCreds({ ...authCreds, clientSecret: val })} />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Token URL</label>
-                    <input disabled={!!authProfileId} className={inputCls} placeholder="https://provider.com/oauth/token" value={authCreds.tokenUrl || ''} onChange={e => setAuthCreds({ ...authCreds, tokenUrl: e.target.value })} />
+                    <VariableInput variables={availableVariables} disabled={!!authProfileId} className={inputCls} placeholder="https://provider.com/oauth/token" value={authCreds.tokenUrl || ''} onChange={val => setAuthCreds({ ...authCreds, tokenUrl: val })} />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Scope</label>
-                    <input disabled={!!authProfileId} className={inputCls} placeholder="openid profile email" value={authCreds.scope || ''} onChange={e => setAuthCreds({ ...authCreds, scope: e.target.value })} />
+                    <VariableInput variables={availableVariables} disabled={!!authProfileId} className={inputCls} placeholder="openid profile email" value={authCreds.scope || ''} onChange={val => setAuthCreds({ ...authCreds, scope: val })} />
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     For OAuth 2.0 collection auth, reference a saved profile with an access token via the Profile picker above.
@@ -357,56 +406,61 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Certificate (PEM) path</label>
-                      <input
+                      <VariableInput
+                        variables={availableVariables}
                         disabled={!!authProfileId}
                         className={inputCls}
                         placeholder="{{cert_dir}}/client.crt"
                         value={authCreds.certPath || ''}
-                        onChange={e => setAuthCreds({ ...authCreds, certPath: e.target.value })}
+                        onChange={val => setAuthCreds({ ...authCreds, certPath: val })}
                       />
                     </div>
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Private key path</label>
-                      <input
+                      <VariableInput
+                        variables={availableVariables}
                         disabled={!!authProfileId}
                         className={inputCls}
                         placeholder="{{cert_dir}}/client.key"
                         value={authCreds.keyPath || ''}
-                        onChange={e => setAuthCreds({ ...authCreds, keyPath: e.target.value })}
+                        onChange={val => setAuthCreds({ ...authCreds, keyPath: val })}
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">PKCS#12 (PFX) path</label>
-                      <input
+                      <VariableInput
+                        variables={availableVariables}
                         disabled={!!authProfileId}
                         className={inputCls}
                         placeholder="{{cert_dir}}/client.pfx"
                         value={authCreds.pfxPath || ''}
-                        onChange={e => setAuthCreds({ ...authCreds, pfxPath: e.target.value })}
+                        onChange={val => setAuthCreds({ ...authCreds, pfxPath: val })}
                       />
                     </div>
                     <div>
                       <label className="block text-sm text-gray-400 mb-1">Passphrase</label>
-                      <input
-                        disabled={!!authProfileId}
+                      <VariableInput
+                        variables={availableVariables}
                         type="password"
+                        disabled={!!authProfileId}
                         className={inputCls}
                         placeholder="{{mtls_passphrase}}"
                         value={authCreds.passphrase || ''}
-                        onChange={e => setAuthCreds({ ...authCreds, passphrase: e.target.value })}
+                        onChange={val => setAuthCreds({ ...authCreds, passphrase: val })}
                       />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">Custom Root CA path (optional)</label>
-                    <input
+                    <VariableInput
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className={inputCls}
                       placeholder="{{cert_dir}}/ca.crt"
                       value={authCreds.caPath || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, caPath: e.target.value })}
+                      onChange={val => setAuthCreds({ ...authCreds, caPath: val })}
                     />
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -449,11 +503,12 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
 
             <div className="flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24 shrink-0">{specSource === 'path' ? 'Path' : 'URL'}</label>
-              <input
+              <VariableInput
+                variables={availableVariables}
                 className={inputCls}
                 placeholder={specSource === 'path' ? './openapi.yaml' : 'https://api.example.com/openapi.json'}
                 value={specValue}
-                onChange={e => setSpecValue(e.target.value)}
+                onChange={val => setSpecValue(val)}
               />
             </div>
 
