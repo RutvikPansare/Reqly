@@ -449,8 +449,8 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <SplitPane
         top={
-        <div className="flex flex-col h-full overflow-hidden p-4">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col h-full overflow-hidden p-2">
+          <div className="flex items-center gap-2 mb-2">
             <button
               className={`btn ${showSaved ? 'btn-primary' : 'btn-secondary'} rounded`}
               onClick={() => setShowSaved(v => !v)}
@@ -460,11 +460,11 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
               <Bookmark size={14} />
             </button>
             
-            <div className="flex-1 flex items-center border border-[var(--border-strong)] rounded bg-transparent overflow-hidden h-8">
+            <div className="flex-1 flex items-center border border-[var(--border-strong)] rounded bg-black overflow-hidden h-8">
               <span className="method-badge ml-2" style={{ background: '#db2777', color: '#fff' }}>GQL</span>
               <VariableInput
                 variables={availableVariables}
-                className="flex-1 px-3 py-1.5 text-sm bg-transparent focus:outline-none h-full"
+                className="flex-1 px-3 py-1.5 text-sm bg-black focus:outline-none h-full"
                 value={url}
                 onChange={setUrl}
                 placeholder="https://api.example.com/graphql"
