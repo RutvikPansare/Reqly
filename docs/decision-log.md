@@ -6,6 +6,19 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-30 - Nav rail architecture for multiple protocols
+
+Each protocol workspace gets a nav rail icon only when its interaction model is genuinely distinct from a REST request. Concretely:
+
+- **gRPC**: dedicated nav rail icon. Workflow is proto loading / server reflection, service browser, method picker, message editor - this can't be crammed into the REST request editor without making both worse.
+- **WebSocket + SSE**: share one "Realtime" nav rail icon. Both are persistent-connection stream protocols with the same UI paradigm (Connect button, append-only message log, composer). Two separate icons for two similar things would be wasteful.
+- **mTLS**: no nav rail icon. It is auth configuration, not a protocol workspace. Lives in the Certificate tab of Collection/Request Settings (T-148). Adding a nav rail item would misrepresent it as a separate mode of operation.
+- **REST + GraphQL**: already have their own icons.
+
+The nav rail icons are exploratory playgrounds. Saved requests of any type live in the Collections panel; opening one from there switches the request editor into the appropriate adaptive view.
+
+Final nav rail order: Collections / Environments / Flows / GraphQL / gRPC / Realtime / History / Capture / Settings (9 items, within usable limit for a developer-focused tool).
+
 ## 2026-06-29 - Desktop installers ship unsigned for v1
 
 Mac: no Apple Developer account ($99/year) for v1 - notarization isn't worth the cost before there's traction. `electron-builder.yml` deliberately omits `hardenedRuntime`/`entitlements`/`gatekeeperAssess` since those only matter for notarization. Users see "cannot be opened because the developer cannot be verified" on first launch; workaround is right-click > Open > Open anyway (one-time, well-known to the dev audience). Homebrew tap users bypass this entirely. Revisit when there's budget for a Developer account.

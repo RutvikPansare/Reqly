@@ -2,6 +2,15 @@
 
 ## 2026-06-30
 
+- [x] **T-148** Client certificates / mTLS
+  - New `AuthType.MTLS = 'mtls'` in `src/types/auth.ts`
+  - New `src/engine/cert-loader.ts` (`loadCert`, `CertLoadError`) reads PEM cert + key from absolute paths
+  - HTTP executor resolves effective auth early, builds undici `Agent` with `connect: { cert, key }` dispatcher for both regular and multipart fetch paths
+  - `set_collection_auth` MCP tool description updated with `type: mtls` and `credentials.certPath` + `credentials.keyPath` docs
+  - UI: mTLS option added to collection auth tab (CollectionSettingsModal) and request auth tab (RequestEditor); path inputs with ~/.reqly/certs/ guidance; effective auth preview shows cert/key paths
+  - `cert-loader.test.ts`: 5 tests; `http-executor.test.ts`: 3 new mTLS tests
+  - 732/732 tests pass
+
 - [x] **T-165** Fix Windows CI failure in `cli-parser.test.ts`
   - **Bug:** `resolveProjectDir` test hardcoded the expected path as `'/some/project'`, which failed on Windows where `path.resolve` normalizes it to a Windows drive letter (e.g. `D:\some\project`).
   - **Fix:** Swapped the expectation string to use `path.resolve('/', '/some/project')` so the test adapts dynamically to the platform running it.

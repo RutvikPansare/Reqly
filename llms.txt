@@ -97,6 +97,7 @@ Reqly exposes the following MCP tools for AI agents:
 - `get_mock_status`: Get running state, collection, port, and route list of the mock server.
 - `get_project`: Returns `{ projectDir, configSource, fallbackReason? }`. Call this on first connection to verify Reqly is pointed at the expected directory. `configSource` is `"flag" | "env" | "config" | "cwd"` - which priority level won. `fallbackReason` is present when a higher-priority source was detected but ignored (e.g. an unresolved `${workspaceFolder}` macro from a non-VS Code host).
 - `switch_project`: Switch Reqly to a different project directory at runtime.
+- `set_collection_auth`: Set collection-level auth inherited by all requests. Supported types: `bearer` (`credentials.token`), `basic` (`credentials.username` + `credentials.password`), `apiKey` (`credentials.key`), `oauth2`, `mtls` (`credentials.certPath` + `credentials.keyPath` - absolute paths to PEM files, store in `~/.reqly/certs/`), `none`. The executor attaches the right headers or TLS client certificate at request time.
 
 ## Reqly Features
 

@@ -525,14 +525,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <div className="mb-6 flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24">Auth Type</label>
               <div className="flex gap-2 flex-wrap">
-                {['none', 'bearer', 'apikey', 'basic', 'oauth2'].map(t => (
+                {['none', 'bearer', 'apikey', 'basic', 'oauth2', 'mtls'].map(t => (
                   <button 
                     key={t}
                     disabled={!!authProfileId}
                     className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'}`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
-                    {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t}
+                    {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t}
                   </button>
                 ))}
               </div>
@@ -748,6 +748,34 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                   })()}
                 </div>
               )}
+
+              {authType === 'mtls' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Certificate path</label>
+                    <input
+                      disabled={!!authProfileId}
+                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                      placeholder="/Users/you/.reqly/certs/client.crt"
+                      value={authCreds.certPath || ''}
+                      onChange={e => setAuthCreds({ ...authCreds, certPath: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Private key path</label>
+                    <input
+                      disabled={!!authProfileId}
+                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                      placeholder="/Users/you/.reqly/certs/client.key"
+                      value={authCreds.keyPath || ''}
+                      onChange={e => setAuthCreds({ ...authCreds, keyPath: e.target.value })}
+                    />
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Absolute paths to PEM-encoded certificate and key. Store in ~/.reqly/certs/ - never committed.
+                  </p>
+                </div>
+              )}
             </div>
 
             {!authProfileId && authType !== 'none' && (
@@ -764,7 +792,9 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         ) : activeTab === 'inherited' ? (() => {
           // Mirror http-executor.ts auth precedence:
           //   request-level auth (type:none = opt-out) > collection auth > nothing
-          const requestHasExplicitNone = authType === 'none' && !authProfileId;
+          // Only count as explicit opt-out if request YAML has auth.type defined as 'none'.
+          // Defaulting authType to 'none' when request has no auth is not an opt-out.
+          const requestHasExplicitNone = authType === 'none' && !authProfileId && !!request?.auth?.type;
           const requestHasAuth = authProfileId || (authType && authType !== 'none');
 
           // Resolve effective auth source
@@ -827,6 +857,12 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                 });
               } else {
                 rows.push({ header: 'Authorization', value: '(not yet obtained)', source: authSource, note: 'Authorize first in the Auth tab' });
+              }
+            } else if (effectiveType === 'mtls') {
+              if (effectiveCreds.certPath && effectiveCreds.keyPath) {
+                rows.push({ header: 'TLS client cert', value: effectiveCreds.certPath, source: authSource, note: `key: ${effectiveCreds.keyPath}` });
+              } else {
+                rows.push({ header: 'TLS client cert', value: '(incomplete)', source: authSource, note: 'certPath and keyPath both required' });
               }
             }
           }

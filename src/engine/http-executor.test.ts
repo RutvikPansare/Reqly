@@ -5,12 +5,13 @@ import * as os from 'os';
 import { execute, RequestError } from './http-executor.js';
 import { RequestConfig, Environment, AuthProfile, AuthType } from '../types/index.js';
 
-// Mock undici fetch
+// Mock undici fetch and Agent
 vi.mock('undici', () => ({
   fetch: vi.fn(),
+  Agent: vi.fn(),
 }));
 
-import { fetch } from 'undici';
+import { fetch, Agent } from 'undici';
 
 describe('http-executor', () => {
   it('should execute a simple GET request', async () => {
@@ -440,6 +441,116 @@ describe('http-executor', () => {
       const headers = headersOf();
       expect(headers['Content-Type']).toBeUndefined();
       expect(headers['content-type']).toBeUndefined();
+    });
+  });
+
+  describe('mTLS auth', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reqly-mtls-test-'));
+      vi.mocked(Agent).mockClear();
+      vi.mocked(fetch).mockClear();
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    function mockOk() {
+      vi.mocked(fetch).mockResolvedValue({
+        status: 200,
+        headers: new Headers({}),
+        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+        text: vi.fn().mockResolvedValue(''),
+      } as any);
+    }
+
+    it('creates an Agent with cert and key buffers when auth type is mtls', async () => {
+      const certFile = path.join(tmpDir, 'client.crt');
+      const keyFile  = path.join(tmpDir, 'client.key');
+      fs.writeFileSync(certFile, 'CERT');
+      fs.writeFileSync(keyFile, 'KEY');
+      mockOk();
+
+      const auth: AuthProfile = {
+        id: 'mtls1', name: 'mTLS', type: AuthType.MTLS,
+        credentials: { certPath: certFile, keyPath: keyFile },
+      };
+
+      await execute({ method: 'GET', url: 'https://example.com' }, undefined, auth);
+
+      expect(Agent).toHaveBeenCalledOnce();
+      const agentArgs = vi.mocked(Agent).mock.calls[0][0] as any;
+      expect(agentArgs.connect.cert).toBeInstanceOf(Buffer);
+      expect(agentArgs.connect.key).toBeInstanceOf(Buffer);
+      expect(agentArgs.connect.cert.toString()).toBe('CERT');
+      expect(agentArgs.connect.key.toString()).toBe('KEY');
+    });
+
+    it('creates an Agent with pfx, passphrase, and ca when provided', async () => {
+      const pfxFile = path.join(tmpDir, 'client.pfx');
+      const caFile  = path.join(tmpDir, 'ca.crt');
+      fs.writeFileSync(pfxFile, 'PFX');
+      fs.writeFileSync(caFile, 'CA');
+      mockOk();
+
+      const auth: AuthProfile = {
+        id: 'mtls2', name: 'mTLS', type: AuthType.MTLS,
+        credentials: { pfxPath: pfxFile, passphrase: 'test', caPath: caFile },
+      };
+
+      await execute({ method: 'GET', url: 'https://example.com' }, undefined, auth);
+
+      expect(Agent).toHaveBeenCalledOnce();
+      const agentArgs = vi.mocked(Agent).mock.calls[0][0] as any;
+      expect(agentArgs.connect.pfx.toString()).toBe('PFX');
+      expect(agentArgs.connect.passphrase).toBe('test');
+      expect(agentArgs.connect.ca[0].toString()).toBe('CA');
+    });
+
+    it('resolves variables in paths and passphrase', async () => {
+      const pfxFile = path.join(tmpDir, 'client.pfx');
+      fs.writeFileSync(pfxFile, 'PFX_VAR');
+      mockOk();
+
+      const auth: AuthProfile = {
+        id: 'mtls3', name: 'mTLS', type: AuthType.MTLS,
+        credentials: { pfxPath: '{{dir}}/client.pfx', passphrase: '{{pass}}' },
+      };
+      
+      const env: Environment = {
+        id: 'e1', name: 'dev', variables: { dir: tmpDir, pass: 'secret' }
+      };
+
+      await execute({ method: 'GET', url: 'https://example.com' }, env, auth);
+
+      expect(Agent).toHaveBeenCalledOnce();
+      const agentArgs = vi.mocked(Agent).mock.calls[0][0] as any;
+      expect(agentArgs.connect.pfx.toString()).toBe('PFX_VAR');
+      expect(agentArgs.connect.passphrase).toBe('secret');
+    });
+
+    it('throws RequestError when neither pfxPath nor certPath+keyPath is provided', async () => {
+      const auth: AuthProfile = {
+        id: 'mtls4', name: 'mTLS', type: AuthType.MTLS,
+        credentials: { keyPath: '/some/key.pem' },
+      };
+
+      await expect(
+        execute({ method: 'GET', url: 'https://example.com' }, undefined, auth)
+      ).rejects.toThrow(/mTLS auth requires either pfxPath, or both/);
+    });
+
+    it('throws RequestError when cert file does not exist', async () => {
+      const auth: AuthProfile = {
+        id: 'mtls5', name: 'mTLS', type: AuthType.MTLS,
+        credentials: { certPath: '/no/such/cert.pem', keyPath: '/no/such/key.pem' },
+      };
+
+      await expect(
+        execute({ method: 'GET', url: 'https://example.com' }, undefined, auth)
+      ).rejects.toThrow(RequestError);
     });
   });
 });

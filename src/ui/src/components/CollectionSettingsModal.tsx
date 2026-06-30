@@ -22,7 +22,7 @@ interface CollectionSettingsModalProps {
   onClose: () => void;
 }
 
-const AUTH_TYPES = ['none', 'bearer', 'apiKey', 'basic', 'oauth2'] as const;
+const AUTH_TYPES = ['none', 'bearer', 'apiKey', 'basic', 'oauth2', 'mtls'] as const;
 type AuthTabType = typeof AUTH_TYPES[number];
 
 export function CollectionSettingsModal({ collectionName, onClose }: CollectionSettingsModalProps) {
@@ -239,7 +239,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                     className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
-                    {t === 'apiKey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'none' ? 'None' : t.charAt(0).toUpperCase() + t.slice(1)}
+                    {t === 'apiKey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t === 'none' ? 'None' : t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
                 ))}
               </div>
@@ -348,6 +348,34 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     For OAuth 2.0 collection auth, reference a saved profile with an access token via the Profile picker above.
+                  </p>
+                </div>
+              )}
+
+              {authType === 'mtls' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Certificate path</label>
+                    <input
+                      disabled={!!authProfileId}
+                      className={inputCls}
+                      placeholder="/Users/you/.reqly/certs/client.crt"
+                      value={authCreds.certPath || ''}
+                      onChange={e => setAuthCreds({ ...authCreds, certPath: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Private key path</label>
+                    <input
+                      disabled={!!authProfileId}
+                      className={inputCls}
+                      placeholder="/Users/you/.reqly/certs/client.key"
+                      value={authCreds.keyPath || ''}
+                      onChange={e => setAuthCreds({ ...authCreds, keyPath: e.target.value })}
+                    />
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Provide absolute paths to PEM-encoded certificate and private key files. Store certs in ~/.reqly/certs/ - they are never committed to the repo.
                   </p>
                 </div>
               )}

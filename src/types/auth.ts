@@ -3,6 +3,7 @@ export enum AuthType {
   API_KEY = 'apiKey',
   BASIC = 'basic',
   OAUTH2 = 'oauth2',
+  MTLS = 'mtls',
 }
 
 export interface AuthProfile {

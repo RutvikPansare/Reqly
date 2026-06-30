@@ -1,4 +1,5 @@
-import { fetch } from 'undici';
+import { fetch, Agent } from 'undici';
+import { loadCert, CertLoadError } from './cert-loader.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { RequestConfig, Environment, AuthProfile, AuthType, HttpResponse, MultipartBody } from '../types/index.js';
@@ -125,6 +126,46 @@ export async function execute(
 
   let body = reqMut._body as typeof config.body;
 
+  // Resolve effective auth early so dispatcher (mTLS) is available for all fetch paths.
+  let effectiveAuthEarly: AuthProfile | undefined;
+  if (config.auth?.type === 'none') {
+    effectiveAuthEarly = undefined;
+  } else if (auth) {
+    effectiveAuthEarly = auth;
+  } else if (config.auth) {
+    effectiveAuthEarly = config.auth as AuthProfile;
+  } else if (!config.authProfileId && collectionAuth && collectionAuth.type !== ('none' as AuthType)) {
+    effectiveAuthEarly = collectionAuth;
+  }
+
+  let sharedDispatcher: Agent | undefined;
+  if (effectiveAuthEarly?.type === AuthType.MTLS) {
+    const { certPath: rawCert, keyPath: rawKey, pfxPath: rawPfx, passphrase: rawPassphrase, caPath: rawCa } = effectiveAuthEarly.credentials;
+
+    const certPath = rawCert ? resolveVariables(rawCert, layers) : undefined;
+    const keyPath = rawKey ? resolveVariables(rawKey, layers) : undefined;
+    const pfxPath = rawPfx ? resolveVariables(rawPfx, layers) : undefined;
+    const passphrase = rawPassphrase ? resolveVariables(rawPassphrase, layers) : undefined;
+    const caPath = rawCa ? resolveVariables(rawCa, layers) : undefined;
+
+    if (!pfxPath && (!certPath || !keyPath)) {
+      throw new RequestError('mTLS auth requires either pfxPath, or both certPath and keyPath');
+    }
+    try {
+      const certBuffers = loadCert({ certPath, keyPath, pfxPath, passphrase, caPath });
+      const connectOpts: any = {};
+      if (certBuffers.cert) connectOpts.cert = certBuffers.cert;
+      if (certBuffers.key) connectOpts.key = certBuffers.key;
+      if (certBuffers.pfx) connectOpts.pfx = certBuffers.pfx;
+      if (certBuffers.passphrase !== undefined) connectOpts.passphrase = certBuffers.passphrase;
+      if (certBuffers.ca) connectOpts.ca = certBuffers.ca;
+      
+      sharedDispatcher = new Agent({ connect: connectOpts });
+    } catch (e: any) {
+      throw new RequestError(`mTLS cert load failed: ${e.message}`);
+    }
+  }
+
   // Multipart branch: build a FormData from parts. Must come before the generic
   // object branch so that { type: 'multipart', parts: [...] } is not JSON-stringified.
   if (body && typeof body === 'object' && (body as MultipartBody).type === 'multipart') {
@@ -171,7 +212,7 @@ export async function execute(
     const startTime = Date.now();
     let response;
     try {
-      response = await fetch(url, { method: config.method, headers, body: formData as any });
+      response = await fetch(url, { method: config.method, headers, body: formData as any, ...(sharedDispatcher ? { dispatcher: sharedDispatcher } : {}) } as any);
     } catch (err: any) {
       throw new RequestError(formatNetworkError(err));
     }
@@ -303,7 +344,8 @@ export async function execute(
       method: config.method,
       headers,
       body: body as string | undefined,
-    });
+      ...(sharedDispatcher ? { dispatcher: sharedDispatcher } : {}),
+    } as any);
   } catch (err: any) {
     throw new RequestError(formatNetworkError(err));
   }

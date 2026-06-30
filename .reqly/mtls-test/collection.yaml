@@ -1,0 +1,5 @@
+auth:
+  type: mtls
+  credentials:
+    certPath: /Users/Rutvik/.reqly/certs/test-client.crt
+    keyPath: /Users/Rutvik/.reqly/certs/test-client.key
