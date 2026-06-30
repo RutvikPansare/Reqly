@@ -262,6 +262,8 @@
   /* JSON Tree Line Numbers */
   .json-tree {
     counter-reset: json-line;
+    position: relative;
+    padding-left: 3.5rem !important;
   }
   .json-line {
     display: flex;
@@ -269,14 +271,15 @@
   .json-line::before {
     counter-increment: json-line;
     content: counter(json-line);
-    display: inline-block;
-    min-width: 1.5rem;
+    position: absolute;
+    left: 0;
+    width: 2.5rem;
     text-align: right;
-    margin-right: 0.75rem;
     color: var(--text-muted);
     font-size: 10px;
     opacity: 0.5;
     user-select: none;
+    line-height: 18px; /* Match the line height of the text */
   }
 }
 
