@@ -13,14 +13,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 
 
-- [ ] **T-157** Extended Chai assertions: `jsonSchema` and `jsonBody`
-  - `jsonSchema` Chai plugin: `expect(res.getBody()).to.have.jsonSchema({ type: 'object', required: ['id'] })` - validates response body against a JSON Schema; Ajv is already a project dependency so no new packages needed
-  - `jsonBody` Chai plugin: `expect(res.getBody()).to.have.jsonBody({ id: 1 })` - partial deep match; passes if the response contains all the specified keys/values, ignores extra fields
-  - Both registered as Chai plugins in the sandbox setup before any script runs
-  - On failure, error message shows: expected schema / actual body excerpt for jsonSchema; expected subset / actual body for jsonBody
-  - **MCP:** results from `jsonSchema` and `jsonBody` assertions appear in the same `testResults` array introduced in T-143 - no separate field needed; update `run_request` tool description to note Chai plugin assertions are included
-  - TDD required: `chai-plugins.test.ts` - jsonSchema pass, jsonSchema fail (wrong type), jsonSchema fail (missing required), jsonBody pass with extra fields, jsonBody fail
-
 ### M7 - Data & CI Power
 
 - [ ] **T-147** Data-driven testing: CSV/JSON collection runner

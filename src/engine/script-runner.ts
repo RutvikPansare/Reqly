@@ -1,11 +1,56 @@
 import vm from 'vm';
-import { expect as chaiExpect } from 'chai';
+import * as chai from 'chai';
+const chaiExpect = chai.expect;
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 import nodeCrypto from 'crypto';
 import nodeBuffer from 'buffer';
 import nodePath from 'path';
 import nodeUrl from 'url';
 import nodeQuerystring from 'querystring';
 import nodeUtil from 'util';
+
+// Ajv instance shared across script invocations - setup once at module load.
+const ajv = new Ajv({ allErrors: true });
+addFormats(ajv);
+
+function isSubset(expected: Record<string, unknown>, actual: Record<string, unknown>): { ok: boolean; mismatches: string[] } {
+  const mismatches: string[] = [];
+  for (const [key, val] of Object.entries(expected)) {
+    if (!(key in actual)) {
+      mismatches.push(`missing key '${key}'`);
+    } else if (JSON.stringify(actual[key]) !== JSON.stringify(val)) {
+      mismatches.push(`'${key}': expected ${JSON.stringify(val)}, got ${JSON.stringify(actual[key])}`);
+    }
+  }
+  return { ok: mismatches.length === 0, mismatches };
+}
+
+chai.use(function (c, utils) {
+  utils.addMethod(c.Assertion.prototype, 'jsonSchema', function (this: any, schema: Record<string, unknown>) {
+    const obj = utils.flag(this, 'object');
+    const validate = ajv.compile(schema);
+    const valid = validate(obj);
+    const bodyExcerpt = JSON.stringify(obj).slice(0, 200);
+    this.assert(
+      valid,
+      `expected body to match JSON schema but got errors: ${ajv.errorsText(validate.errors)} | actual: ${bodyExcerpt}`,
+      `expected body NOT to match JSON schema`
+    );
+  });
+
+  utils.addMethod(c.Assertion.prototype, 'jsonBody', function (this: any, expected: Record<string, unknown>) {
+    const obj = utils.flag(this, 'object');
+    const actual = (typeof obj === 'object' && obj !== null) ? obj as Record<string, unknown> : {};
+    const { ok, mismatches } = isSubset(expected, actual);
+    const bodyExcerpt = JSON.stringify(actual).slice(0, 200);
+    this.assert(
+      ok,
+      `expected body to contain ${JSON.stringify(expected)} but: ${mismatches.join('; ')} | actual: ${bodyExcerpt}`,
+      `expected body NOT to contain ${JSON.stringify(expected)}`
+    );
+  });
+});
 
 const ALLOWED_MODULES: Record<string, unknown> = {
   crypto: nodeCrypto,

@@ -1,5 +1,15 @@
 # Reqly - Done
 
+## 2026-06-29 (T-157)
+
+- [x] **T-157** Extended Chai assertions: `jsonSchema` and `jsonBody`
+  - `expect(val).to.have.jsonSchema(schema)` - validates value against JSON Schema via Ajv; error includes Ajv error text and actual body excerpt
+  - `expect(val).to.have.jsonBody(subset)` - partial deep match; passes if actual contains all expected keys/values, ignores extra fields; error names mismatched keys
+  - Both registered as Chai plugins at module load in `script-runner.ts`, available in all pre/post scripts automatically
+  - Results appear in existing `testResults` array, no new fields
+  - `run_request` MCP tool description updated to document both plugins
+  - TDD: `chai-plugins.test.ts` - 10 tests; no new packages needed (Ajv already in deps)
+
 ## 2026-06-29 (T-156)
 
 - [x] **T-156** Script flow control for collection runner
