@@ -25,7 +25,7 @@ export interface EngineContext {
   mockServer?: MockServer;
   dotEnvLoader: DotEnvLoader;
   specLoader: SpecLoader;
-  scriptVariableStore: ScriptVariableStore;
+  scriptVariableStore?: ScriptVariableStore;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>, collectionAuth?: AuthProfile, collectionName?: string, runnerContext?: RunnerContext) => Promise<HttpResponse>;
   execChildPid?: number;
   lastMcpActivityAt?: number | null;

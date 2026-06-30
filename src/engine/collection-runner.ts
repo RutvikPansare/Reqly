@@ -24,7 +24,7 @@ export interface CollectionRunResult {
   passed: number;
   failed: number;
   results: RequestRunResult[];
-  stoppedEarly: boolean;
+  stoppedEarly?: boolean;
   jumpedTo?: string;
 }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { execute } from './http-executor.js';
 import { ScriptVariableStore } from './script-variables.js';
+import type { HttpMethod } from '../types/request.js';
 
 vi.mock('undici', () => ({
   fetch: vi.fn(),
@@ -23,14 +24,14 @@ describe('ScriptVariables', () => {
   it('setVar persists across requests in the same collection', async () => {
     const config1 = {
       name: 'Req1',
-      method: 'GET',
+      method: 'GET' as HttpMethod,
       url: 'http://localhost/test1',
       postScript: `reqly.setVar('token', 'abc-123');`,
     };
 
     const config2 = {
       name: 'Req2',
-      method: 'GET',
+      method: 'GET' as HttpMethod,
       url: 'http://localhost/test2',
       postScript: `test('check var', () => { expect(reqly.getVar('token')).to.equal('abc-123'); });`,
     };
@@ -81,7 +82,7 @@ describe('ScriptVariables', () => {
   it('getVar returns undefined if not set', async () => {
     const config = {
       name: 'Req1',
-      method: 'GET',
+      method: 'GET' as HttpMethod,
       url: 'http://localhost/test1',
       postScript: `test('check empty var', () => { expect(reqly.getVar('missing')).to.be.undefined; });`,
     };
@@ -111,7 +112,7 @@ describe('ScriptVariables', () => {
   it('is isolated between collections', async () => {
     const config = {
       name: 'Req1',
-      method: 'GET',
+      method: 'GET' as HttpMethod,
       url: 'http://localhost/test1',
       postScript: `reqly.setVar('token', 'abc-123');`,
     };

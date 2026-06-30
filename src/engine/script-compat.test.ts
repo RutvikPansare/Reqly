@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { runScript } from './script-runner';
+import { runScript } from './script-runner.js';
 
 describe('Bruno script compatibility layer', () => {
   it('res.getStatus() returns status', () => {
     const script = `reqly.setEnvVar('s', String(res.getStatus()));`;
     const context = {
-      env: {},
+      env: {} as Record<string, string>,
       request: {},
       response: { status: 201 }
     };
@@ -16,7 +16,7 @@ describe('Bruno script compatibility layer', () => {
   it('res.getBody() returns body', () => {
     const script = `reqly.setEnvVar('b', res.getBody().foo);`;
     const context = {
-      env: {},
+      env: {} as Record<string, string>,
       request: {},
       response: { body: { foo: 'bar' } }
     };
@@ -30,7 +30,7 @@ describe('Bruno script compatibility layer', () => {
       reqly.setEnvVar('h2', res.getHeader('x-test'));
     `;
     const context = {
-      env: {},
+      env: {} as Record<string, string>,
       request: {},
       response: { headers: { 'x-test': 'value' } }
     };
@@ -42,7 +42,7 @@ describe('Bruno script compatibility layer', () => {
   it('res.getResponseTime() returns latency', () => {
     const script = `reqly.setEnvVar('l', String(res.getResponseTime()));`;
     const context = {
-      env: {},
+      env: {} as Record<string, string>,
       request: {},
       response: { latency: 123 }
     };
@@ -53,7 +53,7 @@ describe('Bruno script compatibility layer', () => {
   it('bru.setEnvVar() sets env var', () => {
     const script = `bru.setEnvVar('key', 'value');`;
     const context = {
-      env: {},
+      env: {} as Record<string, string>,
       request: {}
     };
     runScript(script, context);
@@ -63,7 +63,7 @@ describe('Bruno script compatibility layer', () => {
   it('bru.getEnvVar() reads env var', () => {
     const script = `reqly.setEnvVar('copy', bru.getEnvVar('original'));`;
     const context = {
-      env: { original: 'source' },
+      env: { original: 'source' } as Record<string, string>,
       request: {}
     };
     runScript(script, context);

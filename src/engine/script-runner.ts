@@ -11,8 +11,10 @@ import nodeQuerystring from 'querystring';
 import nodeUtil from 'util';
 
 // Ajv instance shared across script invocations - setup once at module load.
-const ajv = new Ajv({ allErrors: true });
-addFormats(ajv);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ajv = new (Ajv as any)({ allErrors: true });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(addFormats as any)(ajv);
 
 function isSubset(expected: Record<string, unknown>, actual: Record<string, unknown>): { ok: boolean; mismatches: string[] } {
   const mismatches: string[] = [];

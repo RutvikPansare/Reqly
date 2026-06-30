@@ -8,6 +8,7 @@ import { CollectionRunner } from '../engine/collection-runner.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { SpecLoader } from '../engine/spec-loader.js';
+import { ScriptVariableStore } from '../engine/script-variables.js';
 import * as path from 'path';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
@@ -93,6 +94,7 @@ export async function handleRunCommand(
           total: 1,
           passed: passed ? 1 : 0,
           failed: passed ? 0 : 1,
+          stoppedEarly: false,
           results: [{
             requestName: req.name,
             response: res,
@@ -136,6 +138,7 @@ export async function handleRunCommand(
         flowManager: new FlowManager(collectionManager.getBaseDir()),
         dotEnvLoader,
         specLoader: new SpecLoader(),
+        scriptVariableStore: new ScriptVariableStore(),
         executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
           executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
       };

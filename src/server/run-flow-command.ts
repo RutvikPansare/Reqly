@@ -7,6 +7,7 @@ import { FlowManager } from '../engine/flow-manager.js';
 import { FlowRunner } from '../engine/flow-runner.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { SpecLoader } from '../engine/spec-loader.js';
+import { ScriptVariableStore } from '../engine/script-variables.js';
 import * as path from 'path';
 import { ParsedArgs } from './cli-parser.js';
 import { EngineContext } from '../mcp/tools/types.js';
@@ -105,6 +106,7 @@ export async function handleRunFlowCommand(
       flowManager,
       dotEnvLoader,
       specLoader: new SpecLoader(),
+      scriptVariableStore: new ScriptVariableStore(),
       executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
         executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
     };
