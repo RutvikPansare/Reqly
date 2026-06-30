@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "jsonplaceholder",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "create-todo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/todos",
+          "host": [
+            ""
+          ],
+          "path": [
+            "{{baseUrl}}",
+            "todos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Learn Reqly\",\n  \"completed\": false,\n  \"userId\": 1\n}\n"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get-todo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/todos/1",
+          "host": [
+            ""
+          ],
+          "path": [
+            "{{baseUrl}}",
+            "todos",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get-user",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{create-todo.response.body.userId}}",
+          "host": [
+            ""
+          ],
+          "path": [
+            "{{baseUrl}}",
+            "users",
+            "{{create-todo.response.body.userId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "list-todos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/todos",
+          "host": [
+            ""
+          ],
+          "path": [
+            "{{baseUrl}}",
+            "todos"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

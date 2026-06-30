@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as path from 'path';
+import { resolveMcpMode } from './startup-mode.js';
 import * as os from 'os';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
@@ -179,19 +180,18 @@ async function main() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectDir: cwd })
       });
-      if (res.ok) {
+      const mode = resolveMcpMode({ ok: res.ok, status: res.status });
+      if (mode === 'switched') {
         console.error(`Switched active project to ${cwd}`);
         mcpOnly = true;
       } else {
-        // Server is running but rejected the switch (4xx = bad path, 5xx = server error).
-        // Do NOT attempt to bind port 4242 - that would EADDRINUSE against the live server.
-        // Run MCP-only, attached to whatever project the running server is already on.
+        // mcp-only: server running but rejected switch - do NOT bind port 4242
         const body = await res.text().catch(() => '');
         console.error(`[reqly] switch-project returned ${res.status} - running MCP-only against current project. ${body}`);
         mcpOnly = true;
       }
     } catch (e: any) {
-      if (e?.cause?.code === 'ECONNREFUSED' || e?.code === 'ECONNREFUSED') {
+      if (resolveMcpMode(e?.cause?.code === 'ECONNREFUSED' || e?.code === 'ECONNREFUSED' ? 'econnrefused' : 'error') === 'start-fresh') {
         // Server not actually running despite lock - fall through to normal start
         await clearLock();
       } else {

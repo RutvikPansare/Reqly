@@ -1,0 +1,7 @@
+name: get-user
+method: GET
+url: '{{baseUrl}}/users/{{create-todo.response.body.userId}}'
+assertions:
+  - field: status
+    operator: eq
+    value: 200

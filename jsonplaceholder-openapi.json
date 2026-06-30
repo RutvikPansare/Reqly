@@ -1,0 +1,82 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "jsonplaceholder",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "{{baseUrl}}/todos": {
+      "post": {
+        "operationId": "createodo",
+        "summary": "create-todo",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "example": "application/json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "completed": {
+                    "type": "boolean"
+                  },
+                  "userId": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listodos",
+        "summary": "list-todos",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "{{baseUrl}}/todos/1": {
+      "get": {
+        "operationId": "getodo",
+        "summary": "get-todo",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "{{baseUrl}}/users/{{create-todo.response.body.userId}}": {
+      "get": {
+        "operationId": "getser",
+        "summary": "get-user",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}

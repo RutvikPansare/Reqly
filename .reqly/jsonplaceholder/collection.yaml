@@ -1,0 +1,4 @@
+description: JSONPlaceholder starter collection - free fake REST API, no auth, no setup
+variables:
+  baseUrl: https://jsonplaceholder.typicode.com
+  apiVersion: v1
