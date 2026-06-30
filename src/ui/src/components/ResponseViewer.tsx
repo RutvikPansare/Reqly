@@ -322,7 +322,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         )}
       </div>
 
-      <div className="flex-1 min-w-0 w-full overflow-y-auto font-mono text-sm relative" style={{ background: 'var(--surface-1)' }}>
+      <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden font-mono text-sm relative" style={{ background: 'var(--surface-1)' }}>
         {isSending && (
           <div className="absolute inset-0 backdrop-blur-sm z-10" style={{ background: 'rgba(0,0,0,0.3)' }} />
         )}
@@ -348,17 +348,19 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
                   try { parsed = JSON.parse(body); } catch { /* ignore */ }
                 }
                 contentEl = (
-                  <div className="p-4 flex flex-col flex-1 h-full min-h-[400px] min-w-0 w-full">
+                  <div className="p-4 flex flex-col flex-1 h-full min-h-0 min-w-0 w-full">
                     <CollapsibleJson label="Response Body" data={parsed} filter={bodyFilter} accent="#7dd3fc" />
                   </div>
                 );
               } else {
                 contentEl = (
-                  <pre
-                    className="p-4 whitespace-pre-wrap outline-none leading-relaxed"
-                    style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
-                    dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
-                  />
+                  <div className="p-4 flex-1 h-full min-h-0 min-w-0 w-full overflow-y-auto">
+                    <pre
+                      className="whitespace-pre-wrap outline-none leading-relaxed"
+                      style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
+                      dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
+                    />
+                  </div>
                 );
               }
 
