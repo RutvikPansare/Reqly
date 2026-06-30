@@ -449,8 +449,8 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <SplitPane
         top={
-        <div className="flex flex-col h-full overflow-hidden p-2">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-col h-full overflow-hidden p-0">
+          <div className="flex items-center gap-2 mb-1 p-2 pb-0">
             <button
               className={`btn ${showSaved ? 'btn-primary' : 'btn-secondary'} rounded`}
               onClick={() => setShowSaved(v => !v)}
@@ -669,7 +669,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                           extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
                           onChange={setQuery}
                           onCreateEditor={view => { editorViewRef.current = view; }}
-                          className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                          className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
                         />
                       </div>
                     </div>
@@ -684,7 +684,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                   theme="dark"
                   extensions={[json(), varCompletionExtension]}
                   onChange={setVariables}
-                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded-none border-t border-[var(--border)]"
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded-none border-t border-[var(--border)] [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
                 />
               </div>
             ) : (

@@ -445,7 +445,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2" style={{ background: 'var(--surface-1)' }}>
+      <div className="flex-1 overflow-y-auto p-0" style={{ background: 'var(--surface-1)' }}>
         {activeTab === 'params' ? (
           <div className="py-2">
             <KeyValueEditor pairs={paramsList} onChange={handleParamsChange} variables={availableVariables} />
@@ -457,7 +457,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         ) : activeTab === 'body' ? (
           <div className="flex flex-col gap-3 h-full">
             {/* Body type selector */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap px-2 pt-2">
               {(['none', 'json', 'raw', 'multipart'] as const).map(t => (
                 <button
                   key={t}
@@ -499,7 +499,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                   extensions={bodyType === 'json' ? [json(), varCompletionExtension] : [varCompletionExtension]}
                   onChange={val => setBodyText(val)}
                   placeholder={bodyType === 'json' ? '{"key": "value"}' : 'Enter raw text here...'}
-                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
                   basicSetup={{
                     lineNumbers: true,
                     foldGutter: true,
