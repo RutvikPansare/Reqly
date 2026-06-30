@@ -51,6 +51,7 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 - [MCP Tools](#what-your-agent-can-do)
 - [CLI Runner](#cli-runner)
 - [Flows](#flows)
+- [Exporting Collections](#-exporting-collections)
 - [Mock Server](#mock-server)
 - [Capture Inbound Requests](#capture-inbound-requests-middleware)
 - [Collections and Assertions](#how-collections-work)
@@ -147,6 +148,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 | 📋 | **Validate contracts** | Point at an OpenAPI spec - every response checked automatically |
 | 🎭 | **Serve mocks** | Fake a backend from saved examples, no live server needed |
 | 🕵️ | **Capture traffic** | Proxy outbound, middleware for inbound, tunnel for webhooks |
+| 📤 | **Export collections** | Generate OpenAPI specs, Postman files, or Markdown documentation |
 
 <details>
 <summary><strong>View all 30+ MCP tools</strong></summary>
@@ -164,7 +166,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 | `run_collection` | Fires all requests in a collection sequentially |
 | `get_response` | Retrieves the last stored response (truncated) |
 | `get_response_full` | Retrieves the last untruncated response |
-| `export_collection` | Exports as Postman v2.1 or OpenAPI 3.0 JSON |
+| `export_collection` | Exports as Postman v2.1, OpenAPI 3.0 JSON, or Markdown API Docs |
 | `import_collection` | Imports a Postman v2.1 or Bruno collection |
 
 **🌍 Environments and Variables**
@@ -235,6 +237,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 
 ## Recently shipped
 
+- **Markdown Docs Export** - generate beautiful markdown API references directly from your collections
 - **Flows** - multi-step automation tests (run, extract, assert, poll, conditional) with data-driven support
 - **OpenAPI contract validation** - point a collection at a spec; every response is checked automatically
 - **Multipart body editor** - send `multipart/form-data` with file and text parts
