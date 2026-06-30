@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Send as SendIcon, Loader2, Save, BookOpen, Wand2, Terminal, Bookmark, FileCode2 } from 'lucide-react';
+import { Send as SendIcon, Loader2, Save, BookOpen, Wand2, Terminal, Bookmark, FileCode2, CheckSquare, Square } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
 import { graphql } from 'cm6-graphql';
 import { buildClientSchema, getIntrospectionQuery, parse as gqlParse, print as gqlPrint } from 'graphql';
@@ -576,16 +576,15 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                 )}
                 {bodyTab === 'query' && (
                   <>
-                    <label className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 cursor-pointer mr-2">
-                      <input 
-                        type="checkbox" 
-                        checked={useQueryFile} 
-                        onChange={e => setUseQueryFile(e.target.checked)} 
-                        className="accent-pink-500 rounded-sm"
-                      />
+                    <button
+                      onClick={() => setUseQueryFile(!useQueryFile)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 cursor-pointer mr-2 bg-transparent border-none p-0"
+                      title="Toggle From File"
+                    >
+                      {useQueryFile ? <CheckSquare size={14} className="text-pink-500" /> : <Square size={14} />}
                       <FileCode2 size={12} />
                       From File
-                    </label>
+                    </button>
                     {!useQueryFile && (
                       <>
                         <button
@@ -661,8 +660,8 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 min-h-0 p-2 flex flex-col">
-                      <div className="flex-1 min-h-0 rounded overflow-hidden border border-[var(--border)]">
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <div className="flex-1 min-h-0 rounded-none border-t border-[var(--border)]">
                         <CodeMirror
                           value={query}
                           height="100%"
@@ -678,14 +677,14 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                 </div>
               </div>
             ) : bodyTab === 'variables' ? (
-              <div className="flex-1 min-h-0 p-2">
+              <div className="flex-1 min-h-0">
                 <CodeMirror
                   value={variables}
                   height="100%"
                   theme="dark"
                   extensions={[json(), varCompletionExtension]}
                   onChange={setVariables}
-                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded overflow-hidden border border-[var(--border)]"
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded-none border-t border-[var(--border)]"
                 />
               </div>
             ) : (
