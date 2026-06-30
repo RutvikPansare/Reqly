@@ -107,4 +107,60 @@ describe('script-runner', () => {
     const { consoleLogs } = runScript('env.x = "1"', ctx);
     expect(consoleLogs).toEqual([]);
   });
+
+  // test() / expect() - T-143
+  it('test() passing produces a passed testResult', () => {
+    const ctx: ScriptContext = { env: {}, request: {}, response: { status: 200, body: null, headers: {}, latency: 10 } };
+    const { testResults } = runScript('test("status is 200", () => { expect(reqly.response.status).to.equal(200) })', ctx);
+    expect(testResults).toHaveLength(1);
+    expect(testResults![0]).toEqual({ name: 'status is 200', passed: true });
+  });
+
+  it('test() failing produces a failed testResult with error message', () => {
+    const ctx: ScriptContext = { env: {}, request: {}, response: { status: 404, body: null, headers: {}, latency: 10 } };
+    const { testResults } = runScript('test("status is 200", () => { expect(reqly.response.status).to.equal(200) })', ctx);
+    expect(testResults).toHaveLength(1);
+    expect(testResults![0].passed).toBe(false);
+    expect(testResults![0].error).toBeTruthy();
+  });
+
+  it('expect() passing does not throw and produces a passed result', () => {
+    const ctx: ScriptContext = { env: {}, request: {}, response: { status: 201, body: { id: 1 }, headers: {}, latency: 5 } };
+    const { testResults } = runScript('test("has id", () => { expect(reqly.response.body).to.have.property("id") })', ctx);
+    expect(testResults![0].passed).toBe(true);
+  });
+
+  it('expect() throws and is caught as a failed testResult', () => {
+    const ctx: ScriptContext = { env: {}, request: {}, response: { status: 200, body: {}, headers: {}, latency: 5 } };
+    const { testResults } = runScript('test("has id", () => { expect(reqly.response.body).to.have.property("id") })', ctx);
+    expect(testResults![0].passed).toBe(false);
+    expect(testResults![0].error).toContain('id');
+  });
+
+  it('multiple test() calls all produce individual results', () => {
+    const ctx: ScriptContext = { env: {}, request: {}, response: { status: 200, body: 'ok', headers: {}, latency: 5 } };
+    const { testResults } = runScript(`
+      test("passes", () => { expect(reqly.response.status).to.equal(200) });
+      test("fails", () => { expect(reqly.response.status).to.equal(999) });
+    `, ctx);
+    expect(testResults).toHaveLength(2);
+    expect(testResults![0].passed).toBe(true);
+    expect(testResults![1].passed).toBe(false);
+  });
+
+  it('test() can mix with reqly.setEnvVar and reqly.getEnvVar', () => {
+    const ctx: ScriptContext = { env: { token: 'abc' }, request: {}, response: { status: 200, body: null, headers: {}, latency: 5 } };
+    const { testResults } = runScript(`
+      reqly.setEnvVar('result', reqly.getEnvVar('token') + '-extended');
+      test("env var set", () => { expect(reqly.getEnvVar('result')).to.equal('abc-extended') });
+    `, ctx);
+    expect(ctx.env.result).toBe('abc-extended');
+    expect(testResults![0].passed).toBe(true);
+  });
+
+  it('returns empty testResults when no test() calls are made', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { testResults } = runScript('env.x = "1"', ctx);
+    expect(testResults).toEqual([]);
+  });
 });

@@ -3,7 +3,7 @@ import { checkContract } from './contract-helper.js';
 
 export const definition: ToolDefinition = {
   name: 'run_request',
-  description: "Fires a saved request and returns the response. When to use: to verify a request actually works after creating it, or to debug a failing endpoint. Preferred pattern: call list_collections first if you don't know the exact request name. If the response is a 401, use set_variable to set the auth token then retry.",
+  description: "Fires a saved request and returns the response. When to use: to verify a request actually works after creating it, or to debug a failing endpoint. Preferred pattern: call list_collections first if you don't know the exact request name. If the response is a 401, use set_variable to set the auth token then retry. Return shape includes a testResults array: [{ name: string, passed: boolean, error?: string }] - one entry per test() call in the request's postScript; empty array if the request has no postScript or no test() calls.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -60,7 +60,8 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
     const contractResult = await checkContract(context, args.collectionName, req, res);
     const contractViolations = contractResult ? contractResult.violations : null;
 
-    return { content: [{ type: 'text', text: JSON.stringify({ response: agentResponse, assertions: assertionsResult, diff, contractViolations }) }] };
+    const testResults = agentResponse.testResults ?? [];
+    return { content: [{ type: 'text', text: JSON.stringify({ response: agentResponse, assertions: assertionsResult, diff, contractViolations, testResults }) }] };
   } catch (e: any) {
     return { content: [{ type: 'text', text: e.message }], isError: true };
   }

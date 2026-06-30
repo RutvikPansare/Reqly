@@ -11,35 +11,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ### M6 - Script Power + Developer UX
 
-- [ ] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts
-  - Add `test('label', fn)` and `expect()` (Chai BDD) to the post-run script sandbox
-  - Each `test()` call produces a named pass/fail result shown in a "Tests" sub-tab in the response viewer alongside existing YAML assertions
-  - Chai API: `.to.equal`, `.to.have.property`, `.to.include`, `.to.be.above`, `.to.deep.equal` - match Chai exactly, not a custom DSL
-  - Existing YAML assertions are untouched; `test()` is purely additive
-  - Script sandbox receives: `test`, `expect`, `reqly.response` (status, body, headers, latency), `reqly.setEnvVar`, `reqly.getEnvVar`
-  - Named test results included in JUnit XML output from `reqly run --format junit`
-  - **MCP:** `run_request` and `run_collection` response shape gains a `testResults` array: `[{ name: string, passed: boolean, error?: string }]` - one entry per `test()` call in the script; update tool descriptions to document this field
-  - TDD required: `script-runner.test.ts` - test() pass, test() fail, expect() pass, expect() throws, multiple tests per script, mix with env var ops
-
-- [ ] **T-144** `req` object in pre-run scripts - full Bruno-compatible API
-  - Expose the full Bruno req method API in pre-run scripts:
-    - `req.getUrl()` / `req.setUrl(url)`
-    - `req.getMethod()` / `req.setMethod(method)`
-    - `req.getHeaders()` / `req.getHeader(name)` / `req.setHeader(name, value)` / `req.removeHeader(name)`
-    - `req.getBody()` / `req.setBody(body)`
-    - `req.setTimeout(ms)` / `req.setMaxRedirects(n)`
-  - All mutations take effect on the outbound request before it fires
-  - Primary use cases: HMAC signing, dynamic timestamps, conditional auth header injection
-  - The executor reads the mutated req state after the pre-script completes
-  - TDD required: `pre-script.test.ts` - getUrl, setUrl, setHeader, removeHeader, setBody, setTimeout; verify mutations are reflected in the fired request
-
-- [ ] **T-145** Variable `{{` autocomplete in URL bar, header value fields, and body editor
-  - Dropdown appears when user types `{{` in URL bar, any header value input, or the body editor
-  - Shows all available variable names with source label (env, collection, .env)
-  - Selecting an entry completes `{{varName}}` pattern
-  - Variable list already available client-side from existing API calls - no backend change needed
-  - Pure UI; no TDD required
-
 - [ ] **T-146** History panel: clicking an entry restores the saved response body
   - Currently clicking a history entry only populates method + URL in the request editor; does not load the saved response
   - After the fix: load body (and status/latency) from the `HistoryEntry` into the response viewer panel

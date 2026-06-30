@@ -18,8 +18,9 @@ function escapeXml(value: string): string {
 
 function toTestCases(result: RequestRunResult, classname: string): TestCase[] {
   const time = result.duration / 1000;
+  const cases: TestCase[] = [];
 
-  if (result.assertions.length === 0) {
+  if (result.assertions.length === 0 && !result.response?.testResults?.length) {
     const status = result.response?.status ?? 0;
     const implicitFailed = status >= 500;
     return [{
@@ -30,12 +31,25 @@ function toTestCases(result: RequestRunResult, classname: string): TestCase[] {
     }];
   }
 
-  return result.assertions.map(a => ({
-    name: `${result.requestName} :: ${a.message}`,
-    classname,
-    time,
-    failureMessage: a.passed ? undefined : a.message
-  }));
+  for (const a of result.assertions) {
+    cases.push({
+      name: `${result.requestName} :: ${a.message}`,
+      classname,
+      time,
+      failureMessage: a.passed ? undefined : a.message
+    });
+  }
+
+  for (const t of (result.response?.testResults ?? [])) {
+    cases.push({
+      name: `${result.requestName} :: ${t.name}`,
+      classname,
+      time,
+      failureMessage: t.passed ? undefined : (t.error ?? t.name)
+    });
+  }
+
+  return cases;
 }
 
 function renderSuite(suiteName: string, testCases: TestCase[]): string {

@@ -40,14 +40,37 @@ export async function execute(
   const layers = [collectionVars, envVars, dotEnvVars];
   const consoleLogs: string[] = [];
 
-  // Run preScript before substitution so env mutations are picked up.
-  // Scripts read/write the env-vars layer; collection vars are read-only inherited.
+  // Mutable req state that the preScript can mutate via req.setUrl() etc.
+  // Mutations are applied to the local vars below before the request fires.
+  const reqMut = {
+    _url: config.url,
+    _method: config.method as string,
+    _headers: { ...(config.headers ?? {}) },
+    _body: config.body as unknown,
+    _timeout: undefined as number | undefined,
+    _maxRedirects: undefined as number | undefined,
+    getUrl()                     { return reqMut._url; },
+    setUrl(u: string)            { reqMut._url = u; },
+    getMethod()                  { return reqMut._method; },
+    setMethod(m: string)         { reqMut._method = m; },
+    getHeaders()                 { return { ...reqMut._headers }; },
+    getHeader(n: string)         { return reqMut._headers[n] ?? reqMut._headers[n.toLowerCase()] ?? undefined; },
+    setHeader(n: string, v: string) { reqMut._headers[n] = v; },
+    removeHeader(n: string)      { delete reqMut._headers[n]; },
+    getBody()                    { return reqMut._body; },
+    setBody(b: unknown)          { reqMut._body = b; },
+    setTimeout(ms: number)       { reqMut._timeout = ms; },
+    setMaxRedirects(n: number)   { reqMut._maxRedirects = n; },
+  };
+
+  // Run preScript before substitution so env mutations and req mutations are
+  // both picked up before variable resolution and fetch options are built.
   if (config.preScript) {
-    const { consoleLogs: pre } = runScript(config.preScript, { env: envVars, request: config as unknown as Record<string, unknown> });
+    const { consoleLogs: pre } = runScript(config.preScript, { env: envVars, request: config as unknown as Record<string, unknown>, req: reqMut as unknown as Record<string, unknown> });
     consoleLogs.push(...pre);
   }
 
-  let url = resolveVariables(config.url, layers);
+  let url = resolveVariables(reqMut._url, layers);
 
   if (config.params) {
     const searchParams = new URLSearchParams();
@@ -60,14 +83,13 @@ export async function execute(
     }
   }
 
+  // Start from req-mutated headers; resolve variables in values.
   const headers: Record<string, string> = {};
-  if (config.headers) {
-    for (const [k, v] of Object.entries(config.headers)) {
-      headers[k] = resolveVariables(v, layers);
-    }
+  for (const [k, v] of Object.entries(reqMut._headers)) {
+    headers[k] = resolveVariables(v, layers);
   }
 
-  let body = config.body;
+  let body = reqMut._body as typeof config.body;
 
   // Multipart branch: build a FormData from parts. Must come before the generic
   // object branch so that { type: 'multipart', parts: [...] } is not JSON-stringified.
@@ -153,8 +175,9 @@ export async function execute(
     };
     if (config.postScript) {
       const envVarsForScript = env?.variables || {};
-      const { consoleLogs: post } = runScript(config.postScript, { env: envVarsForScript, request: config as unknown as Record<string, unknown>, response: multipartResult as unknown as Record<string, unknown> });
+      const { consoleLogs: post, testResults } = runScript(config.postScript, { env: envVarsForScript, request: config as unknown as Record<string, unknown>, response: multipartResult as unknown as Record<string, unknown> });
       if (post.length > 0) multipartResult.consoleLogs = post;
+      if (testResults.length > 0) multipartResult.testResults = testResults;
     }
     return multipartResult;
   }
@@ -300,8 +323,9 @@ export async function execute(
   };
 
   if (config.postScript) {
-    const { consoleLogs: post } = runScript(config.postScript, { env: envVars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
+    const { consoleLogs: post, testResults } = runScript(config.postScript, { env: envVars, request: config as unknown as Record<string, unknown>, response: result as unknown as Record<string, unknown> });
     consoleLogs.push(...post);
+    if (testResults.length > 0) result.testResults = testResults;
   }
 
   if (consoleLogs.length > 0) result.consoleLogs = consoleLogs;
