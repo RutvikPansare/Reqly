@@ -427,10 +427,10 @@ function App() {
       <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
         {/* Wordmark - left */}
         <div className="flex items-center gap-2">
-          <img src="/favicon.png" alt="" style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+          <img src="/favicon.png" alt="" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />
           <h1
             className="shrink-0 select-none"
-            style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', color: '#e4e4e7', lineHeight: 1 }}
+            style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif", fontWeight: 700, fontSize: '1.3rem', letterSpacing: '-0.01em', color: '#e4e4e7', lineHeight: 1 }}
           >
             Reqly
           </h1>
