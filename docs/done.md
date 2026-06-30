@@ -2,6 +2,9 @@
 
 ## 2026-06-30
 
+- [x] **T-180** GraphQL workspace: saved request browser
+- [x] **T-181** `graphql.queryFile` - reference external `.graphql` files
+- [x] **T-182** GraphQL multi-operation picker
 - [x] **T-179** Variable recognition in GraphQL Workspace
   - Added `VariableInput` to URL field (pill display, `{{}}` autocomplete, tooltip on hover)
   - Passed `variables` prop to `KeyValueEditor` in the Headers tab

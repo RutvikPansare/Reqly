@@ -107,7 +107,7 @@ Reqly exposes the following MCP tools for AI agents:
 - Collection runner: run all requests sequentially, CI/CD exit codes
 - Outbound proxy: capture HTTP calls your app makes to external APIs
 - Inbound middleware: capture requests coming INTO your app (`reqly-middleware`)
-- GraphQL: dedicated workspace, schema introspection, autocomplete
+- GraphQL: dedicated workspace, schema introspection, autocomplete, saved request browser, multi-operation picker, and `queryFile` support for external `.graphql` files
 - Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI
 - Flow CI export: `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml`. Full MCP parity via `export_flow_ci`.
 - Mock server: `reqly mock <collection> [--port <n>]` serves saved example responses on a real HTTP port. `X-Reqly-Example: <name>` header selects a specific example; falls back to first. Full MCP parity via `start_mock`/`stop_mock`/`get_mock_status`.

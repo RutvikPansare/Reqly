@@ -4,7 +4,8 @@ import { Assertion } from './assertion.js';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface GraphQLConfig {
-  query: string;
+  query?: string;
+  queryFile?: string;
   variables?: Record<string, unknown>;
   operationName?: string;
   /** For graphql-subscription type: max seconds to buffer messages (default 5) */

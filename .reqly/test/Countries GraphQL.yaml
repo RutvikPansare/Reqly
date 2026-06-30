@@ -1,0 +1,9 @@
+id: '1782847593494'
+name: Countries GraphQL
+method: POST
+url: https://countries.trevorblades.com/
+type: graphql
+graphql:
+  query: 'query GetCountry($code: ID!) { country(code: $code) { name capital } }'
+  variables:
+    code: US

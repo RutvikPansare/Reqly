@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Send as SendIcon, Loader2, Save, BookOpen, Wand2, Terminal } from 'lucide-react';
+import { Send as SendIcon, Loader2, Save, BookOpen, Wand2, Terminal, Bookmark, FileCode2 } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
 import { graphql } from 'cm6-graphql';
 import { buildClientSchema, getIntrospectionQuery, parse as gqlParse, print as gqlPrint } from 'graphql';
@@ -57,8 +57,27 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
   const [dotenvVars, setDotenvVars] = useState<{ key: string; source: string }[]>([]);
 
+  const [showSaved, setShowSaved] = useState(false);
+  const [savedRequests, setSavedRequests] = useState<{ collection: string; request: any }[]>([]);
+  const [activeCollection, setActiveCollection] = useState<string | undefined>(initialRequest?._collection);
+  const [queryFile, setQueryFile] = useState<string>(initialRequest?.graphql?.queryFile ?? '');
+  const [useQueryFile, setUseQueryFile] = useState<boolean>(!!initialRequest?.graphql?.queryFile);
+
   useEffect(() => {
-    fetchCollections().then((cols: any[]) => setCollections(cols.map((c: any) => c.name))).catch(() => {});
+    fetchCollections().then((cols: any[]) => {
+      setCollections(cols.map((c: any) => c.name));
+      const reqs: { collection: string; request: any }[] = [];
+      for (const col of cols) {
+        if (col.requests) {
+          for (const req of col.requests) {
+            if (req.type === 'graphql' || req.type === 'graphql-subscription') {
+              reqs.push({ collection: col.name, request: req });
+            }
+          }
+        }
+      }
+      setSavedRequests(reqs);
+    }).catch(() => {});
   }, []);
 
   // Load env vars, collection vars, and dotenv vars for variable autocomplete
@@ -81,19 +100,20 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   }, []);
 
   useEffect(() => {
-    const colName = initialRequest?._collection;
+    const colName = activeCollection;
     if (!colName) { setCollectionVars({}); return; }
     const load = () => { getCollectionVariables(colName).then(setCollectionVars).catch(() => {}); };
     load();
     window.addEventListener('reqly-reload', load);
     return () => window.removeEventListener('reqly-reload', load);
-  }, [initialRequest?._collection]);
+  }, [activeCollection]);
 
-  // Populate from an initialRequest when it changes (e.g. loaded from Collections sidebar)
   useEffect(() => {
     if (!initialRequest) return;
     setUrl(initialRequest.url ?? '');
     setQuery(initialRequest.graphql?.query ?? '');
+    setQueryFile(initialRequest.graphql?.queryFile ?? '');
+    setUseQueryFile(!!initialRequest.graphql?.queryFile);
     setVariables(initialRequest.graphql?.variables ? JSON.stringify(initialRequest.graphql.variables, null, 2) : '');
     setOperationName(initialRequest.graphql?.operationName ?? '');
     setHeaders(
@@ -101,6 +121,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         ? Object.entries(initialRequest.headers).map(([key, value]) => ({ key, value: value as string, enabled: true }))
         : []
     );
+    setActiveCollection(initialRequest._collection);
   }, [initialRequest]);
 
   // Build the enabled custom headers as a plain object for use in fetch calls
@@ -117,7 +138,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
     ...Object.entries(collectionVars).map(([k, v]) => ({
       name: k,
       sourceType: 'collection',
-      sourceName: initialRequest?._collection || 'collection',
+      sourceName: activeCollection || 'collection',
       value: v,
     })),
     ...Object.entries(activeEnvVars)
@@ -207,7 +228,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         type: 'graphql',
         ...(savedHeaders ? { headers: savedHeaders } : {}),
         graphql: {
-          query,
+          ...(useQueryFile && queryFile.trim() ? { queryFile: queryFile.trim() } : { query }),
           ...(parsedVariables !== undefined ? { variables: parsedVariables } : {}),
           ...(operationName.trim() ? { operationName: operationName.trim() } : {}),
         },
@@ -260,8 +281,12 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
 
   // Detect if the query is a subscription (shows stream panel instead of response viewer)
   const isSubscriptionQuery = useMemo(() => {
+    // If using queryFile, we can't reliably detect subscription from the UI without reading the file.
+    // We'll fall back to normal run (which will fail cleanly if it's actually a sub) unless we add a specific toggle,
+    // or we assume users won't mix queryFile and subscriptions for now.
+    if (useQueryFile) return false;
     return /^\s*subscription[\s{(]/m.test(query);
-  }, [query]);
+  }, [query, useQueryFile]);
 
   // Insert a field name at the current cursor position in the query editor
   const handleInsertField = (fieldName: string, hasSubfields: boolean) => {
@@ -357,7 +382,12 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
     }
     setIsSending(true);
     try {
-      const body: any = { query };
+      const body: any = {};
+      if (useQueryFile && queryFile.trim()) {
+        body.queryFile = queryFile.trim();
+      } else {
+        body.query = query;
+      }
       if (vars) body.variables = vars;
       if (operationName.trim()) body.operationName = operationName.trim();
       const res = await fetch('/api/run/adhoc', {
@@ -393,6 +423,13 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         top={
         <div className="flex flex-col h-full">
           <div className="flex p-2 gap-2 border-b border-[var(--border)] bg-[var(--surface-1)]">
+            <button
+              className={`px-2 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5 border ${showSaved ? 'bg-[var(--surface-4)] border-blue-700 text-blue-300' : 'bg-[var(--surface-3)] border-[var(--border-strong)] text-gray-300 hover:bg-[var(--surface-4)]'}`}
+              onClick={() => setShowSaved(v => !v)}
+              title="Toggle saved requests"
+            >
+              <Bookmark size={14} />
+            </button>
             <span className="px-2 py-1 rounded text-xs font-semibold bg-pink-600 text-white border border-pink-500">GQL</span>
             <VariableInput
               variables={availableVariables}
@@ -501,22 +538,36 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                 )}
                 {bodyTab === 'query' && (
                   <>
-                    <button
-                      onClick={handlePrettify}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 px-2 py-1 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-4)] transition-colors"
-                      title="Format the GraphQL query"
-                    >
-                      <Wand2 size={12} />
-                      Prettify
-                    </button>
-                    <button
-                      onClick={handleCopyAsCurl}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 px-2 py-1 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-4)] transition-colors"
-                      title="Copy as cURL command"
-                    >
-                      <Terminal size={12} />
-                      {curlCopied ? 'Copied!' : 'cURL'}
-                    </button>
+                    <label className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 cursor-pointer mr-2">
+                      <input 
+                        type="checkbox" 
+                        checked={useQueryFile} 
+                        onChange={e => setUseQueryFile(e.target.checked)} 
+                        className="accent-pink-500 rounded-sm"
+                      />
+                      <FileCode2 size={12} />
+                      From File
+                    </label>
+                    {!useQueryFile && (
+                      <>
+                        <button
+                          onClick={handlePrettify}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 px-2 py-1 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-4)] transition-colors"
+                          title="Format the GraphQL query"
+                        >
+                          <Wand2 size={12} />
+                          Prettify
+                        </button>
+                        <button
+                          onClick={handleCopyAsCurl}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 px-2 py-1 rounded bg-[var(--surface-3)] hover:bg-[var(--surface-4)] transition-colors"
+                          title="Copy as cURL command"
+                        >
+                          <Terminal size={12} />
+                          {curlCopied ? 'Copied!' : 'cURL'}
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
                 {schema && schemaCachedAt && (
@@ -557,17 +608,33 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                       Schema loaded: {schemaFields().length} query fields
                     </div>
                   )}
-                  <div className="flex-1 min-h-0">
-                    <CodeMirror
-                      value={query}
-                      height="100%"
-                      theme="dark"
-                      extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
-                      onChange={setQuery}
-                      onCreateEditor={view => { editorViewRef.current = view; }}
-                      className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
-                    />
-                  </div>
+                  {useQueryFile ? (
+                    <div className="flex-1 min-h-0 flex flex-col p-4">
+                      <div className="text-xs text-gray-400 mb-2">Query File Path (relative to project root):</div>
+                      <VariableInput
+                        variables={availableVariables}
+                        value={queryFile}
+                        onChange={setQueryFile}
+                        placeholder="e.g. queries/getUser.graphql"
+                        className="w-full bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-mono"
+                      />
+                      <div className="mt-4 text-[10px] text-gray-500">
+                        When using a query file, the file's contents will be sent as the query string. Variable substitution `{'{{var}}'}` will be applied to the file path itself (e.g. if the path changes per environment).
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-h-0">
+                      <CodeMirror
+                        value={query}
+                        height="100%"
+                        theme="dark"
+                        extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
+                        onChange={setQuery}
+                        onCreateEditor={view => { editorViewRef.current = view; }}
+                        className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             ) : bodyTab === 'variables' ? (
@@ -602,6 +669,54 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         )}
       />
       </div>
+      {showSaved && (
+        <div className="w-64 shrink-0 border-l border-[var(--border)] overflow-hidden flex flex-col bg-[var(--surface-1)] order-first border-r">
+          <div className="p-2 border-b border-[var(--border)] bg-[var(--surface-2)] font-semibold text-xs text-gray-300">
+            Saved GraphQL Requests
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-4">
+            {collections.map(col => {
+              const reqs = savedRequests.filter(r => r.collection === col);
+              if (reqs.length === 0) return null;
+              return (
+                <div key={col} className="flex flex-col gap-1">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-1">{col}</div>
+                  {reqs.map(({ request }) => (
+                    <button
+                      key={request.name}
+                      className="text-left text-xs px-2 py-1.5 rounded hover:bg-[var(--surface-3)] text-gray-300 truncate transition-colors"
+                      onClick={() => {
+                        setUrl(request.url ?? '');
+                        setQuery(request.graphql?.query ?? '');
+                        setQueryFile(request.graphql?.queryFile ?? '');
+                        setUseQueryFile(!!request.graphql?.queryFile);
+                        setVariables(request.graphql?.variables ? JSON.stringify(request.graphql.variables, null, 2) : '');
+                        setOperationName(request.graphql?.operationName ?? '');
+                        setHeaders(
+                          request.headers
+                            ? Object.entries(request.headers).map(([key, value]) => ({ key, value: value as string, enabled: true }))
+                            : []
+                        );
+                        setActiveCollection(col);
+                      }}
+                    >
+                      <span className={`mr-2 ${request.type === 'graphql-subscription' ? 'text-purple-400' : 'text-pink-400'}`}>
+                        {request.type === 'graphql-subscription' ? 'SUB' : 'GQL'}
+                      </span>
+                      {request.name}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+            {savedRequests.length === 0 && (
+              <div className="text-xs text-gray-500 italic p-2 text-center mt-4">
+                No saved GraphQL requests found in any collection.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {showDocs && schema && (
         <div className="w-64 shrink-0 border-l border-[var(--border)] overflow-hidden flex flex-col">
           <GraphQLDocsExplorer schema={schema} onInsertField={handleInsertField} />

@@ -62,9 +62,10 @@ export const definition: ToolDefinition = {
             type: 'object',
             properties: {
               query: { type: 'string' },
-              variables: { type: 'object' }
-            },
-            required: ['query']
+              queryFile: { type: 'string', description: 'Path to a .graphql file relative to the project root. If set, query is ignored.' },
+              variables: { type: 'object' },
+              operationName: { type: 'string' }
+            }
           },
           assertions: {
             type: 'array',

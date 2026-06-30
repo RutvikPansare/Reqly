@@ -273,6 +273,30 @@ describe('http-executor', () => {
       const calledBody = JSON.parse((vi.mocked(fetch).mock.lastCall![1] as any).body);
       expect(calledBody.operationName).toBeUndefined();
     });
+
+    it('should read queryFile from baseDir and include it as the query', async () => {
+      mockOkResponse();
+      const mockQueryContent = 'query GetUserFromFile { user { id } }';
+      
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reqly-gql-test-'));
+      const qFile = path.join(tmpDir, 'query.graphql');
+      fs.writeFileSync(qFile, mockQueryContent);
+
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: { queryFile: 'query.graphql' },
+      };
+      
+      try {
+        await execute(config, undefined, undefined, true, 51200, undefined, undefined, undefined, tmpDir);
+        const calledBody = JSON.parse((vi.mocked(fetch).mock.lastCall![1] as any).body);
+        expect(calledBody.query).toBe(mockQueryContent);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
   });
 
   describe('collection variables', () => {

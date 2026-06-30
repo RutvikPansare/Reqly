@@ -6,6 +6,9 @@
 
 ### M7 - Data & CI Power
 
+### GraphQL Polish
+
+
 ### Protocol Expansion (Later)
 
 - [ ] **T-151** WebSocket / SSE support ("Realtime" workspace)
@@ -55,8 +58,3 @@
   - MCP / agents: buffer incoming stream messages for a configurable timeout (default 5s, configurable via `streamTimeout` on the request), return `{ messages: [...], truncated: boolean }` so agents can test streaming endpoints headlessly in a single tool call
   - **Use Sonnet for this task** - streaming state management in the UI and MCP buffering model require careful design
   - TDD required: `grpc-runner.test.ts` - server streaming collects all messages, client streaming sends all then receives response, bidirectional interleaves correctly, timeout truncation returns `truncated: true`
-
-### World-Class GraphQL Epic
-
-All tasks T-169 through T-178 completed 2026-06-30. See docs/done.md.
-

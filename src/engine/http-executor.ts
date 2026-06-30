@@ -279,7 +279,26 @@ export async function execute(
   }
 
   if (config.type === 'graphql' && config.graphql) {
-    const gqlBody: Record<string, unknown> = { query: config.graphql.query };
+    let queryStr = config.graphql.query || '';
+    if (config.graphql.queryFile && baseDir) {
+      // Find the project root by looking for .reqly or using process.cwd() as fallback
+      // Since baseDir might be `<root>/.reqly/<collection>` or `<root>`, we climb up if needed.
+      const resolvedPath = resolveVariables(config.graphql.queryFile, layers);
+      let pRoot = baseDir;
+      const reqlyIndex = baseDir.lastIndexOf(path.sep + '.reqly');
+      if (reqlyIndex !== -1) {
+        pRoot = baseDir.substring(0, reqlyIndex);
+      } else if (baseDir.endsWith('.reqly')) {
+        pRoot = baseDir.substring(0, baseDir.length - 6);
+      }
+      
+      const fileTarget = path.resolve(pRoot, resolvedPath);
+      if (!fs.existsSync(fileTarget)) {
+         throw new Error(`[error] GraphQL queryFile not found: ${resolvedPath} (resolved to ${fileTarget})`);
+      }
+      queryStr = fs.readFileSync(fileTarget, 'utf8');
+    }
+    const gqlBody: Record<string, unknown> = { query: queryStr };
     if (config.graphql.variables !== undefined) {
       gqlBody.variables = config.graphql.variables;
     }
