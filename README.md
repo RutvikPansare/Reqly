@@ -148,7 +148,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 |------|-------------|
 | `list_collections` | Lists all collections and requests in the project |
 | `create_collection` | Scaffolds a new collection |
-| `create_request` | Adds a request. Supports `{{variables}}`, assertions, pre/post scripts, auth, multipart bodies |
+| `create_request` | Adds a request. Supports `{{variables}}`, assertions, pre/post scripts, script files (`preScriptFile`/`postScriptFile`), auth, multipart bodies |
 | `run_request` | Fires a request - returns status, body, headers, latency, assertion results, diff, contract violations |
 | `run_collection` | Fires all requests in a collection sequentially |
 | `get_response` | Retrieves the last stored response (truncated) |
@@ -609,6 +609,13 @@ reqly.setEnvVar('authToken', token)
 ```
 
 Scripts run in an isolated context with no filesystem or network access - they can only interact with Reqly's variable store and the response object.
+
+For longer scripts, use `preScriptFile` / `postScriptFile` instead - set the value to a path relative to the collection folder (e.g. `"scripts/post.js"`). Reqly reads the file at run time, so you can edit it without touching the YAML. No JSON escaping required.
+
+```js
+// create_request({ postScriptFile: "scripts/post.js", ... })
+// then edit .reqly/<collection>/scripts/post.js freely
+```
 </details>
 
 <details>
