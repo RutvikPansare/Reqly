@@ -469,7 +469,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               onClick={() => { onSelectRequest(req, col); setSearch(''); }}
             >
-              <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
+              {req.type === 'graphql' || req.type === 'graphql-subscription' ? (
+                <span className={`${METHOD_BADGE_BASE} shrink-0`} style={{ background: '#db2777', color: '#fff' }}>GQL</span>
+              ) : (
+                <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
+              )}
               <div className="flex flex-col min-w-0">
                 <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{req.name}</span>
                 <span className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{col}</span>
@@ -628,7 +632,11 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                           }}
                           onDragEnd={() => { setDraggedReq(null); setDragOverCol(null); }}
                         >
-                          <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
+                          {req.type === 'graphql' || req.type === 'graphql-subscription' ? (
+                            <span className={`${METHOD_BADGE_BASE} shrink-0`} style={{ background: '#db2777', color: '#fff' }}>GQL</span>
+                          ) : (
+                            <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
+                          )}
                           {isRenaming ? (
                             <input
                               autoFocus

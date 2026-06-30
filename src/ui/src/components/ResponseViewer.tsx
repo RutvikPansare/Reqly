@@ -4,6 +4,7 @@ import { statusBadgeClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
 import { saveExample, listExamples } from '../api';
 import { pushConsoleLogs } from './BottomPanel';
+import { CollapsibleJson } from './InteractiveJsonTree';
 
 interface ResponseViewerProps {
   response: any;
@@ -330,18 +331,44 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
           <>
             {(() => {
               const hint = getErrorHint(body, latency);
-              return hint ? (
+              const hintEl = hint ? (
                 <div className="flex items-start gap-2 m-4 mb-0 p-3 rounded-md text-xs" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
                   <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                   <span>{hint}</span>
                 </div>
               ) : null;
+
+              const str = typeof body === 'object' ? JSON.stringify(body, null, 2) : body;
+              const isJson = typeof str === 'string' && (str.trim().startsWith('{') || str.trim().startsWith('['));
+
+              let contentEl;
+              if (isJson) {
+                let parsed = body;
+                if (typeof body === 'string') {
+                  try { parsed = JSON.parse(body); } catch { /* ignore */ }
+                }
+                contentEl = (
+                  <div className="p-4 flex flex-col flex-1 h-full min-h-[400px]">
+                    <CollapsibleJson label="Response Body" data={parsed} filter={bodyFilter} accent="#7dd3fc" />
+                  </div>
+                );
+              } else {
+                contentEl = (
+                  <pre
+                    className="p-4 whitespace-pre-wrap outline-none leading-relaxed"
+                    style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
+                    dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
+                  />
+                );
+              }
+
+              return (
+                <>
+                  {hintEl}
+                  {contentEl}
+                </>
+              );
             })()}
-            <pre
-              className="p-4 whitespace-pre-wrap outline-none leading-relaxed"
-              style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
-              dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
-            />
           </>
         )}
 

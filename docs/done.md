@@ -455,3 +455,13 @@
 - [x] **T-138** Allow explicit dismissal of EmptyStateNudge via an X button (saves to localStorage) and fix sidebar empty state hint text wrapping.
 - [x] **T-139** Added 'Tests' tab to ResponseViewer to display assertion results for individual requests.
 - [x] **T-140** Toggling headers and parameters persistently via checkboxes and MCP tools (using disabledParams/disabledHeaders in RequestConfig).
+
+### 2026-06-30
+
+- [x] **T-183** GraphQL and REST response viewer UI polish
+  - Added interactive JSON tree with collapsible brackets
+  - Added filter option to quickly search inside JSON payloads
+  - Added inline copy button and sticky headers for JSON sections
+  - Fixed GraphQL workspace layout so scroll behaviour is properly isolated
+  - Fixed 'Save Example' bug for GraphQL workspace by correctly tracking active request state
+  - Replaced POST badge with GQL badge in the collections panel for GraphQL requests

@@ -60,6 +60,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   const [showSaved, setShowSaved] = useState(false);
   const [savedRequests, setSavedRequests] = useState<{ collection: string; request: any }[]>([]);
   const [activeCollection, setActiveCollection] = useState<string | undefined>(initialRequest?._collection);
+  const [activeRequestName, setActiveRequestName] = useState<string | undefined>(initialRequest?.name);
   const [queryFile, setQueryFile] = useState<string>(initialRequest?.graphql?.queryFile ?? '');
   const [useQueryFile, setUseQueryFile] = useState<boolean>(!!initialRequest?.graphql?.queryFile);
 
@@ -122,6 +123,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         : []
     );
     setActiveCollection(initialRequest._collection);
+    setActiveRequestName(initialRequest.name);
   }, [initialRequest]);
 
   // Build the enabled custom headers as a plain object for use in fetch calls
@@ -421,59 +423,68 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <SplitPane
         top={
-        <div className="flex flex-col h-full">
-          <div className="flex p-2 gap-2 border-b border-[var(--border)] bg-[var(--surface-1)]">
+        <div className="flex flex-col h-full overflow-hidden p-4">
+          <div className="flex items-center gap-2 mb-4">
             <button
-              className={`px-2 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5 border ${showSaved ? 'bg-[var(--surface-4)] border-blue-700 text-blue-300' : 'bg-[var(--surface-3)] border-[var(--border-strong)] text-gray-300 hover:bg-[var(--surface-4)]'}`}
+              className={`btn ${showSaved ? 'btn-primary' : 'btn-secondary'} rounded`}
               onClick={() => setShowSaved(v => !v)}
               title="Toggle saved requests"
+              style={{ padding: '0 8px', height: '32px' }}
             >
               <Bookmark size={14} />
             </button>
-            <span className="px-2 py-1 rounded text-xs font-semibold bg-pink-600 text-white border border-pink-500">GQL</span>
-            <VariableInput
-              variables={availableVariables}
-              className="flex-1 bg-transparent text-gray-200 border border-[var(--border-strong)] rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
-              value={url}
-              onChange={setUrl}
-              placeholder="https://api.example.com/graphql"
-            />
+            
+            <div className="flex-1 flex items-center border border-[var(--border)] rounded bg-[var(--surface-2)] overflow-hidden h-8">
+              <span className="method-badge ml-2" style={{ background: '#db2777', color: '#fff' }}>GQL</span>
+              <VariableInput
+                variables={availableVariables}
+                className="flex-1 px-3 py-1.5 text-sm bg-transparent focus:outline-none h-full"
+                value={url}
+                onChange={setUrl}
+                placeholder="https://api.example.com/graphql"
+              />
+            </div>
+
             {isSubscriptionQuery ? (
-              <span className="px-3 py-1 rounded text-xs font-semibold bg-purple-900 border border-purple-700 text-purple-300 flex items-center gap-1.5">
+              <span className="px-3 py-1.5 rounded text-xs font-semibold bg-purple-900 border border-purple-700 text-purple-300 flex items-center gap-1.5 h-8">
                 Use Connect in the stream panel below
               </span>
             ) : (
               <button
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1 rounded text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="btn btn-primary rounded gap-1.5 h-8"
                 onClick={handleSend}
                 disabled={isSending}
               >
-                {isSending ? <Loader2 size={14} className="animate-spin" /> : <SendIcon size={14} />}
+                {isSending ? <Loader2 size={13} className="animate-spin" /> : <SendIcon size={13} />}
                 {isSending ? 'Sending...' : 'Send'}
               </button>
             )}
+
             <button
-              className={`px-3 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5 border ${saveSuccess ? 'bg-green-900 border-green-700 text-green-300' : 'bg-[var(--surface-3)] border-[var(--border-strong)] text-gray-300 hover:bg-[var(--surface-4)]'}`}
+              className={`btn ${saveSuccess ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5 h-8`}
+              style={saveSuccess ? { background: '#16a34a', borderColor: '#16a34a' } : undefined}
               onClick={() => setShowSaveForm(v => !v)}
               title="Save to collection"
             >
-              <Save size={14} />
+              <Save size={13} />
               {saveSuccess ? 'Saved!' : 'Save'}
             </button>
+
             {schema && (
               <button
-                className={`px-3 py-1 rounded text-sm font-semibold transition-colors flex items-center gap-1.5 border ${showDocs ? 'bg-[var(--surface-4)] border-pink-700 text-pink-300' : 'bg-[var(--surface-3)] border-[var(--border-strong)] text-gray-300 hover:bg-[var(--surface-4)]'}`}
+                className={`btn ${showDocs ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5 h-8`}
+                style={showDocs ? { background: '#db2777', borderColor: '#db2777' } : undefined}
                 onClick={() => setShowDocs(v => !v)}
                 title="Toggle schema docs explorer"
               >
-                <BookOpen size={14} />
+                <BookOpen size={13} />
                 Docs
               </button>
             )}
           </div>
 
           {showSaveForm && (
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--surface-1)]">
+            <div className="flex items-center gap-2 mb-4 p-2 rounded border border-[var(--border)] bg-[var(--surface-2)]">
               <select
                 className="bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1 text-xs focus:outline-none"
                 value={saveCollection}
@@ -491,7 +502,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                 onKeyDown={e => e.key === 'Enter' && handleSave()}
               />
               <button
-                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold transition-colors"
+                className="btn btn-primary rounded text-xs px-3 py-1"
                 onClick={handleSave}
               >
                 Save
@@ -500,38 +511,39 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
             </div>
           )}
 
-          <div className="flex-1 min-h-0 flex flex-col gap-2 p-4">
-            <div className="flex justify-between items-center px-1">
-              <div className="flex gap-1">
-                <button
-                  className={`px-3 py-1 text-xs font-semibold rounded ${bodyTab === 'query' ? 'bg-[var(--surface-3)] text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
-                  onClick={() => setBodyTab('query')}
-                >
-                  Query
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs font-semibold rounded relative flex items-center gap-1 ${bodyTab === 'variables' ? 'bg-[var(--surface-3)] text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
-                  onClick={() => setBodyTab('variables')}
-                >
-                  Variables
-                  {variableWarning && variableWarning.length > 0 && (
-                    <span className="text-[10px] text-amber-400" title={`Missing variables: ${variableWarning.join(', ')}`}>
-                      ⚠
-                    </span>
-                  )}
-                </button>
-                <button
-                  className={`px-3 py-1 text-xs font-semibold rounded relative ${bodyTab === 'headers' ? 'bg-[var(--surface-3)] text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
-                  onClick={() => setBodyTab('headers')}
-                >
-                  Headers
-                  {headers.filter(h => h.enabled && h.key.trim()).length > 0 && (
-                    <span className="ml-1 text-[10px] bg-blue-700 text-white rounded-full px-1">
-                      {headers.filter(h => h.enabled && h.key.trim()).length}
-                    </span>
-                  )}
-                </button>
-              </div>
+          <div className="tab-bar overflow-x-auto">
+            <button
+              className={`tab-btn ${bodyTab === 'query' ? 'active' : ''}`}
+              onClick={() => setBodyTab('query')}
+            >
+              Query
+            </button>
+            <button
+              className={`tab-btn flex items-center gap-1 ${bodyTab === 'variables' ? 'active' : ''}`}
+              onClick={() => setBodyTab('variables')}
+            >
+              Variables
+              {variableWarning && variableWarning.length > 0 && (
+                <span className="text-[10px] text-amber-400" title={`Missing variables: ${variableWarning.join(', ')}`}>
+                  ⚠
+                </span>
+              )}
+            </button>
+            <button
+              className={`tab-btn flex items-center gap-1 ${bodyTab === 'headers' ? 'active' : ''}`}
+              onClick={() => setBodyTab('headers')}
+            >
+              Headers
+              {headers.filter(h => h.enabled && h.key.trim()).length > 0 && (
+                <span className="ml-1 text-[10px] bg-blue-700 text-white rounded-full px-1">
+                  {headers.filter(h => h.enabled && h.key.trim()).length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 flex flex-col pt-2 pb-0" style={{ background: 'var(--surface-1)' }}>
+            <div className="flex justify-end items-center px-1 mb-2">
               <div className="flex items-center gap-2">
                 {prettifyError && (
                   <span className="text-[10px] text-red-400 max-w-xs truncate" title={prettifyError}>Parse error</span>
@@ -623,33 +635,35 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 min-h-0">
-                      <CodeMirror
-                        value={query}
-                        height="100%"
-                        theme="dark"
-                        extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
-                        onChange={setQuery}
-                        onCreateEditor={view => { editorViewRef.current = view; }}
-                        className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
-                      />
+                    <div className="flex-1 min-h-0 p-2 flex flex-col">
+                      <div className="flex-1 min-h-0 rounded overflow-hidden border border-[var(--border)]">
+                        <CodeMirror
+                          value={query}
+                          height="100%"
+                          theme="dark"
+                          extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
+                          onChange={setQuery}
+                          onCreateEditor={view => { editorViewRef.current = view; }}
+                          className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
             ) : bodyTab === 'variables' ? (
-              <div className="flex-1 min-h-0" style={{ borderTop: '1px solid var(--border)' }}>
+              <div className="flex-1 min-h-0 p-2">
                 <CodeMirror
                   value={variables}
                   height="100%"
                   theme="dark"
                   extensions={[json(), varCompletionExtension]}
                   onChange={setVariables}
-                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded overflow-hidden border border-[var(--border)]"
                 />
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-auto" style={{ borderTop: '1px solid var(--border)' }}>
+              <div className="flex-1 min-h-0 overflow-auto py-2">
                 <KeyValueEditor pairs={headers} onChange={setHeaders} variables={availableVariables} />
               </div>
             )}
@@ -665,7 +679,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
             headers={enabledHeaders}
           />
         ) : (
-          <GraphQLResponseViewer response={response} isSending={isSending} />
+          <GraphQLResponseViewer response={response} isSending={isSending} request={{ _collection: activeCollection, name: activeRequestName }} />
         )}
       />
       </div>
@@ -698,6 +712,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                             : []
                         );
                         setActiveCollection(col);
+                        setActiveRequestName(request.name);
                       }}
                     >
                       <span className={`mr-2 ${request.type === 'graphql-subscription' ? 'text-purple-400' : 'text-pink-400'}`}>
