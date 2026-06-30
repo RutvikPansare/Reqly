@@ -468,7 +468,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
               <VariableInput
                 multiline
                 variables={availableVariables}
-                className="flex-1 bg-[var(--surface-1)] border border-[var(--border)] rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
+                className="flex-1 bg-black border border-[var(--border)] rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
                 placeholder={bodyType === 'json' ? '{"key": "value"}' : 'Enter raw text here...'}
                 value={bodyText}
                 onChange={val => setBodyText(val)}
