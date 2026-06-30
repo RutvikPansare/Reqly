@@ -6,6 +6,9 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export interface GraphQLConfig {
   query: string;
   variables?: Record<string, unknown>;
+  operationName?: string;
+  /** For graphql-subscription type: max seconds to buffer messages (default 5) */
+  streamTimeout?: number;
 }
 
 // Inline auth carried directly on a request or a collection (no separate
@@ -47,7 +50,7 @@ export interface RequestConfig {
   auth?: InlineAuth;
   environmentId?: string;
   assertions?: Assertion[];
-  type?: 'rest' | 'graphql';
+  type?: 'rest' | 'graphql' | 'graphql-subscription';
   graphql?: GraphQLConfig;
   preScript?: string;
   postScript?: string;

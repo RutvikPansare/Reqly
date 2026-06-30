@@ -2,6 +2,22 @@
 
 ## 2026-06-30
 
+- [x] **T-169** GraphQL Headers + Auth Tab
+- [x] **T-170** Full Introspection Query + Schema Persistence
+- [x] **T-171** Schema / Docs Explorer Sidebar
+- [x] **T-172** Rich Autocomplete, Linting + Hover Docs (variable warning indicator)
+- [x] **T-173** operationName Support (type, engine, UI dropdown, MCP)
+- [x] **T-174** Prettify + Copy as cURL
+- [x] **T-175** GraphQL-Aware Response Viewer
+- [x] **T-176** Load Saved GraphQL Request from Collection (routing + round-trip)
+- [x] **T-177** MCP `introspect_graphql` Tool
+- [x] **T-178** GraphQL Subscriptions (WebSocket via graphql-ws)
+  - `graphql-subscription-runner.ts` - buffers messages for configurable timeout; `truncated` flag
+  - `GraphQLSubscriptionStream.tsx` - Connect/Disconnect UI, append-only log, auto-scroll, Clear button
+  - `GraphQLWorkspace.tsx` auto-detects `subscription` keyword and swaps Send for stream panel
+  - `RequestConfig.type` extended with `'graphql-subscription'`; `GraphQLConfig.streamTimeout` added
+  - 751/751 tests pass (96 test files)
+
 - [x] **T-148** Client certificates / mTLS
   - New `AuthType.MTLS = 'mtls'` in `src/types/auth.ts`
   - New `src/engine/cert-loader.ts` (`loadCert`, `CertLoadError`) reads PEM cert + key from absolute paths

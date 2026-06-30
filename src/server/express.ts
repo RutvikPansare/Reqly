@@ -208,6 +208,43 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Schema cache - persists GraphQL introspection results per URL in
+  // .reqly/.schema-cache/<sha256-of-url>.json so the UI can restore the schema
+  // across sessions without re-introspecting on every load.
+  // ---------------------------------------------------------------------------
+  app.get('/api/schema-cache', async (req, res) => {
+    const url = req.query.url as string | undefined;
+    if (!url) { res.status(400).json({ error: 'url query param required' }); return; }
+    try {
+      const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+      const cacheDir = path.join(projectRoot, '.reqly', '.schema-cache');
+      const hash = crypto.createHash('sha256').update(url).digest('hex');
+      const cacheFile = path.join(cacheDir, `${hash}.json`);
+      const raw = await fs.readFile(cacheFile, 'utf8');
+      res.json(JSON.parse(raw));
+    } catch {
+      res.status(404).json({ error: 'not found' });
+    }
+  });
+
+  app.post('/api/schema-cache', async (req, res) => {
+    const { url, schema } = req.body as { url?: string; schema?: unknown };
+    if (!url || !schema) { res.status(400).json({ error: 'url and schema are required' }); return; }
+    try {
+      const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+      const cacheDir = path.join(projectRoot, '.reqly', '.schema-cache');
+      await fs.mkdir(cacheDir, { recursive: true });
+      const hash = crypto.createHash('sha256').update(url).digest('hex');
+      const cacheFile = path.join(cacheDir, `${hash}.json`);
+      const payload = { url, schema, cachedAt: new Date().toISOString() };
+      await fs.writeFile(cacheFile, JSON.stringify(payload), 'utf8');
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/open-folder-picker', async (_req, res) => {
     try {
       const { execFile } = await import('child_process');

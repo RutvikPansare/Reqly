@@ -231,6 +231,48 @@ describe('http-executor', () => {
       const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
       expect(calledHeaders['Content-Type']).toBe('application/graphql');
     });
+
+    it('should merge custom headers with Content-Type for graphql requests', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        headers: { 'X-Custom-Header': 'my-value', 'Authorization': 'Bearer tok123' },
+        graphql: { query: 'query { users { id } }' },
+      };
+      await execute(config);
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['Content-Type']).toBe('application/json');
+      expect(calledHeaders['X-Custom-Header']).toBe('my-value');
+      expect(calledHeaders['Authorization']).toBe('Bearer tok123');
+    });
+
+    it('should include operationName in graphql body when set', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: { query: 'query GetUsers { users { id } } query GetPosts { posts { id } }', variables: {}, operationName: 'GetUsers' },
+      };
+      await execute(config);
+      const calledBody = JSON.parse((vi.mocked(fetch).mock.lastCall![1] as any).body);
+      expect(calledBody.operationName).toBe('GetUsers');
+    });
+
+    it('should omit operationName from graphql body when not set', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: { query: 'query { users { id } }' },
+      };
+      await execute(config);
+      const calledBody = JSON.parse((vi.mocked(fetch).mock.lastCall![1] as any).body);
+      expect(calledBody.operationName).toBeUndefined();
+    });
   });
 
   describe('collection variables', () => {

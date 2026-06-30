@@ -131,6 +131,7 @@ function App() {
   const [renameTabValue, setRenameTabValue] = useState('');
   const [selectedFlowName, setSelectedFlowName] = useState<string | null>(null);
   const [flowLastResults, setFlowLastResults] = useState<Record<string, any>>({});
+  const [graphqlRequest, setGraphqlRequest] = useState<any>(null);
 
   const startTabRename = (id: string, currentName: string) => {
     setRenamingTabId(id);
@@ -382,6 +383,11 @@ function App() {
       setTabs([...tabs, t]);
       setActiveTabId(tabId);
     }
+    // Route graphql requests to the GraphQL workspace instead of the REST editor
+    if (req.type === 'graphql') {
+      setGraphqlRequest({ ...req, _collection: col });
+      setActivePanel('graphql');
+    }
   };
 
   const createNewTab = () => {
@@ -545,7 +551,7 @@ function App() {
 
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 relative" style={{ background: 'var(--surface-1)' }}>
           {activePanel === 'graphql' ? (
-            <GraphQLWorkspace />
+            <GraphQLWorkspace initialRequest={graphqlRequest} />
           ) : activePanel === 'flows' ? (
             selectedFlowName ? (
               <FlowWorkspace

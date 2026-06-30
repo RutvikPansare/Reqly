@@ -17,6 +17,7 @@
     "@xterm/xterm": "^6.0.0",
     "cm6-graphql": "^0.2.1",
     "graphql": "^17.0.1",
+    "graphql-ws": "^6.0.8",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

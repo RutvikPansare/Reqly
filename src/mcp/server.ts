@@ -61,6 +61,7 @@ import * as switchProject from './tools/switch-project.js';
 import * as duplicateCollection from './tools/duplicate-collection.js';
 import * as duplicateEnvironment from './tools/duplicate-environment.js';
 import * as moveRequest from './tools/move-request.js';
+import * as introspectGraphql from './tools/introspect-graphql.js';
 
 const tools = [
   runRequest,
@@ -118,6 +119,7 @@ const tools = [
   duplicateCollection,
   duplicateEnvironment,
   moveRequest,
+  introspectGraphql,
 ];
 
 import { z } from 'zod';

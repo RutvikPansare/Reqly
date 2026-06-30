@@ -283,6 +283,9 @@ export async function execute(
     if (config.graphql.variables !== undefined) {
       gqlBody.variables = config.graphql.variables;
     }
+    if (config.graphql.operationName !== undefined) {
+      gqlBody.operationName = config.graphql.operationName;
+    }
     body = JSON.stringify(gqlBody);
     if (!headers['Content-Type'] && !headers['content-type']) {
       headers['Content-Type'] = 'application/json';

@@ -225,13 +225,11 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 | `exec_with_proxy` | Starts the proxy and runs a dev command with it injected |
 | `install_middleware` | Returns the inbound-capture snippet for your framework |
 
-**🎭 Mock Server**
+**🌐 GraphQL**
 
 | Tool | What it does |
 |------|-------------|
-| `start_mock` | Starts the mock server for a collection on a given port |
-| `stop_mock` | Stops the mock server |
-| `get_mock_status` | Returns mock server status and active routes |
+| `introspect_graphql` | Runs full schema introspection against a GraphQL endpoint; returns structured type/field/arg summary; caches schema for the UI |
 
 </details>
 
@@ -244,7 +242,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 - **Response diffing** - detects what changed between runs: status, latency delta, body diff
 - **Mock server** - serve saved examples as a real HTTP server for frontend dev and agent testing
 - **Pre/post scripts** - per-request sandboxed JS that can read/write env vars before and after the request fires
-- **GraphQL workspace** - dedicated editor with schema introspection, syntax highlighting, and variable panel
+- **GraphQL workspace** - dedicated editor with Headers tab, full schema introspection (with cache), Docs Explorer sidebar, operationName multi-op dropdown, Prettify, Copy as cURL, GraphQL-aware response viewer (data/errors/extensions sections), and real-time subscription streaming via graphql-ws
 - **cURL import** - paste any cURL command; fields populate instantly
 - **TypeScript interface generator** - infers a typed TS interface from any JSON response body
 - **.env integration** - zero-config: if `.env` exists at the project root it's loaded automatically

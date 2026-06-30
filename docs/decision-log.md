@@ -6,6 +6,18 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-06-30 - GraphQL subscription detection by query keyword, not by saved type
+
+`GraphQLWorkspace` detects subscription mode at runtime by scanning the query text for the `subscription` keyword rather than relying on a `type: graphql-subscription` flag on the saved request. Reasoning: users often paste or type a subscription query into the playground before saving. Requiring them to set a type field first would create friction. The subscription stream panel appears automatically when the query starts with `subscription`, and reverts to the normal response viewer when they switch to a `query` or `mutation`. Saved requests still carry `type: graphql-subscription` as a forward-compatible marker for the engine and MCP.
+
+## 2026-06-30 - Schema cache stored per URL hash in .reqly/.schema-cache/
+
+Introspection results are cached per-URL as `<sha256-of-url>.json` inside `.reqly/.schema-cache/`. This directory is inside the project's `.reqly/` folder so it travels with the repo if committed, or can be gitignored if preferred. The hash-based naming prevents collisions between different endpoints (staging vs prod). The cache is written both by the UI (on manual introspection) and by the `introspect_graphql` MCP tool so either path benefits the other.
+
+## 2026-06-30 - graphql package added to server root for MCP introspect_graphql tool
+
+`getIntrospectionQuery()` from the `graphql` npm package is used in the `introspect_graphql` MCP tool to generate the full introspection query. Previously the package was only in `src/ui/`. Adding it to the root `package.json` makes it available to server-side code without duplicating the query string inline.
+
 ## 2026-06-30 - Nav rail architecture for multiple protocols
 
 Each protocol workspace gets a nav rail icon only when its interaction model is genuinely distinct from a REST request. Concretely:
