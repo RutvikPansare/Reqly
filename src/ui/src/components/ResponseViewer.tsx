@@ -201,7 +201,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
             Sending...
           </div>
         ) : (
-          <div className="flex gap-3 text-sm font-mono items-center">
+          <div className="flex gap-3 text-xs font-mono items-center">
             <span className={statusColorClass(status)}>
               {status} {isError ? 'Error' : 'OK'}
             </span>
