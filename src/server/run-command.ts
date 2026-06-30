@@ -15,7 +15,8 @@ import { EngineContext } from '../mcp/tools/types.js';
 import { ResponseStore } from '../engine/response-store.js';
 import { HistoryStore } from '../engine/history-store.js';
 import { AssertionResult } from '../types/assertion.js';
-import { toJUnit } from '../engine/reporters/junit.js';
+import { toJUnit, toJUnitFromData } from '../engine/reporters/junit.js';
+import { DataRunner } from '../engine/data-runner.js';
 
 export async function handleRunCommand(
   parsed: ParsedArgs,
@@ -143,82 +144,131 @@ export async function handleRunCommand(
           executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
       };
 
-      const runner = new CollectionRunner(context);
-      const results = await runner.run(collectionName, { environment: env || undefined });
+      let runs: { rowNumber?: number, data?: any, result: import('../engine/collection-runner.js').CollectionRunResult }[] = [];
+      let dataRunResult: any = null;
 
-      // --validate-spec: check every fired response against the collection's
-      // configured spec (no-op if none is configured).
+      if (parsed.flags.data) {
+        const dataRunner = new DataRunner(context);
+        dataRunResult = await dataRunner.run(collectionName, parsed.flags.data, { environment: env || undefined });
+        runs = dataRunResult.runs;
+      } else {
+        const runner = new CollectionRunner(context);
+        runs = [{ result: await runner.run(collectionName, { environment: env || undefined }) }];
+      }
+
       let hasContractViolations = false;
-      const violationsByRequest = new Map<string, import('../types/index.js').ContractViolation[]>();
+      const allViolations = new Map<string, import('../types/index.js').ContractViolation[]>();
+
       if (parsed.flags.validateSpec) {
         const spec = await collectionManager.getCollectionSpec(collectionName);
         if (spec) {
           const { checkContract } = await import('../mcp/tools/contract-helper.js');
-          for (const r of results.results) {
-            if (!r.response) continue;
-            const reqDef = await collectionManager.getRequest(collectionName, r.requestName);
-            const contractResult = await checkContract(context, collectionName, reqDef, r.response);
-            if (contractResult) {
-              violationsByRequest.set(r.requestName, contractResult.violations);
-              if (contractResult.violations.length > 0) hasContractViolations = true;
+          for (const run of runs) {
+            for (const r of run.result.results) {
+              if (!r.response) continue;
+              const reqDef = await collectionManager.getRequest(collectionName, r.requestName);
+              const contractResult = await checkContract(context, collectionName, reqDef, r.response);
+              if (contractResult) {
+                const key = run.rowNumber ? `${run.rowNumber}-${r.requestName}` : r.requestName;
+                allViolations.set(key, contractResult.violations);
+                if (contractResult.violations.length > 0) hasContractViolations = true;
+              }
             }
           }
         }
       }
 
       if (parsed.flags.reporter === 'json') {
-        const resultsWithViolations = {
-          ...results,
-          results: results.results.map((r: any) => ({
-            ...r,
-            ...(violationsByRequest.has(r.requestName) ? { contractViolations: violationsByRequest.get(r.requestName) } : {}),
-          })),
-        };
-        console.log(JSON.stringify(resultsWithViolations, null, 2));
+        if (parsed.flags.data) {
+          const resultsWithViolations = {
+            ...dataRunResult,
+            runs: dataRunResult.runs.map((run: any) => ({
+              ...run,
+              result: {
+                ...run.result,
+                results: run.result.results.map((r: any) => ({
+                  ...r,
+                  ...(allViolations.has(`${run.rowNumber}-${r.requestName}`) ? { contractViolations: allViolations.get(`${run.rowNumber}-${r.requestName}`) } : {}),
+                }))
+              }
+            }))
+          };
+          console.log(JSON.stringify(resultsWithViolations, null, 2));
+        } else {
+          const resultsWithViolations = {
+            ...runs[0].result,
+            results: runs[0].result.results.map((r: any) => ({
+              ...r,
+              ...(allViolations.has(r.requestName) ? { contractViolations: allViolations.get(r.requestName) } : {}),
+            })),
+          };
+          console.log(JSON.stringify(resultsWithViolations, null, 2));
+        }
       } else if (parsed.flags.reporter === 'tap') {
         console.log('TAP version 13');
-        console.log(`1..${results.results.length}`);
-        results.results.forEach((r: any, i: number) => {
-          const violations = violationsByRequest.get(r.requestName) || [];
-          const ok = r.passed && violations.length === 0;
-          console.log(`${ok ? 'ok' : 'not ok'} ${i + 1} - ${r.requestName}`);
-          if (!r.passed && r.error) {
-            console.log(`  ---`);
-            console.log(`  error: ${r.error}`);
-            console.log(`  ...`);
-          }
-          for (const v of violations) {
-            console.log(`  ---`);
-            console.log(`  contract: [${v.severity}] ${v.field}: ${v.message}`);
-            console.log(`  ...`);
-          }
-        });
-      } else if (parsed.flags.reporter === 'junit') {
-        console.log(toJUnit(results));
-      } else {
-        console.log(`Running collection: ${collectionName}\n`);
-        for (const r of results.results) {
-          const mark = r.passed ? '✓' : '✗';
-          const method = 'UNK';
-          const status = r.response?.status || 0;
-          const latency = r.response?.latency || 0;
-          console.log(`  ${mark}  ${method.padEnd(5)}  ${r.requestName.padEnd(20)}  ${status}  ${latency}ms`);
-          if (!r.passed && r.error) {
-            console.log(`        ${r.error}`);
-          }
-          const violations = violationsByRequest.get(r.requestName) || [];
-          for (const v of violations) {
-            console.log(`        [contract:${v.severity}] ${v.field}: ${v.message}`);
+        const totalTests = runs.reduce((acc, run) => acc + run.result.results.length, 0);
+        console.log(`1..${totalTests}`);
+        let testIdx = 1;
+        for (const run of runs) {
+          for (const r of run.result.results) {
+            const key = run.rowNumber ? `${run.rowNumber}-${r.requestName}` : r.requestName;
+            const violations = allViolations.get(key) || [];
+            const ok = r.passed && violations.length === 0;
+            const name = run.rowNumber ? `${r.requestName} (Row ${run.rowNumber})` : r.requestName;
+            console.log(`${ok ? 'ok' : 'not ok'} ${testIdx++} - ${name}`);
+            if (!r.passed && r.error) {
+              console.log(`  ---`);
+              console.log(`  error: ${r.error}`);
+              console.log(`  ...`);
+            }
+            for (const v of violations) {
+              console.log(`  ---`);
+              console.log(`  contract: [${v.severity}] ${v.field}: ${v.message}`);
+              console.log(`  ...`);
+            }
           }
         }
-        console.log(`\nResults: ${results.passed} passed, ${results.failed} failed`);
+      } else if (parsed.flags.reporter === 'junit') {
+        if (parsed.flags.data) {
+          console.log(toJUnitFromData(dataRunResult));
+        } else {
+          console.log(toJUnit(runs[0].result));
+        }
+      } else {
+        console.log(`Running collection: ${collectionName}\n`);
+        for (const run of runs) {
+          if (run.rowNumber) {
+            console.log(`Row ${run.rowNumber} -----------`);
+          }
+          for (const r of run.result.results) {
+            const mark = r.passed ? '✓' : '✗';
+            const method = 'UNK';
+            const status = r.response?.status || 0;
+            const latency = r.response?.latency || 0;
+            console.log(`  ${mark}  ${method.padEnd(5)}  ${r.requestName.padEnd(20)}  ${status}  ${latency}ms`);
+            if (!r.passed && r.error) {
+              console.log(`        ${r.error}`);
+            }
+            const key = run.rowNumber ? `${run.rowNumber}-${r.requestName}` : r.requestName;
+            const violations = allViolations.get(key) || [];
+            for (const v of violations) {
+              console.log(`        [contract:${v.severity}] ${v.field}: ${v.message}`);
+            }
+          }
+        }
+        
+        const totalPassed = runs.reduce((acc, run) => acc + run.result.passed, 0);
+        const totalFailed = runs.reduce((acc, run) => acc + run.result.failed, 0);
+        console.log(`\nResults: ${totalPassed} passed, ${totalFailed} failed`);
+        
         if (parsed.flags.validateSpec) {
-          const totalViolations = [...violationsByRequest.values()].reduce((sum, v) => sum + v.length, 0);
+          const totalViolations = [...allViolations.values()].reduce((sum, v) => sum + v.length, 0);
           console.log(`Contract violations: ${totalViolations}`);
         }
       }
 
-      return (results.failed === 0 && !hasContractViolations) ? 0 : 1;
+      const totalFailed = runs.reduce((acc, run) => acc + run.result.failed, 0);
+      return (totalFailed === 0 && !hasContractViolations) ? 0 : 1;
     } catch (e: any) {
       console.error(`Error running collection: ${e.message}`);
       return 1;

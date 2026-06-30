@@ -59,6 +59,13 @@
 
 ## 2026-06-30
 
+- [x] **T-147** Data-driven testing: CSV/JSON collection runner
+  - Created `DataRunner` to parse CSV/JSON files and execute the collection once per row with the row's values injected as variables at the environment level.
+  - Added `--data <file>` flag to the CLI via `cli-parser.ts` and wired it into `run-command.ts` with output grouped by row for JSON, TAP, and pretty-print reporters.
+  - Added `toJUnitFromData` to JUnit reporter to generate one `<testsuite>` per data row so CI tracks input sets independently.
+  - Extended `run_collection` MCP tool schema and handler to accept `dataFile`, returning an object containing an array of runs.
+  - TDD: `data-runner.test.ts` covers CSV parsing (including quoted values), JSON parsing, iteration count, and variable injection.
+
 - [x] **T-158** Homebrew cask for Reqly.app
   - Wired `icon.png` into `electron-builder.yml` for macOS and Windows builds.
   - Confirmed tray PNG paths match `packages/desktop/src/main.ts`.

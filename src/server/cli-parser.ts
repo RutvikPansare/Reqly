@@ -19,6 +19,7 @@ export interface ParsedArgs {
     envFiles?: string[];
     validateSpec?: boolean;
     format?: string;
+    data?: string;
   };
 }
 
@@ -77,6 +78,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
       result.flags.validateSpec = true;
     } else if (arg === '--format') {
       result.flags.format = args[++i];
+    } else if (arg === '--data') {
+      result.flags.data = args[++i];
     } else if (arg === '--version' || arg === '-v') {
       try {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));

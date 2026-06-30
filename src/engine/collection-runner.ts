@@ -7,6 +7,7 @@ export interface RunOptions {
   environment?: Environment;
   auth?: AuthProfile;
   stopOnFailure?: boolean;
+  dataVariables?: Record<string, string>;
 }
 
 export interface RequestRunResult {
@@ -68,11 +69,18 @@ export class CollectionRunner {
         }
 
         const { substituteConfig } = await import('./variable-substitutor.js');
-        const envVars = options.environment ? options.environment.variables : {};
+        const envVars = options.environment ? { ...options.environment.variables } : {};
+        if (options.dataVariables) {
+          Object.assign(envVars, options.dataVariables);
+        }
+        const runEnv = options.environment 
+          ? { ...options.environment, variables: envVars }
+          : { id: 'data', name: 'Data', variables: envVars };
+
         const config = substituteConfig(request, [collectionVars, envVars], this.context.responseStore);
 
         response = await this.context.executeRequest(
-          config, options.environment, auth, undefined, undefined,
+          config, runEnv, auth, undefined, undefined,
           collectionVars, collectionAuth, collectionName,
           { validRequestNames }
         );

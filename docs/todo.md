@@ -17,15 +17,7 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ### M7 - Data & CI Power
 
-- [ ] **T-147** Data-driven testing: CSV/JSON collection runner
-  - `reqly run <collection> --data data.csv` (or `data.json`) runs the collection once per row
-  - Each row's keys become variables for that run at env-var precedence level
-  - CSV: first row is header (variable names), subsequent rows are data sets
-  - JSON: array of objects, each object is one data set
-  - Console output: one labeled result block per row ("Row 1 / Row 2...")
-  - JUnit XML: one `<testsuite>` per row so CI can distinguish failures by input set
-  - MCP tool `run_collection` gets an optional `dataFile` param
-  - TDD required: `data-runner.test.ts` - CSV parse, JSON parse, variable injection per row, multi-row output shape, JUnit shape
+
 
 - [ ] **T-149** Collection documentation export
   - `reqly export docs <collection>` generates a clean markdown API reference from the collection YAML

@@ -91,3 +91,13 @@ export function toJUnitFromFlow(result: FlowRunResult): string {
   const testCases = steps.map(s => stepToTestCase(s, result.flowName));
   return renderSuite(result.flowName, testCases);
 }
+
+export function toJUnitFromData(result: any): string {
+  const suites = [];
+  for (const run of result.runs) {
+    const testCases = run.result.results.flatMap((r: any) => toTestCases(r, result.collection));
+    const suiteName = `${result.collection} (Row ${run.rowNumber})`;
+    suites.push(renderSuite(suiteName, testCases));
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>\n${suites.join('\n')}\n</testsuites>`;
+}
