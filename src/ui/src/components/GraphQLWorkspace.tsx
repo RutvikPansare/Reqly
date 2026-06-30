@@ -387,7 +387,8 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col overflow-hidden" style={{ background: 'var(--surface-1)' }}>
+    <div className="absolute inset-0 flex overflow-hidden" style={{ background: 'var(--surface-1)' }}>
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <SplitPane
         top={
         <div className="flex flex-col h-full">
@@ -568,11 +569,6 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                     />
                   </div>
                 </div>
-                {showDocs && schema && (
-                  <div className="w-64 shrink-0 overflow-hidden">
-                    <GraphQLDocsExplorer schema={schema} onInsertField={handleInsertField} />
-                  </div>
-                )}
               </div>
             ) : bodyTab === 'variables' ? (
               <div className="flex-1 min-h-0" style={{ borderTop: '1px solid var(--border)' }}>
@@ -605,6 +601,12 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
           <GraphQLResponseViewer response={response} isSending={isSending} />
         )}
       />
+      </div>
+      {showDocs && schema && (
+        <div className="w-64 shrink-0 border-l border-[var(--border)] overflow-hidden flex flex-col">
+          <GraphQLDocsExplorer schema={schema} onInsertField={handleInsertField} />
+        </div>
+      )}
     </div>
   );
 }
