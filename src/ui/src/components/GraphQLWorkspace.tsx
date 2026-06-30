@@ -4,7 +4,10 @@ import CodeMirror from '@uiw/react-codemirror';
 import { graphql } from 'cm6-graphql';
 import { buildClientSchema, getIntrospectionQuery, parse as gqlParse, print as gqlPrint } from 'graphql';
 import type { EditorView } from '@codemirror/view';
+import { EditorSelection } from '@codemirror/state';
 import { json } from '@codemirror/lang-json';
+import { autocompletion } from '@codemirror/autocomplete';
+import type { CompletionContext } from '@codemirror/autocomplete';
 import { GraphQLResponseViewer } from './GraphQLResponseViewer';
 import { GraphQLSubscriptionStream } from './GraphQLSubscriptionStream';
 import { SplitPane } from './SplitPane';
@@ -135,7 +138,28 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
       })),
   ];
 
-  // Load cached schema whenever the URL changes
+  // CodeMirror completion extension for {{variable}} syntax in the Variables JSON editor
+  const varCompletionExtension = useMemo(() => {
+    return autocompletion({
+      override: [
+        (context: CompletionContext) => {
+          const match = context.matchBefore(/\{\{[a-zA-Z0-9_-]*/);
+          if (!match || (match.from === match.to && !context.explicit)) return null;
+          const typed = match.text.slice(2); // strip {{
+          const options = availableVariables
+            .filter(v => v.name.toLowerCase().includes(typed.toLowerCase()))
+            .map(v => ({
+              label: `{{${v.name}}}`,
+              apply: `{{${v.name}}}`,
+              detail: `${v.sourceType}${v.value !== undefined ? ` = ${v.value}` : ''}`,
+              type: 'variable',
+            }));
+          if (options.length === 0) return null;
+          return { from: match.from, options };
+        },
+      ],
+    });
+  }, [availableVariables]);
   useEffect(() => {
     if (!url.trim()) return;
     const controller = new AbortController();
@@ -256,6 +280,14 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
     setPrettifyError(null);
     try {
       const formatted = gqlPrint(gqlParse(query));
+      const view = editorViewRef.current;
+      if (view) {
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: formatted },
+          selection: EditorSelection.cursor(0),
+          scrollIntoView: true,
+        });
+      }
       setQuery(formatted);
     } catch (e: any) {
       setPrettifyError(e.message ?? 'Could not parse query');
@@ -529,7 +561,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                       value={query}
                       height="100%"
                       theme="dark"
-                      extensions={gqlSchemaObj ? [graphql(gqlSchemaObj)] : []}
+                      extensions={gqlSchemaObj ? [graphql(gqlSchemaObj), varCompletionExtension] : [varCompletionExtension]}
                       onChange={setQuery}
                       onCreateEditor={view => { editorViewRef.current = view; }}
                       className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
@@ -548,7 +580,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                   value={variables}
                   height="100%"
                   theme="dark"
-                  extensions={[json()]}
+                  extensions={[json(), varCompletionExtension]}
                   onChange={setVariables}
                   className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto"
                 />
