@@ -1031,7 +1031,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       // Layered scope: collection vars win over env vars on collision.
       const config = substituteConfig(req.body.request, [collectionVars, envVars], context.responseStore);
 
-      const response = await context.executeRequest(config, env, auth, undefined, undefined, collectionVars, collectionAuth);
+      const response = await context.executeRequest(config, env, auth, undefined, undefined, collectionVars, collectionAuth, collectionName);
       context.responseStore.set(req.body.request.name, response);
       context.historyStore.append(req.body.request, response);
 
