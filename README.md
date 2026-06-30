@@ -456,6 +456,24 @@ POST /api/mock/stop
 GET  /api/mock/status
 ```
 
+## 📤 Exporting Collections
+
+Reqly makes it easy to move your collections into other tools, documentation sites, or API gateways with built-in export formats:
+
+* 📮 **Postman (`postman`)**: Exports a standard Postman v2.1 JSON file. Perfect for importing directly into Postman, Insomnia, or other HTTP clients.
+* ⚙️ **OpenAPI (`openapi`)**: Generates an OpenAPI 3.0 JSON specification. Ideal for Swagger UI, generating client SDKs, or configuring API gateways.
+* 📖 **Markdown Docs (`docs`)**: Generates a beautiful Markdown (`.md`) API reference ready to be committed to your repository, wiki, or static site generator.
+
+**Via CLI:**
+```bash
+reqly export docs my-collection
+reqly export docs my-collection --output docs/api/my-collection.md
+```
+
+**Via AI Agents:**
+Your agent can automatically document your APIs by calling the `export_collection` MCP tool with the format set to `postman`, `openapi`, or `docs`.
+
+
 ## FAQ
 
 <details>
