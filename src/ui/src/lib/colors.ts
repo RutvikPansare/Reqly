@@ -35,11 +35,3 @@ export function statusColorClass(status: number): string {
   if (status >= 500) return 'text-red-400';
   return 'text-gray-400';
 }
-
-export function statusBadgeClass(status: number): string {
-  if (status >= 200 && status < 300) return 'bg-green-900/50 text-green-400';
-  if (status >= 300 && status < 400) return 'bg-blue-900/50 text-blue-400';
-  if (status >= 400 && status < 500) return 'bg-yellow-900/50 text-yellow-400';
-  if (status >= 500) return 'bg-red-900/50 text-red-400';
-  return 'bg-gray-800 text-gray-400';
-}

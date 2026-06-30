@@ -183,7 +183,8 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#0f0f12', // Matches var(--surface-1)
+    titleBarStyle: 'hiddenInset',
     webPreferences: { nodeIntegration: false, contextIsolation: true },
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
   });

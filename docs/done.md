@@ -465,3 +465,8 @@
   - Fixed GraphQL workspace layout so scroll behaviour is properly isolated
   - Fixed 'Save Example' bug for GraphQL workspace by correctly tracking active request state
   - Replaced POST badge with GQL badge in the collections panel for GraphQL requests
+- [x] **T-183** Electron title bar styling & response code font weight adjustments
+  - Updated `packages/desktop/src/main.ts` with `titleBarStyle: hiddenInset`
+  - Made `App.tsx` header draggable in Electron and added padding for traffic lights
+  - Removed `font-bold` from `ResponseViewer` and `GraphQLResponseViewer` to match latency styling
+

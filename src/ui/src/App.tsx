@@ -24,6 +24,8 @@ import { BottomBar, BottomPanel, useConsoleStats, type BottomTab } from './compo
 import { EmptyStateNudge } from './components/EmptyStateNudge';
 import { ShortcutsPalette } from './components/ShortcutsPalette';
 
+const isElectron = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron');
+
 interface TabData {
   id: string;
   tabName?: string;
@@ -424,7 +426,7 @@ function App() {
     <div className="h-screen flex flex-col relative" style={{ background: 'var(--surface-1)', overflow: 'hidden' }}>
       {/* Main area: header + sidebar/content - flex-1 so bottom bar is never squeezed out */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <header className="relative flex items-center px-4 shrink-0" style={{ height: '48px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)' }}>
+      <header className={`relative flex items-center shrink-0 ${isElectron ? 'pl-20 pr-4' : 'px-4'}`} style={{ height: '48px', background: 'var(--surface-1)', borderBottom: '1px solid var(--border)', WebkitAppRegion: isElectron ? 'drag' : 'auto' } as any}>
         {/* Wordmark - left */}
         <div className="flex items-center gap-2">
           <img src="/favicon.png" alt="" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />

@@ -202,14 +202,6 @@
     font-family: ui-monospace, monospace;
   }
 
-  /* Status badge */
-  .status-badge {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.125rem 0.5rem;
-    border-radius: var(--radius-sm);
-    font-family: ui-monospace, monospace;
-  }
 
   /* Sidebar section label */
   .sidebar-label {
@@ -285,3 +277,9 @@
   }
 }
 
+
+/* Make draggable regions work with buttons */
+[style*="-webkit-app-region: drag"] button,
+[style*="-webkit-app-region: drag"] input {
+  -webkit-app-region: no-drag;
+}

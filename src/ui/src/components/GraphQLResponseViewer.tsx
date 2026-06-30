@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, AlertTriangle, Copy, Check, BookMarked, X } from
 import { ResponseViewer } from './ResponseViewer';
 import { CollapsibleJson } from './InteractiveJsonTree';
 import { saveExample } from '../api';
+import { statusColorClass } from '../lib/colors';
 
 interface Props {
   response: any;
@@ -109,10 +110,10 @@ export function GraphQLResponseViewer({ response, isSending, request }: Props) {
       <div className="flex items-center gap-3 px-4 py-1.5 border-b border-[var(--border)] shrink-0" style={{ background: 'var(--surface-2)' }}>
         <GqlStatusBadge hasData={hasData} hasErrors={hasErrors} />
         {response.status && (
-          <span className="text-xs text-gray-500">HTTP {response.status}</span>
+          <span className={`text-xs font-mono ${statusColorClass(response.status)}`}>HTTP {response.status}</span>
         )}
         {response.latency !== undefined && (
-          <span className="text-xs text-gray-500">{response.latency}ms</span>
+          <span className="text-xs font-mono text-gray-500">{response.latency}ms</span>
         )}
         <div className="flex-1" />
         <div className="flex items-center gap-2 pr-2 border-r border-[var(--border)] mr-1">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, Copy, Check, Search, Braces, BookMarked, X, AlertTriangle } from 'lucide-react';
-import { statusBadgeClass } from '../lib/colors';
+import { statusColorClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
 import { saveExample, listExamples } from '../api';
 import { pushConsoleLogs } from './BottomPanel';
@@ -202,7 +202,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
           </div>
         ) : (
           <div className="flex gap-3 text-sm font-mono items-center">
-            <span className={`status-badge ${statusBadgeClass(status)}`}>
+            <span className={statusColorClass(status)}>
               {status} {isError ? 'Error' : 'OK'}
             </span>
             <span style={{ color: 'var(--text-muted)' }}>{latency || 0} ms</span>
@@ -518,7 +518,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
                     <div className="flex items-center justify-between px-3 py-2" style={{ background: 'var(--surface-3)', borderBottom: '1px solid var(--border)' }}>
                       <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{ex.name}</span>
                       <div className="flex items-center gap-3 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-                        <span className={`status-badge ${statusBadgeClass(ex.status)}`}>{ex.status}</span>
+                        <span className={`font-bold ${statusColorClass(ex.status)}`}>{ex.status}</span>
                         <span>{ex.latency} ms</span>
                         <span>{new Date(ex.savedAt).toLocaleString()}</span>
                       </div>
