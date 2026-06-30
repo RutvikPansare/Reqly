@@ -148,7 +148,7 @@ export function GraphQLResponseViewer({ response, isSending, request }: Props) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-3 min-w-0 w-full">
         {/* Errors always shown first, prominently */}
         {hasErrors && (
           <div className="mb-3 border border-red-800 rounded overflow-hidden">

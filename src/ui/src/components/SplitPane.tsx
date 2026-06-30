@@ -14,6 +14,7 @@ interface SplitPaneProps {
 
 export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBottom = 15, autoSplit }: SplitPaneProps) {
   const [split, setSplit] = useState(autoSplit ?? defaultSplit);
+  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const userDragged = useRef(false);
@@ -28,6 +29,7 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
     e.preventDefault();
     dragging.current = true;
     userDragged.current = true;
+    setIsDragging(true);
 
     const onMove = (ev: MouseEvent) => {
       if (!dragging.current || !containerRef.current) return;
@@ -38,6 +40,7 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
 
     const onUp = () => {
       dragging.current = false;
+      setIsDragging(false);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
@@ -47,7 +50,7 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
   }, [minTop, minBottom]);
 
   return (
-    <div ref={containerRef} className="flex flex-col h-full select-none">
+    <div ref={containerRef} className={`flex flex-col h-full ${isDragging ? 'select-none' : ''}`}>
       {/* Top pane */}
       <div style={{ flex: `${split} 1 0%` }} className="min-h-0 overflow-hidden flex flex-col">
         {top}

@@ -118,7 +118,7 @@ export function CollapsibleJson({ label, data, defaultOpen = true, accent, filte
   };
 
   return (
-    <div className="border border-[var(--border)] rounded mb-3 overflow-hidden flex flex-col min-h-0 shrink-0">
+    <div className="border border-[var(--border)] rounded mb-3 flex flex-col min-h-0 shrink-0 min-w-0 w-full overflow-hidden">
       <div
         className="flex items-center gap-1.5 w-full px-3 py-2 text-xs font-semibold text-left transition-colors shrink-0 sticky top-0 z-10 group"
         style={{ background: 'var(--surface-2)' }}
