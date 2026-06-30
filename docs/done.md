@@ -2,6 +2,11 @@
 
 ## 2026-06-30
 
+- [x] **T-164** Fix literal `\n` characters in Markdown API documentation export
+  - **Bug:** `exportToDocs` in `src/engine/exporter.ts` joined lines with the string literal `'\\n'` instead of actual newline `'\n'`, causing the exported `.md` file to output single line strings with literal `\n` visible in the content.
+  - **Fix:** Swapped `\\n` to `\n` in the `lines.join('\n')` statement at the end of the exporter.
+  - Tested via `npx vitest run src/engine/exporter.test.ts` and `src/mcp/tools/export-collection.test.ts` - all tests pass.
+
 - [x] **T-163** `reqly setup` tool-aware config generation + setup docs
   - Updated `reqly setup` to use `${workspaceFolder}` only for VS Code-based tools (Cursor, Windsurf).
   - Omitted `--project-dir` for standalone tools (Claude Desktop, Gemini, Antigravity) and added instructions to use `reqly use <path>`.

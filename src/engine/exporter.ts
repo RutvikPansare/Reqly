@@ -220,5 +220,5 @@ export function exportToDocs(collection: Collection): string {
     }
   }
 
-  return lines.join('\\n').trim() + '\\n';
+  return lines.join('\n').trim() + '\n';
 }
