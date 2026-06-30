@@ -191,7 +191,7 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
   };
 
   return (
-    <div className="flex flex-col flex-1" style={{ background: 'var(--surface-1)' }}>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden" style={{ background: 'var(--surface-1)' }}>
       <div className="panel-header">
         <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Response</span>
         {isSending ? (
