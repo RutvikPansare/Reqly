@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export interface ParsedArgs {
-  command: 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export-flow' | 'init' | 'app';
+  command: 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app';
   args: string[];
   collection?: string;
   flags: {
@@ -20,6 +20,8 @@ export interface ParsedArgs {
     validateSpec?: boolean;
     format?: string;
     data?: string;
+    output?: string;
+    silent?: boolean;
   };
 }
 
@@ -45,7 +47,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let i = 0;
 
   // check if first non-flag argument is a command
-  const validCommands = ['start', 'run', 'run-flow', 'mock', 'setup', 'use', 'status', 'stop', 'exec', 'import', 'export-flow', 'init', 'app'];
+  const validCommands = ['start', 'run', 'run-flow', 'mock', 'setup', 'use', 'status', 'stop', 'exec', 'import', 'export', 'export-flow', 'init', 'app'];
   let commandFound = false;
   // once `exec`'s child command starts, everything after it (including its own
   // dashed flags) is passed through verbatim rather than parsed as reqly flags
@@ -80,6 +82,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
       result.flags.format = args[++i];
     } else if (arg === '--data') {
       result.flags.data = args[++i];
+    } else if (arg === '--output') {
+      result.flags.output = args[++i];
+    } else if (arg === '--silent') {
+      result.flags.silent = true;
     } else if (arg === '--version' || arg === '-v') {
       try {
         const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
@@ -90,7 +96,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       if (!commandFound && validCommands.includes(arg)) {
-        result.command = arg as 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export-flow' | 'init' | 'app';
+        result.command = arg as 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app';
         commandFound = true;
       } else {
         result.args.push(arg);

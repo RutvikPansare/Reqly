@@ -19,14 +19,7 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 
 
-- [ ] **T-149** Collection documentation export
-  - `reqly export docs <collection>` generates a clean markdown API reference from the collection YAML
-  - Structure: H1 = collection name, H2 per request, table for headers/params, fenced code block for body + example responses
-  - Default output path: `docs/api/<collection>.md`; `--output <path>` to override
-  - Also available as `POST /api/collections/:name/export?format=docs`
-  - Extend existing `export_collection` MCP tool with `format: "docs"` option alongside existing `postman` and `openapi`
-  - No external deps - pure string templating from existing collection YAML
-  - TDD required: `docs-exporter.test.ts` - collection with no requests, collection with headers/body/examples, output path resolution
+
 
 ### Protocol Expansion (Later)
 

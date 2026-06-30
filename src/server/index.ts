@@ -111,6 +111,12 @@ async function main() {
     process.exit(exitCode);
   }
 
+  if (parsed.command === 'export') {
+    const { handleExportCommand } = await import('./export-command.js');
+    const exitCode = await handleExportCommand(parsed, collectionManager);
+    process.exit(exitCode);
+  }
+
   if (parsed.command === 'exec') {
     const execProxyServer = new ProxyServer(collectionManager);
     const exitCode = await handleExecCommand(parsed, execProxyServer);

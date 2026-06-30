@@ -39,6 +39,16 @@ describe('export_collection tool', () => {
     expect(openapi.info.title).toBe('Test API');
   });
 
+  it('exports as docs and returns markdown content', async () => {
+    const ctx = makeContext();
+    const result = await handler({ collectionName: 'Test API', format: 'docs' }, ctx);
+    expect(result.isError).toBeFalsy();
+    const data = JSON.parse(result.content[0].text);
+    expect(data.format).toBe('docs');
+    expect(data.content).toContain('# Test API');
+    expect(data.content).toContain('## Get Items');
+  });
+
   it('returns error for unknown format', async () => {
     const ctx = makeContext();
     const result = await handler({ collectionName: 'Test API', format: 'invalid' }, ctx);

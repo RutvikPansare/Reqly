@@ -59,6 +59,13 @@
 
 ## 2026-06-30
 
+- [x] **T-149** Collection documentation export
+  - Implemented `exportToDocs` in `exporter.ts` to generate Markdown documentation from a collection.
+  - Added `reqly export docs <collection>` command to the CLI with optional `--output` flag.
+  - Added `format=docs` to the `/api/collections/:name/export` REST endpoint.
+  - Extended the `export_collection` MCP tool to support the `docs` format.
+  - TDD covered in `docs-exporter.test.ts` and `export-command.test.ts`.
+
 - [x] **T-147** Data-driven testing: CSV/JSON collection runner
   - Created `DataRunner` to parse CSV/JSON files and execute the collection once per row with the row's values injected as variables at the environment level.
   - Added `--data <file>` flag to the CLI via `cli-parser.ts` and wired it into `run-command.ts` with output grouped by row for JSON, TAP, and pretty-print reporters.

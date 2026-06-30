@@ -131,3 +131,94 @@ export function exportToOpenApi(collection: Collection): string {
 
   return JSON.stringify(openapi, null, 2);
 }
+
+// ── Markdown Docs export ─────────────────────────────────────────────────────
+
+export function exportToDocs(collection: Collection): string {
+  const lines: string[] = [];
+
+  lines.push(`# ${collection.name}`);
+  if (collection.description) {
+    lines.push('');
+    lines.push(collection.description);
+  }
+
+  for (const req of collection.requests) {
+    lines.push('');
+    lines.push(`## ${req.name}`);
+    lines.push('');
+    lines.push(`**${req.method.toUpperCase()}** \`${req.url}\``);
+    lines.push('');
+
+    // Headers
+    if (req.headers && Object.keys(req.headers).length > 0) {
+      lines.push('### Headers');
+      lines.push('| Key | Value |');
+      lines.push('|---|---|');
+      for (const [k, v] of Object.entries(req.headers)) {
+        lines.push(`| \`${k}\` | \`${v}\` |`);
+      }
+      lines.push('');
+    }
+
+    // Params
+    if (req.params && Object.keys(req.params).length > 0) {
+      lines.push('### Parameters');
+      lines.push('| Key | Value |');
+      lines.push('|---|---|');
+      for (const [k, v] of Object.entries(req.params)) {
+        lines.push(`| \`${k}\` | \`${v}\` |`);
+      }
+      lines.push('');
+    }
+
+    // Body
+    if (req.body) {
+      lines.push('### Request Body');
+      if (typeof req.body === 'object' && req.body !== null) {
+        if ('type' in req.body && req.body.type === 'multipart') {
+          lines.push('**Type:** \`multipart/form-data\`');
+          lines.push('');
+          lines.push('| Name | Type | Value |');
+          lines.push('|---|---|---|');
+          for (const part of (req.body as import('../types/index.js').MultipartBody).parts) {
+            lines.push(`| \`${part.name}\` | \`${part.type}\` | \`${part.value || part.filePath || ''}\` |`);
+          }
+          lines.push('');
+        } else {
+          lines.push('```json');
+          lines.push(JSON.stringify(req.body, null, 2));
+          lines.push('```');
+          lines.push('');
+        }
+      } else {
+        lines.push('```');
+        lines.push(String(req.body));
+        lines.push('```');
+        lines.push('');
+      }
+    }
+
+    // Examples
+    if (req.examples && req.examples.length > 0) {
+      lines.push('### Examples');
+      for (const ex of req.examples) {
+        lines.push('');
+        lines.push(`#### ${ex.name}`);
+        lines.push(`**Status:** ${ex.status}`);
+        
+        if (ex.body) {
+          const isJson = ex.headers && Object.entries(ex.headers).some(([k, v]) => k.toLowerCase() === 'content-type' && v.includes('application/json'));
+          const rawBody = typeof ex.body === 'object' ? JSON.stringify(ex.body, null, 2) : ex.body;
+          lines.push('');
+          lines.push(isJson || typeof ex.body === 'object' ? '```json' : '```');
+          lines.push(rawBody);
+          lines.push('```');
+        }
+      }
+      lines.push('');
+    }
+  }
+
+  return lines.join('\\n').trim() + '\\n';
+}

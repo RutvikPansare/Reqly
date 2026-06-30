@@ -16,7 +16,7 @@ import { writeLock, readLock } from './lock.js';
 import { fileURLToPath } from 'url';
 import { parseCurl } from '../engine/curl-parser.js';
 import { generateCode } from '../engine/code-generator.js';
-import { exportToPostman, exportToOpenApi } from '../engine/exporter.js';
+import { exportToPostman, exportToOpenApi, exportToDocs } from '../engine/exporter.js';
 import { execute as executeHttp } from '../engine/http-executor.js';
 import { detectFramework } from '../engine/framework-detector.js';
 import { attachTerminal } from './terminal.js';
@@ -1237,14 +1237,14 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     try {
       const name = decodeURIComponent(req.params.name);
       const format = (req.query.format as string) || 'postman';
-      if (!['postman', 'openapi'].includes(format)) {
-        return res.status(400).json({ error: 'format must be "postman" or "openapi"' });
+      if (!['postman', 'openapi', 'docs'].includes(format)) {
+        return res.status(400).json({ error: 'format must be "postman", "openapi", or "docs"' });
       }
       const collection = await context.collectionManager.getCollection(name);
-      const content = format === 'openapi' ? exportToOpenApi(collection) : exportToPostman(collection);
-      const ext = format === 'openapi' ? 'json' : 'json';
+      const content = format === 'docs' ? exportToDocs(collection) : format === 'openapi' ? exportToOpenApi(collection) : exportToPostman(collection);
+      const ext = format === 'docs' ? 'md' : 'json';
       const filename = `${name.replace(/[^a-zA-Z0-9-_]/g, '_')}_${format}.${ext}`;
-      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Type', format === 'docs' ? 'text/markdown' : 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(content);
     } catch (e: any) {
