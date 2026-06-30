@@ -122,7 +122,7 @@ const tools = [
 
 import { z } from 'zod';
 
-function convertSchemaToZodShape(schema: any) {
+export function convertSchemaToZodShape(schema: any) {
   if (!schema || !schema.properties) return {};
   const shape: any = {};
   for (const [k, v] of Object.entries(schema.properties)) {
@@ -130,6 +130,20 @@ function convertSchemaToZodShape(schema: any) {
     if ((v as any).type === 'string') zType = z.string();
     else if ((v as any).type === 'number') zType = z.number();
     else if ((v as any).type === 'boolean') zType = z.boolean();
+    else if ((v as any).type === 'object') {
+      // Some MCP clients (Claude Code) serialize object args as JSON strings.
+      // Preprocess handles both native object and double-encoded string.
+      zType = z.preprocess(
+        (val) => typeof val === 'string' ? JSON.parse(val) : val,
+        z.record(z.string(), z.any())
+      );
+    }
+    else if ((v as any).type === 'array') {
+      zType = z.preprocess(
+        (val) => typeof val === 'string' ? JSON.parse(val) : val,
+        z.array(z.any())
+      );
+    }
     
     if (schema.required && !schema.required.includes(k)) {
       zType = zType.optional();
