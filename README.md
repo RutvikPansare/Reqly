@@ -103,6 +103,17 @@ This configures Cursor, Claude Desktop, Claude Code, Gemini CLI, and Codex in on
 
 Restart your AI tool, then ask it: "list my Reqly collections".
 
+### Project directory resolution
+Reqly determines which project directory to operate on based on a 4-level priority chain:
+1. **Flag:** `--project-dir` (highest priority)
+2. **Environment Variable:** \`REQLY_PROJECT_DIR\`
+3. **Saved Config:** The path set by running \`reqly use <path>\`
+4. **Current Directory:** \`process.cwd()\`
+
+**Setup Methods by Host:**
+*   **VS Code-based editors (Cursor, Windsurf):** These editors support dynamic macro interpolation. \`reqly setup\` configures them to pass \`--project-dir \${workspaceFolder}\` so Reqly dynamically follows whichever project is currently open in the editor window.
+*   **Standalone hosts (Claude Desktop, Gemini CLI, Antigravity):** These tools spawn one global MCP server process that is shared across all projects and do not interpolate macros. \`reqly setup\` omits the flag entirely. For these tools, you **must** run \`reqly use <path>\` inside your project directory to tell the global Reqly process which project to look at.
+
 ### Try it in 30 seconds
 
 No API, no agent setup needed yet. Run this in any directory:

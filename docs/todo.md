@@ -37,20 +37,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
   - TDD required: `cli-parser.test.ts` - macro regex catches all patterns, valid paths pass through; `startup.test.ts` - 4xx switch response triggers mcp-only mode not EADDRINUSE, ECONNREFUSED triggers full server start
 
-- [ ] **T-163** `reqly setup` tool-aware config generation + setup docs
-  - **Context:** `reqly setup cursor` correctly uses `${workspaceFolder}` because Cursor (VS Code-based) interpolates it. Non-VS Code tools like Antigravity, Claude Desktop, and Gemini CLI do not - passing `--project-dir ${workspaceFolder}` to them is always wrong.
-
-  **Setup config fix:**
-  - Identify which tools support VS Code macro interpolation: Cursor, Windsurf, VS Code (Claude extension). These keep `${workspaceFolder}`.
-  - For all other tools (`antigravity`, `claude`, `claudecode`, `gemini`, any unknown tool): omit `--project-dir` from the generated config entirely. Instead, print a post-setup instruction: "Run `reqly use <path>` in each project directory to set your default project. This persists across restarts."
-  - Update `reqly setup --help` output to explain the distinction.
-
-  **Docs fix (`README.md` + `docs/llms.txt`):**
-  - Add a "Project directory resolution" section to both files explaining the 4-level priority chain and which setup method applies to which host: VS Code-based editors use `${workspaceFolder}` in config; everything else uses `reqly use <path>`
-  - Add a note in `llms.txt` that agents should call `get_project` on first connection to verify `configSource` and confirm they are in the expected directory - this catches misconfiguration before any tool calls run
-
-  - No TDD required (config template changes + docs)
-
 ### M6 - Script Power + Developer UX
 
 

@@ -29,6 +29,19 @@ reqly setup cursor
 ```
 Then ask Cursor: "list my Reqly collections".
 
+## Project Directory Resolution
+
+Reqly determines which project directory to operate on based on a 4-level priority chain:
+1. `flag`: `--project-dir` (highest priority)
+2. `env`: `REQLY_PROJECT_DIR`
+3. `config`: The path set by running `reqly use <path>`
+4. `cwd`: `process.cwd()`
+
+VS Code-based editors (Cursor, Windsurf) support dynamic macro interpolation and will automatically pass `--project-dir ${workspaceFolder}`. 
+
+Standalone hosts (Claude Desktop, Gemini CLI, Antigravity) do not support macros, so `reqly setup` configures them without the flag. For these tools, the user **must** run `reqly use <path>` inside their project directory to tell the global Reqly process which project to look at.
+
+**Important for agents:** On first connection, you should call the `get_project` MCP tool to verify Reqly is pointed at the expected directory. It returns `{ projectDir, configSource, fallbackReason? }`. This catches misconfigurations early.
 ## The fastest way to start
 
 Don't wait for traffic capture - if the agent can read the project's source, tell it directly:

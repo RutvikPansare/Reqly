@@ -2,6 +2,11 @@
 
 ## 2026-06-30
 
+- [x] **T-163** `reqly setup` tool-aware config generation + setup docs
+  - Updated `reqly setup` to use `${workspaceFolder}` only for VS Code-based tools (Cursor, Windsurf).
+  - Omitted `--project-dir` for standalone tools (Claude Desktop, Gemini, Antigravity) and added instructions to use `reqly use <path>`.
+  - Added `--help` to `reqly setup` detailing host tool distinctions.
+  - Added "Project directory resolution" section to `README.md` and `llms.txt`.
 - [x] **T-162** Harden `--project-dir` macro detection and fix switch-project failure logic
   - **Fix 1:** `resolveProjectDir` now uses a broad regex (`/^\$\{.+\}$|^%.+%$|^\{.+\}$|^\$[A-Z_][A-Z0-9_]*$/`) instead of exact `${workspaceFolder}` check; covers `%WORKSPACE_FOLDER%`, `{workspaceFolder}`, `$VARNAME`, and any future unresolved pattern; logs a warning when ignored
   - **Fix 2:** switch-project 4xx/5xx responses now set `mcpOnly = true` instead of falling through to start a new Express server; only `ECONNREFUSED` triggers a fresh server start; prevents `EADDRINUSE` crash when server is running but rejects the path

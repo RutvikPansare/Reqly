@@ -6,20 +6,30 @@ import { ParsedArgs } from './cli-parser.js';
 export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
   const target = parsed.args[0];
 
+  if (target === '--help' || target === '-h') {
+    console.log(`Usage: reqly setup [tool]
+
+Supported tools: cursor, windsurf, claude, claudecode, gemini, antigravity
+
+Project Directory Resolution:
+- VS Code-based editors (cursor, windsurf) support the \`\${workspaceFolder}\` macro. Reqly will configure them to pass \`--project-dir \${workspaceFolder}\` so the server always points to your current editor window.
+- Other tools (claude, claudecode, gemini, antigravity) do not support this macro. Reqly will omit the flag. Instead, you must run \`reqly use <path>\` in your project directory to set your default project manually.
+`);
+    return 0;
+  }
+
   // Use `reqly` as the command (global install) with --project-dir so the server
   // always resolves collections relative to the user's actual project, not wherever
   // the AI tool happens to launch the process from.
   const mcpCommand = 'reqly';
   // ${workspaceFolder} is interpolated by Cursor and most MCP-aware editors at launch time.
-  // For tools that don't support it, the user should re-run `reqly setup` from their project dir
-  // or pass --project-dir explicitly.
   const mcpArgs = ['start', '--project-dir', '${workspaceFolder}'];
-  // Claude Desktop has no ${workspaceFolder} equivalent and spawns one global server process
-  // shared across every project - --project-dir can't be set per-project here, so it's omitted
-  // and the user is told to run `reqly use` instead (T-065).
+  // Tools that don't support it spawn one global server process shared across every project
+  // so --project-dir can't be set per-project here. It's omitted and the user is told to run `reqly use` instead.
   const desktopMcpArgs = ['start'];
 
   const cursorConfigPath = path.join(os.homedir(), '.cursor', 'mcp.json');
+  const windsurfConfigPath = path.join(os.homedir(), '.codeium', 'windsurf', 'mcp_config.json');
   const geminiConfigPath = path.join(os.homedir(), '.gemini', 'config', 'mcp.json');
   const codexConfigPath = path.join(os.homedir(), '.codex', 'config.toml');
   const claudeDesktopConfigPathMac = path.join(os.homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
@@ -63,9 +73,10 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
     await setupJsonMcp(configPath, 'Claude Desktop', desktopMcpArgs);
   };
 
-  const printDesktopUseHint = () => {
-    console.log("  Run 'reqly use /path/to/your/project' to point Reqly at a project.");
-    console.log('  Re-run whenever you switch projects, then restart Claude Desktop.');
+  const printDesktopUseHint = (toolName: string) => {
+    console.log(`\nNote for ${toolName}:`);
+    console.log("  Run `reqly use <path>` inside your project to point Reqly at it.");
+    console.log('  This tool does not support dynamic folder resolution, so this step is required.');
   };
 
   const setupCodex = async () => {
@@ -101,22 +112,31 @@ export async function handleSetupCommand(parsed: ParsedArgs): Promise<number> {
   console.log('Configuring Reqly MCP server...\n');
 
   if (target === 'cursor') {
-    await setupJsonMcp(cursorConfigPath, 'Cursor');
+    await setupJsonMcp(cursorConfigPath, 'Cursor', mcpArgs);
+  } else if (target === 'windsurf') {
+    await setupJsonMcp(windsurfConfigPath, 'Windsurf', mcpArgs);
+    await setupCodex();
   } else if (target === 'claude') {
     await setupClaudeDesktop();
-    printDesktopUseHint();
+    printDesktopUseHint('Claude Desktop');
   } else if (target === 'gemini') {
-    await setupJsonMcp(geminiConfigPath, 'Gemini');
+    await setupJsonMcp(geminiConfigPath, 'Gemini', desktopMcpArgs);
+    printDesktopUseHint('Gemini');
+  } else if (target === 'antigravity') {
+    await setupJsonMcp(geminiConfigPath, 'Antigravity', desktopMcpArgs);
+    printDesktopUseHint('Antigravity');
   } else if (target === 'codex') {
     await setupCodex();
   } else if (target === 'claudecode') {
     printClaudeCode();
   } else {
-    // All
-    await setupJsonMcp(cursorConfigPath, 'Cursor');
+    // All known tools
+    await setupJsonMcp(cursorConfigPath, 'Cursor', mcpArgs);
+    await setupJsonMcp(windsurfConfigPath, 'Windsurf', mcpArgs);
     await setupClaudeDesktop();
-    printDesktopUseHint();
-    await setupJsonMcp(geminiConfigPath, 'Gemini');
+    printDesktopUseHint('Claude Desktop');
+    await setupJsonMcp(geminiConfigPath, 'Gemini / Antigravity', desktopMcpArgs);
+    printDesktopUseHint('Gemini / Antigravity');
     await setupCodex();
     printClaudeCode();
   }
