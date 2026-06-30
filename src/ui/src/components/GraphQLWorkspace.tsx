@@ -660,8 +660,8 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 min-h-0 flex flex-col">
-                      <div className="flex-1 min-h-0 rounded-none border-t border-[var(--border)]">
+                    <div className="flex-1 min-h-0 flex flex-col p-2 pt-0">
+                      <div className="flex-1 min-h-0 rounded border border-[var(--border)] overflow-hidden">
                         <CodeMirror
                           value={query}
                           height="100%"
@@ -677,14 +677,14 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
                 </div>
               </div>
             ) : bodyTab === 'variables' ? (
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 p-2 pt-0">
                 <CodeMirror
                   value={variables}
                   height="100%"
                   theme="dark"
                   extensions={[json(), varCompletionExtension]}
                   onChange={setVariables}
-                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded-none border-t border-[var(--border)] [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto rounded border border-[var(--border)] overflow-hidden [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
                 />
               </div>
             ) : (
