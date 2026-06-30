@@ -429,7 +429,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <KeyValueEditor pairs={headersList} onChange={setHeadersList} variables={availableVariables} />
           </div>
         ) : activeTab === 'body' ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 h-full">
             {/* Body type selector */}
             <div className="flex items-center gap-2 flex-wrap">
               {(['none', 'json', 'raw', 'multipart'] as const).map(t => (
