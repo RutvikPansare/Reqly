@@ -145,6 +145,7 @@ All Windows Support items shipped (T-115 through T-119).
 
 - [ ] **T-147** Data-driven testing - `reqly run <collection> --data data.csv` (or `.json`) runs the collection once per row; each row's keys inject as variables; JUnit XML emits one `<testsuite>` per row so CI can distinguish failures by input; MCP tool `run_collection` gets an optional `dataFile` param
 - [ ] **T-149** Collection documentation export - `reqly export docs <collection>` generates a clean markdown API reference from the collection YAML (method, URL, params, headers, body schema, example responses); default output to `docs/api/<collection>.md`; extend `export_collection` MCP tool with `format: "docs"`; no external deps, pure string templating
+- [ ] **T-161** `preScriptFile` / `postScriptFile` - agents write complex scripts as plain `.js` files (no JSON escaping), reference by path relative to collection folder; engine reads at run time; inline `preScript`/`postScript` stays for one-liners and wins on conflict; path traversal outside collection folder rejected
 
 ---
 
