@@ -354,28 +354,63 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
 
               {authType === 'mtls' && (
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Certificate path</label>
-                    <input
-                      disabled={!!authProfileId}
-                      className={inputCls}
-                      placeholder="/Users/you/.reqly/certs/client.crt"
-                      value={authCreds.certPath || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, certPath: e.target.value })}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Certificate (PEM) path</label>
+                      <input
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="{{cert_dir}}/client.crt"
+                        value={authCreds.certPath || ''}
+                        onChange={e => setAuthCreds({ ...authCreds, certPath: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Private key path</label>
+                      <input
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="{{cert_dir}}/client.key"
+                        value={authCreds.keyPath || ''}
+                        onChange={e => setAuthCreds({ ...authCreds, keyPath: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">PKCS#12 (PFX) path</label>
+                      <input
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="{{cert_dir}}/client.pfx"
+                        value={authCreds.pfxPath || ''}
+                        onChange={e => setAuthCreds({ ...authCreds, pfxPath: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Passphrase</label>
+                      <input
+                        disabled={!!authProfileId}
+                        type="password"
+                        className={inputCls}
+                        placeholder="{{mtls_passphrase}}"
+                        value={authCreds.passphrase || ''}
+                        onChange={e => setAuthCreds({ ...authCreds, passphrase: e.target.value })}
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Private key path</label>
+                    <label className="block text-sm text-gray-400 mb-1">Custom Root CA path (optional)</label>
                     <input
                       disabled={!!authProfileId}
                       className={inputCls}
-                      placeholder="/Users/you/.reqly/certs/client.key"
-                      value={authCreds.keyPath || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, keyPath: e.target.value })}
+                      placeholder="{{cert_dir}}/ca.crt"
+                      value={authCreds.caPath || ''}
+                      onChange={e => setAuthCreds({ ...authCreds, caPath: e.target.value })}
                     />
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    Provide absolute paths to PEM-encoded certificate and private key files. Store certs in ~/.reqly/certs/ - they are never committed to the repo.
+                    Provide either (Certificate + Private Key) OR a (PFX) file. All fields support <code>{'{{variables}}'}</code> to avoid hardcoding secrets in YAML. Store files outside the project repo (e.g. <code>~/.reqly/certs/</code>).
                   </p>
                 </div>
               )}

@@ -751,28 +751,68 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
 
               {authType === 'mtls' && (
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Certificate path</label>
-                    <input
-                      disabled={!!authProfileId}
-                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
-                      placeholder="/Users/you/.reqly/certs/client.crt"
-                      value={authCreds.certPath || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, certPath: e.target.value })}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Certificate (PEM) path</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="{{cert_dir}}/client.crt"
+                        value={authCreds.certPath || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, certPath: val })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Private key path</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="{{cert_dir}}/client.key"
+                        value={authCreds.keyPath || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, keyPath: val })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">PKCS#12 (PFX) path</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="{{cert_dir}}/client.pfx"
+                        value={authCreds.pfxPath || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, pfxPath: val })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Passphrase</label>
+                      <VariableInput
+                        type="password"
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="{{mtls_passphrase}}"
+                        value={authCreds.passphrase || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, passphrase: val })}
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Private key path</label>
-                    <input
+                    <label className="block text-sm text-gray-400 mb-1">Custom Root CA path (optional)</label>
+                    <VariableInput
+                      variables={availableVariables}
                       disabled={!!authProfileId}
                       className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
-                      placeholder="/Users/you/.reqly/certs/client.key"
-                      value={authCreds.keyPath || ''}
-                      onChange={e => setAuthCreds({ ...authCreds, keyPath: e.target.value })}
+                      placeholder="{{cert_dir}}/ca.crt"
+                      value={authCreds.caPath || ''}
+                      onChange={val => setAuthCreds({ ...authCreds, caPath: val })}
                     />
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    Absolute paths to PEM-encoded certificate and key. Store in ~/.reqly/certs/ - never committed.
+                    Provide either (Certificate + Private Key) OR a (PFX) file. Fields support <code>{'{{variables}}'}</code>. Store certs in ~/.reqly/certs/ - never committed.
                   </p>
                 </div>
               )}
@@ -859,10 +899,15 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                 rows.push({ header: 'Authorization', value: '(not yet obtained)', source: authSource, note: 'Authorize first in the Auth tab' });
               }
             } else if (effectiveType === 'mtls') {
-              if (effectiveCreds.certPath && effectiveCreds.keyPath) {
+              if (effectiveCreds.pfxPath) {
+                rows.push({ header: 'TLS client cert', value: effectiveCreds.pfxPath, source: authSource, note: effectiveCreds.passphrase ? 'with passphrase' : 'no passphrase' });
+              } else if (effectiveCreds.certPath && effectiveCreds.keyPath) {
                 rows.push({ header: 'TLS client cert', value: effectiveCreds.certPath, source: authSource, note: `key: ${effectiveCreds.keyPath}` });
               } else {
-                rows.push({ header: 'TLS client cert', value: '(incomplete)', source: authSource, note: 'certPath and keyPath both required' });
+                rows.push({ header: 'TLS client cert', value: '(incomplete)', source: authSource, note: 'pfxPath OR certPath+keyPath required' });
+              }
+              if (effectiveCreds.caPath) {
+                rows.push({ header: 'TLS Root CA', value: effectiveCreds.caPath, source: authSource });
               }
             }
           }

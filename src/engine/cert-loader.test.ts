@@ -26,8 +26,8 @@ describe('loadCert', () => {
 
     const result = loadCert({ certPath: certFile, keyPath: keyFile });
 
-    expect(result.cert.toString()).toBe(FAKE_CERT);
-    expect(result.key.toString()).toBe(FAKE_KEY);
+    expect(result.cert!.toString()).toBe(FAKE_CERT);
+    expect(result.key!.toString()).toBe(FAKE_KEY);
   });
 
   it('throws CertLoadError when cert file does not exist', () => {
@@ -70,8 +70,8 @@ describe('loadCert', () => {
 
     const result = loadCert({ certPath: certFile, keyPath: keyFile });
 
-    expect(Buffer.isBuffer(result.cert)).toBe(true);
-    expect(Buffer.isBuffer(result.key)).toBe(true);
+    expect(Buffer.isBuffer(result.cert!)).toBe(true);
+    expect(Buffer.isBuffer(result.key!)).toBe(true);
   });
 
   it('reads pfx file if provided', () => {
