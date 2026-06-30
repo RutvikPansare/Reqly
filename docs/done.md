@@ -1,5 +1,20 @@
 # Reqly - Done
 
+## 2026-06-29 (M6 bug fixes)
+
+- [x] **T-159** Fix T-143 UI gap: Tests tab not rendering `testResults` from `test()` calls
+  - `ResponseViewer.tsx` Tests tab only rendered YAML `assertions`; `response.testResults` from postScript `test()` calls was silently ignored in the UI
+  - Added `testResults` rendering block (named PASS/FAIL badge + test name + error message) above YAML assertions in the Tests tab
+  - Updated Tests tab button color and fail-count badge to consider both `testResults` and `assertions`
+  - Updated empty state to check both arrays before showing "No tests were run"
+  - Verified in Chrome: t157-json-assertions postScript `test()` results now appear in the Tests tab
+
+- [x] **T-160** Fix T-154 bug: `reqly.setVar()` then `reqly.getVar()` in same script returned `undefined`
+  - `setVar` in `script-runner.ts` used `else if (context.scriptVars)` - skipped updating the local snapshot when `onScriptVarSet` was defined
+  - `getVar` reads `context.scriptVars` (the snapshot), so a `setVar` in the same execution was invisible to a subsequent `getVar`
+  - Fixed: changed `else if` to `if` so both the persistence callback and local snapshot are always updated
+  - Verified: `reqly.setVar('k','v')` then `reqly.getVar('k')` in same postScript now returns `'v'`
+
 ## 2026-06-29 (T-157)
 
 - [x] **T-157** Extended Chai assertions: `jsonSchema` and `jsonBody`

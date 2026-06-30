@@ -119,7 +119,7 @@ export function runScript(script: string, context: ScriptContext): ScriptResult 
     getEnvVar: (key: string) => context.env[key] ?? '',
     setVar: (key: string, value: string) => {
       if (context.onScriptVarSet) context.onScriptVarSet(key, value);
-      else if (context.scriptVars) context.scriptVars[key] = value;
+      if (context.scriptVars) context.scriptVars[key] = value;
     },
     getVar: (key: string) => context.scriptVars ? context.scriptVars[key] : undefined,
     runner: {

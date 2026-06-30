@@ -123,23 +123,23 @@ All Windows Support items shipped (T-115 through T-119).
 
 ---
 
-## M6 - Now: Script Power + Developer UX
+## M6 - Done: Script Power + Developer UX
 
 **Goal:** Close the scripting gap versus Bruno and Postman. Developers switching from those tools expect Chai-style test assertions, a pre-script `req` object for dynamic signing, and variable autocomplete. These are daily-driver features that directly affect the decision to switch.
 
-- [ ] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts - add Chai BDD API to the script sandbox; each `test('label', fn)` call produces a named pass/fail result shown in a "Tests" sub-tab alongside existing YAML assertions; named results included in JUnit XML output; existing YAML assertions untouched
-- [ ] **T-144** `req` object in pre-run scripts - full Bruno-compatible req API: `req.getUrl()` / `req.setUrl(url)`, `req.getMethod()` / `req.setMethod(method)`, `req.getHeaders()` / `req.getHeader(name)` / `req.setHeader(name, value)` / `req.removeHeader(name)`, `req.getBody()` / `req.setBody(body)`, `req.setTimeout(ms)`, `req.setMaxRedirects(n)`; all mutations take effect on the outbound request before it fires; primary use cases: HMAC signing, dynamic timestamps, conditional auth header injection
-- [ ] **T-145** Variable `{{` autocomplete in URL bar, header value fields, and body editor - dropdown appears on `{{` showing all available variables with source label (env, collection, .env); pure UI, no backend change
-- [ ] **T-146** History panel: clicking an entry restores the saved response body into the response viewer - currently only repopulates the request editor; body is already stored in `HistoryEntry` (up to 10KB); show a "historical" badge so the user knows it's not a live result
-- [ ] **T-153** Bruno script compatibility layer - expose `res.getStatus()`, `res.getBody()`, `res.getHeader(name)`, `res.getResponseTime()` as aliases in the post-run sandbox so Bruno scripts paste in and run without changes; show a one-page "Script API" nudge in the UI when a Bruno collection is imported mapping `bru.*` to `reqly.*` equivalents
-- [ ] **T-154** Collection-scoped variables in scripts - `reqly.setVar(key, value)` / `reqly.getVar(key)` for variables scoped to the collection (not the environment); survives environment switches; resolves between collection vars and env vars in the existing precedence chain; available in both pre and post scripts
-- [ ] **T-155** `require()` in scripts - allow `require()` with a safelist of built-in Node modules: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`; covers the primary use case (HMAC signing via `crypto`) without opening arbitrary filesystem or network access; unsupported modules throw a clear error naming the safelist
-- [ ] **T-156** Script flow control - `reqly.setNextRequest(name)` jumps to a named request in the collection runner (skipping everything between); `reqly.runner.stop()` halts the collection run entirely; `reqly.sleep(ms)` adds a delay before the next step; all three are no-ops when running a single request outside the collection runner
-- [ ] **T-157** Extended Chai assertions - `jsonSchema` assertion validates response body against a JSON Schema object via Ajv (already a project dependency - zero new deps); `jsonBody` assertion does a readable partial-match check (`expect(res.getBody()).to.have.jsonBody({ id: 1 })` passes even if the response has extra fields); both exposed as Chai plugins added to the sandbox on startup
+- [x] **T-143** Chai-style `test()` / `expect()` assertions in post-run scripts - Chai BDD API in the script sandbox; each `test('label', fn)` call produces a named pass/fail result shown in the Tests tab alongside YAML assertions; UI renders `testResults` array (T-159 bug fix shipped alongside)
+- [x] **T-144** `req` object in pre-run scripts - full Bruno-compatible req API with getter/setter methods; mutations applied to the outbound request before it fires
+- [x] **T-145** Variable `{{` autocomplete in URL bar, header value fields, and body editor - already fully implemented in `VariableInput.tsx`; verified working
+- [x] **T-146** History panel: clicking an entry restores the saved response body into the response viewer with a "Historical" badge
+- [x] **T-153** Bruno script compatibility layer - `res.getStatus()`, `res.getBody()`, `res.getHeader(name)`, `res.getResponseTime()` and `bru.*` aliases in the post-run sandbox; Bruno import migration nudge in UI
+- [x] **T-154** Collection-scoped variables in scripts - `reqly.setVar(key, value)` / `reqly.getVar(key)` scoped to the collection; same-script read-back fixed (T-160 bug fix)
+- [x] **T-155** `require()` in scripts - safelisted Node built-ins: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`
+- [x] **T-156** Script flow control - `reqly.setNextRequest(name)`, `reqly.runner.stop()`, `reqly.sleep(ms)` in the collection runner
+- [x] **T-157** Extended Chai assertions - `jsonSchema` and `jsonBody` Chai plugins via Ajv
 
 ---
 
-## M7 - Later: Data & CI Power
+## M7 - Now: Data & CI Power
 
 **Goal:** Parameterized testing and collection documentation. Both deepen the CI integration story: data-driven runs mean one collection tests dozens of inputs in GitHub Actions; docs export means collections double as living API references committed alongside the code.
 

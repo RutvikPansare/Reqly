@@ -268,14 +268,19 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         )}
         <button
           className={`tab-btn disabled:opacity-40 ${activeTab === 'assertions' ? 'active' : ''}`}
-          style={response?.assertions?.some((a: any) => !a.passed) ? { color: '#f87171', borderBottomColor: activeTab === 'assertions' ? '#ef4444' : undefined } : response?.assertions?.length > 0 ? { color: '#4ade80', borderBottomColor: activeTab === 'assertions' ? '#4ade80' : undefined } : {}}
+          style={
+            (response?.assertions?.some((a: any) => !a.passed) || response?.testResults?.some((t: any) => !t.passed))
+              ? { color: '#f87171', borderBottomColor: activeTab === 'assertions' ? '#ef4444' : undefined }
+              : (response?.assertions?.length > 0 || response?.testResults?.length > 0)
+                ? { color: '#4ade80', borderBottomColor: activeTab === 'assertions' ? '#4ade80' : undefined }
+                : {}
+          }
           onClick={() => setActiveTab('assertions')}
         >
-          Tests{response?.assertions?.some((a: any) => !a.passed) && (
-            <span className="ml-1 px-1.5 rounded-full text-[10px]" style={{ background: '#ef4444', color: 'white' }}>
-              {response.assertions.filter((a: any) => !a.passed).length}
-            </span>
-          )}
+          Tests{(() => {
+            const failCount = (response?.assertions?.filter((a: any) => !a.passed).length || 0) + (response?.testResults?.filter((t: any) => !t.passed).length || 0);
+            return failCount > 0 ? <span className="ml-1 px-1.5 rounded-full text-[10px]" style={{ background: '#ef4444', color: 'white' }}>{failCount}</span> : null;
+          })()}
         </button>
         {canSaveExample && (
           <button
@@ -420,31 +425,47 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
 
         {activeTab === 'assertions' && (
           <div className="p-4 flex flex-col gap-2">
-            {!response?.assertions || response.assertions.length === 0 ? (
+            {(!response?.assertions || response.assertions.length === 0) && (!response?.testResults || response.testResults.length === 0) ? (
               <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 No tests were run. You can add assertions in the request editor.
               </div>
             ) : (
-              response.assertions.map((a: any, i: number) => (
-                <div key={i} className="flex items-start gap-2 p-2 rounded" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 mt-0.5"
-                    style={{ background: a.passed ? '#4ade80' : '#ef4444', color: 'white' }}
-                  >
-                    {a.passed ? 'PASS' : 'FAIL'}
-                  </span>
-                  <div>
-                    <div className="font-mono text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {a.assertion.field}{a.assertion.path ? `.${a.assertion.path}` : ''} {a.assertion.operator} {a.assertion.value}
+              <>
+                {response?.testResults?.map((t: any, i: number) => (
+                  <div key={`tr-${i}`} className="flex items-start gap-2 p-2 rounded" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 mt-0.5"
+                      style={{ background: t.passed ? '#4ade80' : '#ef4444', color: 'white' }}
+                    >
+                      {t.passed ? 'PASS' : 'FAIL'}
+                    </span>
+                    <div>
+                      <div className="font-mono text-sm" style={{ color: 'var(--text-secondary)' }}>{t.name}</div>
+                      {!t.passed && t.error && (
+                        <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t.error}</div>
+                      )}
                     </div>
-                    {!a.passed && a.error && (
-                      <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                        {a.error}
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))
+                ))}
+                {response?.assertions?.map((a: any, i: number) => (
+                  <div key={`a-${i}`} className="flex items-start gap-2 p-2 rounded" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 mt-0.5"
+                      style={{ background: a.passed ? '#4ade80' : '#ef4444', color: 'white' }}
+                    >
+                      {a.passed ? 'PASS' : 'FAIL'}
+                    </span>
+                    <div>
+                      <div className="font-mono text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {a.assertion.field}{a.assertion.path ? `.${a.assertion.path}` : ''} {a.assertion.operator} {a.assertion.value}
+                      </div>
+                      {!a.passed && a.error && (
+                        <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{a.error}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         )}
