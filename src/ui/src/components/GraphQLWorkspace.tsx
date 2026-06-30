@@ -460,7 +460,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
               <Bookmark size={14} />
             </button>
             
-            <div className="flex-1 flex items-center border border-[var(--border)] rounded bg-[var(--surface-2)] overflow-hidden h-8">
+            <div className="flex-1 flex items-center border border-[var(--border-strong)] rounded bg-transparent overflow-hidden h-8">
               <span className="method-badge ml-2" style={{ background: '#db2777', color: '#fff' }}>GQL</span>
               <VariableInput
                 variables={availableVariables}
