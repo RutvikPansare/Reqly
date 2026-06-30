@@ -119,10 +119,10 @@ export function GraphQLResponseViewer({ response, isSending, request }: Props) {
               {gql.errors!.map((e, i) => (
                 <div key={i} className="px-3 py-2" style={{ background: 'var(--surface-1)' }}>
                   <div className="text-sm text-red-300 font-medium">{e.message}</div>
-                  {e.path && (
+                  {!!e.path && (
                     <div className="text-[10px] text-gray-500 mt-0.5">path: {JSON.stringify(e.path)}</div>
                   )}
-                  {e.locations && (
+                  {!!e.locations && (
                     <div className="text-[10px] text-gray-600 mt-0.5">locations: {JSON.stringify(e.locations)}</div>
                   )}
                 </div>

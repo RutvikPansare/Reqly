@@ -5,14 +5,15 @@ import { graphql } from 'cm6-graphql';
 import { buildClientSchema, getIntrospectionQuery, parse as gqlParse, print as gqlPrint } from 'graphql';
 import type { EditorView } from '@codemirror/view';
 import { json } from '@codemirror/lang-json';
-import { ResponseViewer } from './ResponseViewer';
 import { GraphQLResponseViewer } from './GraphQLResponseViewer';
 import { GraphQLSubscriptionStream } from './GraphQLSubscriptionStream';
 import { SplitPane } from './SplitPane';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { GraphQLDocsExplorer } from './GraphQLDocsExplorer';
-import { addRequest, fetchCollections } from '../api';
+import { VariableInput } from './VariableInput';
+import type { VariableItem } from './VariableInput';
+import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles } from '../api';
 
 const INTROSPECTION_QUERY = getIntrospectionQuery();
 
@@ -48,10 +49,42 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   const [operationName, setOperationName] = useState<string>(initialRequest?.graphql?.operationName ?? '');
   const [prettifyError, setPrettifyError] = useState<string | null>(null);
   const [curlCopied, setCurlCopied] = useState(false);
+  const [activeEnvVars, setActiveEnvVars] = useState<Record<string, string>>({});
+  const [activeEnvName, setActiveEnvName] = useState<string>('');
+  const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
+  const [dotenvVars, setDotenvVars] = useState<{ key: string; source: string }[]>([]);
 
   useEffect(() => {
     fetchCollections().then((cols: any[]) => setCollections(cols.map((c: any) => c.name))).catch(() => {});
   }, []);
+
+  // Load env vars, collection vars, and dotenv vars for variable autocomplete
+  useEffect(() => {
+    const load = () => {
+      fetchEnvironments()
+        .then((data: any) => {
+          const active = data.environments?.find((e: any) => e.name === data.active);
+          setActiveEnvName(active?.name || '');
+          setActiveEnvVars(active?.variables || {});
+        })
+        .catch(() => {});
+      fetchDotenvFiles()
+        .then((data: any) => setDotenvVars(data.variables || []))
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener('reqly-reload', load);
+    return () => window.removeEventListener('reqly-reload', load);
+  }, []);
+
+  useEffect(() => {
+    const colName = initialRequest?._collection;
+    if (!colName) { setCollectionVars({}); return; }
+    const load = () => { getCollectionVariables(colName).then(setCollectionVars).catch(() => {}); };
+    load();
+    window.addEventListener('reqly-reload', load);
+    return () => window.removeEventListener('reqly-reload', load);
+  }, [initialRequest?._collection]);
 
   // Populate from an initialRequest when it changes (e.g. loaded from Collections sidebar)
   useEffect(() => {
@@ -75,6 +108,32 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
     }
     return result;
   }, [headers]);
+
+  // Merge collection, env, and dotenv vars for VariableInput autocomplete
+  const availableVariables: VariableItem[] = [
+    ...Object.entries(collectionVars).map(([k, v]) => ({
+      name: k,
+      sourceType: 'collection',
+      sourceName: initialRequest?._collection || 'collection',
+      value: v,
+    })),
+    ...Object.entries(activeEnvVars)
+      .filter(([k]) => !(k in collectionVars))
+      .map(([k, v]) => ({
+        name: k,
+        sourceType: 'env',
+        sourceName: activeEnvName || 'env',
+        value: v,
+      })),
+    ...dotenvVars
+      .filter(v => !(v.key in collectionVars) && !(v.key in activeEnvVars))
+      .map(v => ({
+        name: v.key,
+        sourceType: 'dotenv',
+        sourceName: v.source,
+        value: '',
+      })),
+  ];
 
   // Load cached schema whenever the URL changes
   useEffect(() => {
@@ -184,7 +243,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   const handleInsertField = (fieldName: string, hasSubfields: boolean) => {
     const view = editorViewRef.current;
     if (!view) {
-      setQuery(prev => prev + (hasSubfields ? `${fieldName} {\n  \n}` : fieldName));
+      setQuery((prev: string) => prev + (hasSubfields ? `${fieldName} {\n  \n}` : fieldName));
       return;
     }
     const insert = hasSubfields ? `${fieldName} {\n  \n}` : fieldName;
@@ -219,7 +278,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
     setTimeout(() => setCurlCopied(false), 2000);
   };
 
-
+  const runIntrospection = async () => {
     if (!url.trim()) { alert('Enter the GraphQL endpoint URL first.'); return; }
     setIntrospecting(true);
     try {
@@ -302,11 +361,11 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         <div className="flex flex-col h-full">
           <div className="flex p-2 gap-2 border-b border-[var(--border)] bg-[var(--surface-1)]">
             <span className="px-2 py-1 rounded text-xs font-semibold bg-pink-600 text-white border border-pink-500">GQL</span>
-            <input
-              type="text"
+            <VariableInput
+              variables={availableVariables}
               className="flex-1 bg-transparent text-gray-200 border border-[var(--border-strong)] rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
               value={url}
-              onChange={e => setUrl(e.target.value)}
+              onChange={setUrl}
               placeholder="https://api.example.com/graphql"
             />
             {isSubscriptionQuery ? (
@@ -496,7 +555,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
               </div>
             ) : (
               <div className="flex-1 min-h-0 overflow-auto" style={{ borderTop: '1px solid var(--border)' }}>
-                <KeyValueEditor pairs={headers} onChange={setHeaders} />
+                <KeyValueEditor pairs={headers} onChange={setHeaders} variables={availableVariables} />
               </div>
             )}
           </div>

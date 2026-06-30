@@ -2,6 +2,12 @@
 
 ## 2026-06-30
 
+- [x] **T-179** Variable recognition in GraphQL Workspace
+  - Added `VariableInput` to URL field (pill display, `{{}}` autocomplete, tooltip on hover)
+  - Passed `variables` prop to `KeyValueEditor` in the Headers tab
+  - Added state + `useEffect` hooks to load `activeEnvVars`, `collectionVars`, `dotenvVars` (same pattern as `RequestEditor`)
+  - Query/Variables CodeMirror editors intentionally excluded: GraphQL uses native `$variable` syntax
+  - Fixed TypeScript build errors from prior session: missing `runIntrospection` function declaration, unused `ResponseViewer` import, implicit `any` on `prev`, `unknown` JSX children in `GraphQLResponseViewer`
 - [x] **T-169** GraphQL Headers + Auth Tab
 - [x] **T-170** Full Introspection Query + Schema Persistence
 - [x] **T-171** Schema / Docs Explorer Sidebar
