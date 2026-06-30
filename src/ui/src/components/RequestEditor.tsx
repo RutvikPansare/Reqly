@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, ExternalLink } from 'lucide-react';
+import CodeMirror from '@uiw/react-codemirror';
+import { json } from '@codemirror/lang-json';
+import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
 import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables, getCollectionAuth, fetchDotenvFiles } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
@@ -335,6 +338,29 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       })),
   ];
 
+  // CodeMirror completion extension for {{variable}} syntax in the body editor
+  const varCompletionExtension = useMemo(() => {
+    return autocompletion({
+      override: [
+        (context: CompletionContext) => {
+          const match = context.matchBefore(/\{\{[a-zA-Z0-9_-]*/);
+          if (!match || (match.from === match.to && !context.explicit)) return null;
+          const typed = match.text.slice(2); // strip {{
+          const options = availableVariables
+            .filter(v => v.name.toLowerCase().includes(typed.toLowerCase()))
+            .map(v => ({
+              label: `{{${v.name}}}`,
+              apply: `{{${v.name}}}`,
+              detail: `${v.sourceType}${v.value !== undefined ? ` = ${v.value}` : ''}`,
+              type: 'variable',
+            }));
+          if (options.length === 0) return null;
+          return { from: match.from, options };
+        },
+      ],
+    });
+  }, [availableVariables]);
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>
       {/* URL bar */}
@@ -465,15 +491,22 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             )}
 
             {(bodyType === 'json' || bodyType === 'raw') && (
-              <VariableInput
-                multiline
-                variables={availableVariables}
-                className="flex-1 bg-black border border-[var(--border)] rounded p-3 text-sm text-gray-300 font-mono focus:outline-none focus:border-blue-500 resize-none whitespace-pre"
-                placeholder={bodyType === 'json' ? '{"key": "value"}' : 'Enter raw text here...'}
-                value={bodyText}
-                onChange={val => setBodyText(val)}
-                spellCheck={false}
-              />
+              <div className="flex-1 bg-black border border-[var(--border)] rounded overflow-hidden focus-within:border-blue-500 transition-colors min-h-0">
+                <CodeMirror
+                  value={bodyText}
+                  height="100%"
+                  theme="dark"
+                  extensions={bodyType === 'json' ? [json(), varCompletionExtension] : [varCompletionExtension]}
+                  onChange={val => setBodyText(val)}
+                  placeholder={bodyType === 'json' ? '{"key": "value"}' : 'Enter raw text here...'}
+                  className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-r [&_.cm-gutters]:!border-[var(--border)]"
+                  basicSetup={{
+                    lineNumbers: true,
+                    foldGutter: true,
+                    highlightActiveLine: true,
+                  }}
+                />
+              </div>
             )}
 
             {bodyType === 'multipart' && (
