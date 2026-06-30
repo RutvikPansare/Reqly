@@ -13,15 +13,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 
 
-- [ ] **T-156** Script flow control for collection runner
-  - `reqly.setNextRequest(name)` - jumps to the named request in the collection run, skipping everything between; name must match a request in the same collection
-  - `reqly.runner.stop()` - halts the collection run immediately; remaining requests are skipped, not failed
-  - `reqly.sleep(ms)` - pauses execution for `ms` milliseconds before the next request fires; useful for rate-limited APIs
-  - All three are no-ops when running a single request outside the collection runner (no error thrown)
-  - `setNextRequest` with an unknown name throws immediately with a clear message listing valid request names
-  - **MCP:** `run_collection` response gains a `stoppedEarly: boolean` field and a `jumpedTo?: string` field so agents know if a script halted or redirected the run; update `run_collection` tool description
-  - TDD required: `flow-control.test.ts` - setNextRequest skips to correct request, runner.stop() halts remaining, sleep() delays by expected duration, no-op outside runner
-
 - [ ] **T-157** Extended Chai assertions: `jsonSchema` and `jsonBody`
   - `jsonSchema` Chai plugin: `expect(res.getBody()).to.have.jsonSchema({ type: 'object', required: ['id'] })` - validates response body against a JSON Schema; Ajv is already a project dependency so no new packages needed
   - `jsonBody` Chai plugin: `expect(res.getBody()).to.have.jsonBody({ id: 1 })` - partial deep match; passes if the response contains all the specified keys/values, ignores extra fields

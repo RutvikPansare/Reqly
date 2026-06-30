@@ -2,7 +2,7 @@ import { fetch } from 'undici';
 import * as fs from 'fs';
 import * as path from 'path';
 import { RequestConfig, Environment, AuthProfile, AuthType, HttpResponse, MultipartBody } from '../types/index.js';
-import { runScript } from './script-runner.js';
+import { runScript, RunnerContext } from './script-runner.js';
 
 export class RequestError extends Error {
   constructor(message: string) {
@@ -35,7 +35,8 @@ export async function execute(
   baseDir?: string,
   resolvedFiles?: Record<string, Buffer>,
   scriptVars: Record<string, string> = {},
-  onScriptVarSet?: (key: string, value: string) => void
+  onScriptVarSet?: (key: string, value: string) => void,
+  runnerContext?: RunnerContext
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
   // Layered scope chain: script vars > collection vars > env vars > .env-file vars.
@@ -183,15 +184,17 @@ export async function execute(
     };
     if (config.postScript) {
       const envVarsForScript = env?.variables || {};
-      const { consoleLogs: post, testResults } = runScript(config.postScript, { 
-        env: envVarsForScript, 
-        request: config as unknown as Record<string, unknown>, 
+      const { consoleLogs: post, testResults, flowControl } = runScript(config.postScript, {
+        env: envVarsForScript,
+        request: config as unknown as Record<string, unknown>,
         response: multipartResult as unknown as Record<string, unknown>,
         scriptVars,
-        onScriptVarSet
+        onScriptVarSet,
+        runnerContext,
       });
       if (post.length > 0) multipartResult.consoleLogs = post;
       if (testResults.length > 0) multipartResult.testResults = testResults;
+      if (runnerContext) (multipartResult as any)._flowControl = flowControl;
     }
     return multipartResult;
   }
@@ -337,15 +340,17 @@ export async function execute(
   };
 
   if (config.postScript) {
-    const { consoleLogs: post, testResults } = runScript(config.postScript, { 
-      env: envVars, 
-      request: config as unknown as Record<string, unknown>, 
+    const { consoleLogs: post, testResults, flowControl } = runScript(config.postScript, {
+      env: envVars,
+      request: config as unknown as Record<string, unknown>,
       response: result as unknown as Record<string, unknown>,
       scriptVars,
-      onScriptVarSet
+      onScriptVarSet,
+      runnerContext,
     });
     consoleLogs.push(...post);
     if (testResults.length > 0) result.testResults = testResults;
+    if (runnerContext) (result as any)._flowControl = flowControl;
   }
 
   if (consoleLogs.length > 0) result.consoleLogs = consoleLogs;

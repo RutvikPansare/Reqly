@@ -1,5 +1,18 @@
 # Reqly - Done
 
+## 2026-06-29 (T-156)
+
+- [x] **T-156** Script flow control for collection runner
+  - `reqly.runner.stop()` in postScript halts the collection run; `stoppedEarly: true` in response
+  - `reqly.setNextRequest(name)` jumps to a named request, skipping intermediate ones; `jumpedTo: string` in response
+  - `reqly.sleep(ms)` pauses before the next request fires
+  - All three are no-ops when called outside a collection runner context
+  - `setNextRequest` with unknown name throws: "setNextRequest: 'name' not found. Valid request names: ..."
+  - `CollectionRunResult` now includes `stoppedEarly: boolean` and `jumpedTo?: string`
+  - `RunnerContext` threaded from CollectionRunner through `executeRequest` to `runScript`
+  - `run_collection` MCP tool description updated to document the three APIs and new response fields
+  - TDD: `flow-control.test.ts` - 11 tests covering all scenarios
+
 ## 2026-06-29
 
 - [x] **T-155** `require()` in scripts - safelisted Node built-ins

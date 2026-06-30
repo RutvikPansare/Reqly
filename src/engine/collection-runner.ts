@@ -24,6 +24,12 @@ export interface CollectionRunResult {
   passed: number;
   failed: number;
   results: RequestRunResult[];
+  stoppedEarly: boolean;
+  jumpedTo?: string;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export class CollectionRunner {
@@ -39,11 +45,16 @@ export class CollectionRunner {
     const { resolveCollectionAuth } = await import('./collection-auth.js');
     const collectionAuth = await resolveCollectionAuth(collection.auth, this.context.authManager);
 
+    const validRequestNames = collection.requests.map((r: any) => r.name as string);
     const results: RequestRunResult[] = [];
     let passedCount = 0;
     let failedCount = 0;
+    let stoppedEarly = false;
+    let jumpedTo: string | undefined;
 
-    for (const request of collection.requests) {
+    let i = 0;
+    while (i < collection.requests.length) {
+      const request = collection.requests[i];
       const start = Date.now();
       let passed = true;
       let response: HttpResponse | null = null;
@@ -58,16 +69,19 @@ export class CollectionRunner {
 
         const { substituteConfig } = await import('./variable-substitutor.js');
         const envVars = options.environment ? options.environment.variables : {};
-        // Layered scope: collection vars win over env vars on collision.
         const config = substituteConfig(request, [collectionVars, envVars], this.context.responseStore);
 
-        response = await this.context.executeRequest(config, options.environment, auth, undefined, undefined, collectionVars, collectionAuth, collectionName);
+        response = await this.context.executeRequest(
+          config, options.environment, auth, undefined, undefined,
+          collectionVars, collectionAuth, collectionName,
+          { validRequestNames }
+        );
         this.context.responseStore.set(request.name, response);
         this.context.historyStore.append(request, response, { collectionName: collectionName });
 
         if (request.assertions && request.assertions.length > 0) {
           assertionResults = runAssertions(response, request.assertions);
-          passed = assertionResults.every(a => a.passed);
+          passed = assertionResults.every((a: AssertionResult) => a.passed);
         }
       } catch (e: any) {
         passed = false;
@@ -97,9 +111,32 @@ export class CollectionRunner {
         error
       });
 
+      // Read flow control signals from the response (set by scripts via executeRequest)
+      const fc = (response as any)?._flowControl;
+
       if (!passed && options.stopOnFailure) {
         break;
       }
+
+      if (fc?.stopRunner) {
+        stoppedEarly = true;
+        break;
+      }
+
+      if (fc?.nextRequest) {
+        const targetIdx = collection.requests.findIndex((r: any) => r.name === fc.nextRequest);
+        if (targetIdx !== -1) {
+          jumpedTo = fc.nextRequest;
+          i = targetIdx;
+          continue;
+        }
+      }
+
+      if (fc?.sleepMs && fc.sleepMs > 0) {
+        await sleep(fc.sleepMs);
+      }
+
+      i++;
     }
 
     return {
@@ -107,7 +144,9 @@ export class CollectionRunner {
       total: collection.requests.length,
       passed: passedCount,
       failed: failedCount,
-      results
+      results,
+      stoppedEarly,
+      jumpedTo,
     };
   }
 }

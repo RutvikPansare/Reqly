@@ -144,14 +144,14 @@ async function main() {
     dotEnvLoader,
     specLoader: new SpecLoader(),
     scriptVariableStore,
-    executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth, collectionName) => {
+    executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth, collectionName, runnerContext) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;
       // Read context.dotEnvLoader (not the closed-over local) - switch-project
       // reassigns it to a new instance scoped to the new project dir.
       const scriptVars = collectionName ? context.scriptVariableStore.getAll(collectionName) : {};
       const onScriptVarSet = collectionName ? (k: string, v: string) => context.scriptVariableStore.set(collectionName, k, v) : undefined;
-      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), cwd, undefined, scriptVars, onScriptVarSet);
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), cwd, undefined, scriptVars, onScriptVarSet, runnerContext);
     }
   };
 

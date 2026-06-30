@@ -25,6 +25,10 @@ function sandboxRequire(name: string): unknown {
   throw new Error(`require('${name}') is not allowed in Reqly scripts. Allowed modules: ${ALLOWED_LIST}`);
 }
 
+export interface RunnerContext {
+  validRequestNames: string[];
+}
+
 export interface ScriptContext {
   env: Record<string, string>;
   request: Record<string, unknown>;
@@ -32,6 +36,7 @@ export interface ScriptContext {
   req?: Record<string, unknown>;
   scriptVars?: Record<string, string>;
   onScriptVarSet?: (key: string, value: string) => void;
+  runnerContext?: RunnerContext;
 }
 
 export interface TestResult {
@@ -40,9 +45,16 @@ export interface TestResult {
   error?: string;
 }
 
+export interface FlowControl {
+  stopRunner?: boolean;
+  nextRequest?: string;
+  sleepMs?: number;
+}
+
 export interface ScriptResult {
   consoleLogs: string[];
   testResults: TestResult[];
+  flowControl: FlowControl;
 }
 
 function formatArgs(...args: unknown[]): string {
@@ -52,16 +64,36 @@ function formatArgs(...args: unknown[]): string {
 export function runScript(script: string, context: ScriptContext): ScriptResult {
   const consoleLogs: string[] = [];
   const testResults: TestResult[] = [];
+  const flowControl: FlowControl = {};
+
+  const runnerCtx = context.runnerContext;
 
   const reqly = {
     response: context.response ?? null,
     setEnvVar: (key: string, value: string) => { context.env[key] = value; },
     getEnvVar: (key: string) => context.env[key] ?? '',
-    setVar: (key: string, value: string) => { 
-      if (context.onScriptVarSet) context.onScriptVarSet(key, value); 
-      else if (context.scriptVars) context.scriptVars[key] = value; 
+    setVar: (key: string, value: string) => {
+      if (context.onScriptVarSet) context.onScriptVarSet(key, value);
+      else if (context.scriptVars) context.scriptVars[key] = value;
     },
     getVar: (key: string) => context.scriptVars ? context.scriptVars[key] : undefined,
+    runner: {
+      stop: () => {
+        if (runnerCtx) flowControl.stopRunner = true;
+      },
+    },
+    sleep: (ms: number) => {
+      if (runnerCtx) flowControl.sleepMs = ms;
+    },
+    setNextRequest: (name: string) => {
+      if (!runnerCtx) return;
+      if (!runnerCtx.validRequestNames.includes(name)) {
+        throw new Error(
+          `setNextRequest: '${name}' not found. Valid request names: ${runnerCtx.validRequestNames.join(', ')}`
+        );
+      }
+      flowControl.nextRequest = name;
+    },
   };
 
   const sandbox: Record<string, unknown> = {
@@ -108,5 +140,5 @@ export function runScript(script: string, context: ScriptContext): ScriptResult 
     consoleLogs.push(`[error] Script error: ${err.message}`);
   }
 
-  return { consoleLogs, testResults };
+  return { consoleLogs, testResults, flowControl };
 }
