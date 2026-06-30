@@ -66,12 +66,15 @@ async function main() {
     process.exit(exitCode);
   }
 
-  const cwd = resolveProjectDir({
+  const resolved = resolveProjectDir({
     flag: parsed.flags.projectDir,
     env: process.env.REQLY_PROJECT_DIR,
     configActiveProject: await authManager.getActiveProject(),
     cwd: process.cwd(),
   });
+  const cwd = resolved.dir;
+  // Stash for get_project MCP tool
+  (globalThis as any).__reqlyProjectResolution = resolved;
   const projectReqlyDir = path.join(cwd, '.reqly');
 
   if (parsed.command === 'init') {
@@ -179,9 +182,23 @@ async function main() {
       if (res.ok) {
         console.error(`Switched active project to ${cwd}`);
         mcpOnly = true;
+      } else {
+        // Server is running but rejected the switch (4xx = bad path, 5xx = server error).
+        // Do NOT attempt to bind port 4242 - that would EADDRINUSE against the live server.
+        // Run MCP-only, attached to whatever project the running server is already on.
+        const body = await res.text().catch(() => '');
+        console.error(`[reqly] switch-project returned ${res.status} - running MCP-only against current project. ${body}`);
+        mcpOnly = true;
       }
-    } catch (e) {
-      // existing instance unreachable - fall through to a normal start
+    } catch (e: any) {
+      if (e?.cause?.code === 'ECONNREFUSED' || e?.code === 'ECONNREFUSED') {
+        // Server not actually running despite lock - fall through to normal start
+        await clearLock();
+      } else {
+        // Network error or timeout - play it safe, do not bind port
+        console.error(`[reqly] Could not reach running server (${e?.message}) - running MCP-only.`);
+        mcpOnly = true;
+      }
     }
   } else if (lock) {
     // stale lock left behind by a dead process

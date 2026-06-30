@@ -82,6 +82,8 @@ Reqly exposes the following MCP tools for AI agents:
 - `start_mock`: Start a mock HTTP server for a collection on a given port (default 4243). Returns active routes.
 - `stop_mock`: Stop the running mock server.
 - `get_mock_status`: Get running state, collection, port, and route list of the mock server.
+- `get_project`: Returns `{ projectDir, configSource, fallbackReason? }`. Call this on first connection to verify Reqly is pointed at the expected directory. `configSource` is `"flag" | "env" | "config" | "cwd"` - which priority level won. `fallbackReason` is present when a higher-priority source was detected but ignored (e.g. an unresolved `${workspaceFolder}` macro from a non-VS Code host).
+- `switch_project`: Switch Reqly to a different project directory at runtime.
 
 ## Reqly Features
 

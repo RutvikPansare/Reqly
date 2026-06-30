@@ -1,5 +1,14 @@
 # Reqly - Done
 
+## 2026-06-30
+
+- [x] **T-162** Harden `--project-dir` macro detection and fix switch-project failure logic
+  - **Fix 1:** `resolveProjectDir` now uses a broad regex (`/^\$\{.+\}$|^%.+%$|^\{.+\}$|^\$[A-Z_][A-Z0-9_]*$/`) instead of exact `${workspaceFolder}` check; covers `%WORKSPACE_FOLDER%`, `{workspaceFolder}`, `$VARNAME`, and any future unresolved pattern; logs a warning when ignored
+  - **Fix 2:** switch-project 4xx/5xx responses now set `mcpOnly = true` instead of falling through to start a new Express server; only `ECONNREFUSED` triggers a fresh server start; prevents `EADDRINUSE` crash when server is running but rejects the path
+  - **Fix 3:** `resolveProjectDir` returns `{ dir, configSource, fallbackReason? }` instead of a bare string; `get_project` MCP tool includes `configSource` and optional `fallbackReason` in response so agents can verify directory resolution on first connect
+  - `cli-parser.test.ts`: 8 new tests for macro patterns and configSource metadata (31 total)
+  - 719/719 tests pass
+
 ## 2026-06-29
 
 - [x] **T-161** `preScriptFile` / `postScriptFile` - script file references in requests

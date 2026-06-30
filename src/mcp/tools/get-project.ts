@@ -3,7 +3,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'get_project',
-  description: 'Returns the absolute path of the project directory Reqly is currently pointed at (the parent of its .reqly collections folder). When to use: to confirm which project Reqly is operating on before reading or writing collections, especially after a switch_project call.',
+  description: 'Returns the absolute path of the project directory Reqly is currently pointed at (the parent of its .reqly collections folder), plus how that path was resolved. When to use: call on first connection to verify Reqly is operating on the expected directory - catches misconfiguration before any tool calls run. Returns: { projectDir, configSource: "flag"|"env"|"config"|"cwd", fallbackReason? }. fallbackReason is present when a higher-priority source (e.g. --project-dir flag) was detected but ignored because it contained an unresolved macro like ${workspaceFolder}.',
   inputSchema: {
     type: 'object',
     properties: {}
@@ -13,7 +13,13 @@ export const definition: ToolDefinition = {
 export async function handler(_args: any, context: EngineContext): Promise<ToolHandlerResult> {
   try {
     const projectDir = path.dirname(context.collectionManager.getBaseDir());
-    return { content: [{ type: 'text', text: JSON.stringify({ projectDir }) }] };
+    const resolution = (globalThis as any).__reqlyProjectResolution;
+    const result: any = { projectDir };
+    if (resolution) {
+      result.configSource = resolution.configSource;
+      if (resolution.fallbackReason) result.fallbackReason = resolution.fallbackReason;
+    }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] };
   } catch (e: any) {
     return { content: [{ type: 'text', text: e.message }], isError: true };
   }

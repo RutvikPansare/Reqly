@@ -25,15 +25,51 @@ export interface ParsedArgs {
   };
 }
 
+export type ConfigSource = 'flag' | 'env' | 'config' | 'cwd';
+
+export interface ResolvedProjectDir {
+  dir: string;
+  configSource: ConfigSource;
+  fallbackReason?: string;
+}
+
+// Matches unresolved macro patterns from various tool hosts:
+//   ${workspaceFolder}  - VS Code / Cursor (not interpolated by non-VS-Code hosts)
+//   %WORKSPACE_FOLDER%  - Windows CMD style
+//   {workspaceFolder}   - bare-brace style
+//   $VARNAME            - shell-style (no braces)
+const MACRO_RE = /^\$\{.+\}$|^%.+%$|^\{.+\}$|^\$[A-Z_][A-Z0-9_]*$/;
+
 // Resolves the project root the server should treat as the `.reqly` home.
 // Priority: --project-dir flag > REQLY_PROJECT_DIR env var > activeProject in
 // ~/.reqly/config.json (set via `reqly use`) > the process's cwd.
-// The env var and config fallback exist because some MCP hosts (Claude Desktop)
-// spawn one global server process with no per-project cwd and no way to inject
-// per-project launch args - these are the escape hatches for that case.
-export function resolveProjectDir(opts: { flag?: string; env?: string; configActiveProject?: string; cwd: string }): string {
-  const dir = opts.flag ?? opts.env ?? opts.configActiveProject;
-  return dir ? path.resolve(opts.cwd, dir) : opts.cwd;
+// Returns the resolved dir plus metadata for agents (configSource, fallbackReason).
+export function resolveProjectDir(opts: { flag?: string; env?: string; configActiveProject?: string; cwd: string }): ResolvedProjectDir {
+  let flag = opts.flag;
+  let fallbackReason: string | undefined;
+
+  if (flag && MACRO_RE.test(flag)) {
+    fallbackReason = `Ignoring --project-dir value that looks like an unresolved macro: ${flag}. Falling back to next source.`;
+    console.error(`[reqly] ${fallbackReason}`);
+    flag = undefined;
+  }
+
+  if (flag) {
+    return { dir: path.resolve(opts.cwd, flag), configSource: 'flag' };
+  }
+  if (opts.env) {
+    const result: ResolvedProjectDir = { dir: path.resolve(opts.cwd, opts.env), configSource: 'env' };
+    if (fallbackReason) result.fallbackReason = fallbackReason;
+    return result;
+  }
+  if (opts.configActiveProject) {
+    const result: ResolvedProjectDir = { dir: path.resolve(opts.cwd, opts.configActiveProject), configSource: 'config' };
+    if (fallbackReason) result.fallbackReason = fallbackReason;
+    return result;
+  }
+  const result: ResolvedProjectDir = { dir: opts.cwd, configSource: 'cwd' };
+  if (fallbackReason) result.fallbackReason = fallbackReason;
+  return result;
 }
 
 export function parseArgs(argv: string[]): ParsedArgs {

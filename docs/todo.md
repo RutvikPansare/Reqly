@@ -9,6 +9,48 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
+### Hardening (pick up immediately - ahead of M7)
+
+- [x] **T-162** Harden `--project-dir` macro detection and fix switch-project failure logic
+  - **Context:** Antigravity passed the literal string `${workspaceFolder}` to `--project-dir`. Gemini's fix caught that exact string. Two deeper issues remain:
+    1. The macro detection is too narrow - other tools could send `$WORKSPACE_FOLDER`, `%WORKSPACE_FOLDER%`, `{workspaceFolder}` or any other uninterpolated pattern
+    2. The switch-project failure logic has a dangerous assumption: when `POST /api/switch-project` returns a 4xx, the new MCP process currently treats it as "no server running" and tries to start its own Express on port 4242 - causing EADDRINUSE crash. Gemini's macro fix prevents the chain from starting, but the logic flaw is still live for any future legitimate switch failure
+
+  **Fix 1 - Broad macro regex in `cli-parser.ts`:**
+  - Replace the exact string check with a regex that rejects any flag value matching an unresolved macro pattern: `/^\$\{.+\}$|^\%.+\%$|^\{.+\}$/`
+  - Covers `${workspaceFolder}`, `%WORKSPACE_FOLDER%`, `{workspaceFolder}` and similar
+  - Log a warning when a macro is detected and ignored: "Ignoring --project-dir value that looks like an unresolved macro: <value>. Falling back to next source."
+
+  **Fix 2 - Distinguish switch-project rejection from server-not-running in the MCP startup path:**
+  - Currently: any failure from `POST /api/switch-project` → attempt to start new Express server
+  - Correct behaviour:
+    - `ECONNREFUSED` (server not running) → start new Express + MCP server as normal
+    - `4xx` from switch-project (server running but rejected the path, e.g. path doesn't exist) → start in MCP-only mode using the running server's current project; log a warning that the requested path was rejected
+    - `5xx` or network error → log error, start in MCP-only mode, do not attempt to bind port 4242
+  - The rule: only bind port 4242 when ECONNREFUSED proves no server is listening. Never bind on a 4xx or 5xx.
+
+  **Fix 3 - `configSource` in `get_project` MCP response:**
+  - Extend `GET /api/project` and the `get_project` MCP tool response with two new fields:
+    - `configSource: "flag" | "env" | "config" | "cwd"` - which priority level won
+    - `fallbackReason?: string` - present only when a higher-priority source was detected but ignored (e.g. "flag was an unresolved macro: ${workspaceFolder}")
+  - Agents can call `get_project` on startup to verify they are working in the expected directory
+
+  - TDD required: `cli-parser.test.ts` - macro regex catches all patterns, valid paths pass through; `startup.test.ts` - 4xx switch response triggers mcp-only mode not EADDRINUSE, ECONNREFUSED triggers full server start
+
+- [ ] **T-163** `reqly setup` tool-aware config generation + setup docs
+  - **Context:** `reqly setup cursor` correctly uses `${workspaceFolder}` because Cursor (VS Code-based) interpolates it. Non-VS Code tools like Antigravity, Claude Desktop, and Gemini CLI do not - passing `--project-dir ${workspaceFolder}` to them is always wrong.
+
+  **Setup config fix:**
+  - Identify which tools support VS Code macro interpolation: Cursor, Windsurf, VS Code (Claude extension). These keep `${workspaceFolder}`.
+  - For all other tools (`antigravity`, `claude`, `claudecode`, `gemini`, any unknown tool): omit `--project-dir` from the generated config entirely. Instead, print a post-setup instruction: "Run `reqly use <path>` in each project directory to set your default project. This persists across restarts."
+  - Update `reqly setup --help` output to explain the distinction.
+
+  **Docs fix (`README.md` + `docs/llms.txt`):**
+  - Add a "Project directory resolution" section to both files explaining the 4-level priority chain and which setup method applies to which host: VS Code-based editors use `${workspaceFolder}` in config; everything else uses `reqly use <path>`
+  - Add a note in `llms.txt` that agents should call `get_project` on first connection to verify `configSource` and confirm they are in the expected directory - this catches misconfiguration before any tool calls run
+
+  - No TDD required (config template changes + docs)
+
 ### M6 - Script Power + Developer UX
 
 

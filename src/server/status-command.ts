@@ -3,13 +3,15 @@ import { AuthManager } from '../engine/auth-manager.js';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { resolveProjectDir, ParsedArgs } from './cli-parser.js';
 
-// Same priority order as resolveProjectDir, but reports which source actually won
-// so users can debug "why is reqly looking in the wrong folder".
-function describeSource(opts: { flag?: string; env?: string; configActiveProject?: string }): string {
-  if (opts.flag) return '--project-dir flag';
-  if (opts.env) return 'REQLY_PROJECT_DIR environment variable';
-  if (opts.configActiveProject) return '~/.reqly/config.json (set via `reqly use`)';
-  return 'process.cwd() (no flag, env var, or active project set)';
+import type { ConfigSource } from './cli-parser.js';
+
+function describeSource(opts: { flag?: string; env?: string; configActiveProject?: string; configSource?: ConfigSource }): string {
+  switch (opts.configSource) {
+    case 'flag': return '--project-dir flag';
+    case 'env': return 'REQLY_PROJECT_DIR environment variable';
+    case 'config': return '~/.reqly/config.json (set via `reqly use`)';
+    default: return 'process.cwd() (no flag, env var, or active project set)';
+  }
 }
 
 function isPortOpen(port: number): Promise<boolean> {
@@ -37,8 +39,8 @@ export async function handleStatusCommand(parsed: ParsedArgs, authManager: AuthM
     cwd: process.cwd(),
   };
 
-  const projectDir = resolveProjectDir(opts);
-  const source = describeSource(opts);
+  const { dir: projectDir, configSource } = resolveProjectDir(opts);
+  const source = describeSource({ ...opts, configSource });
 
   const collectionManager = new CollectionManager(projectDir);
   let collectionCount = 0;

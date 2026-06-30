@@ -113,31 +113,77 @@ describe('cli-parser', () => {
 describe('resolveProjectDir', () => {
   it('falls back to cwd when neither flag nor env var is set', () => {
     const cwd = path.resolve('/home/user/project');
-    expect(resolveProjectDir({ cwd })).toBe(cwd);
+    expect(resolveProjectDir({ cwd }).dir).toBe(cwd);
   });
 
   it('uses REQLY_PROJECT_DIR env var when no flag is given', () => {
-    expect(resolveProjectDir({ env: '/home/user/project', cwd: '/' })).toBe(path.resolve('/', '/home/user/project'));
+    expect(resolveProjectDir({ env: '/home/user/project', cwd: '/' }).dir).toBe(path.resolve('/', '/home/user/project'));
   });
 
   it('prefers --project-dir flag over the env var', () => {
-    expect(resolveProjectDir({ flag: '/flag/dir', env: '/env/dir', cwd: '/' })).toBe(path.resolve('/', '/flag/dir'));
+    expect(resolveProjectDir({ flag: '/flag/dir', env: '/env/dir', cwd: '/' }).dir).toBe(path.resolve('/', '/flag/dir'));
   });
 
   it('resolves a relative flag against cwd', () => {
     const cwd = path.resolve('/home/user/project');
-    expect(resolveProjectDir({ flag: '../sibling', cwd })).toBe(path.resolve(cwd, '../sibling'));
+    expect(resolveProjectDir({ flag: '../sibling', cwd }).dir).toBe(path.resolve(cwd, '../sibling'));
   });
 
   it('uses configActiveProject when no flag or env var is set', () => {
-    expect(resolveProjectDir({ configActiveProject: '/home/user/tellero', cwd: '/' })).toBe(path.resolve('/', '/home/user/tellero'));
+    expect(resolveProjectDir({ configActiveProject: '/home/user/tellero', cwd: '/' }).dir).toBe(path.resolve('/', '/home/user/tellero'));
   });
 
   it('prefers env var over configActiveProject', () => {
-    expect(resolveProjectDir({ env: '/env/dir', configActiveProject: '/config/dir', cwd: '/' })).toBe(path.resolve('/', '/env/dir'));
+    expect(resolveProjectDir({ env: '/env/dir', configActiveProject: '/config/dir', cwd: '/' }).dir).toBe(path.resolve('/', '/env/dir'));
   });
 
   it('prefers flag over configActiveProject', () => {
-    expect(resolveProjectDir({ flag: '/flag/dir', configActiveProject: '/config/dir', cwd: '/' })).toBe(path.resolve('/', '/flag/dir'));
+    expect(resolveProjectDir({ flag: '/flag/dir', configActiveProject: '/config/dir', cwd: '/' }).dir).toBe(path.resolve('/', '/flag/dir'));
+  });
+
+  it('ignores literal ${workspaceFolder} macro from tools that do not support it and falls back', () => {
+    expect(resolveProjectDir({ flag: '${workspaceFolder}', env: '/env/dir', cwd: '/' }).dir).toBe(path.resolve('/', '/env/dir'));
+  });
+
+  // T-162: broader macro pattern coverage
+  it('ignores %WORKSPACE_FOLDER% Windows-style macro', () => {
+    const r = resolveProjectDir({ flag: '%WORKSPACE_FOLDER%', env: '/env/dir', cwd: '/' });
+    expect(r.dir).toBe(path.resolve('/', '/env/dir'));
+    expect(r.fallbackReason).toMatch(/%WORKSPACE_FOLDER%/);
+  });
+
+  it('ignores {workspaceFolder} bare-brace macro', () => {
+    const r = resolveProjectDir({ flag: '{workspaceFolder}', env: '/env/dir', cwd: '/' });
+    expect(r.dir).toBe(path.resolve('/', '/env/dir'));
+    expect(r.fallbackReason).toMatch(/\{workspaceFolder\}/);
+  });
+
+  it('ignores $UPPERCASE_VAR shell-style macro', () => {
+    const r = resolveProjectDir({ flag: '$WORKSPACE_FOLDER', cwd: '/' });
+    expect(r.dir).toBe('/');
+    expect(r.fallbackReason).toBeDefined();
+  });
+
+  it('valid absolute path passes through with configSource=flag', () => {
+    const r = resolveProjectDir({ flag: '/some/project', cwd: '/' });
+    expect(r.dir).toBe('/some/project');
+    expect(r.configSource).toBe('flag');
+    expect(r.fallbackReason).toBeUndefined();
+  });
+
+  it('env var source reported correctly', () => {
+    const r = resolveProjectDir({ env: '/env/project', cwd: '/' });
+    expect(r.configSource).toBe('env');
+  });
+
+  it('config source reported correctly', () => {
+    const r = resolveProjectDir({ configActiveProject: '/config/project', cwd: '/' });
+    expect(r.configSource).toBe('config');
+  });
+
+  it('cwd source reported when no other source', () => {
+    const r = resolveProjectDir({ cwd: '/my/cwd' });
+    expect(r.configSource).toBe('cwd');
+    expect(r.dir).toBe('/my/cwd');
   });
 });
