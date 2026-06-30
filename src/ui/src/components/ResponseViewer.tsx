@@ -348,15 +348,15 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
                   try { parsed = JSON.parse(body); } catch { /* ignore */ }
                 }
                 contentEl = (
-                  <div className="p-4 flex flex-col flex-1 h-full min-h-0 min-w-0 w-full">
+                  <div className="p-1.5 flex flex-col flex-1 h-full min-h-0 min-w-0 w-full">
                     <CollapsibleJson label="Response Body" data={parsed} filter={bodyFilter} accent="#7dd3fc" />
                   </div>
                 );
               } else {
                 contentEl = (
-                  <div className="p-4 flex-1 h-full min-h-0 min-w-0 w-full overflow-y-auto">
+                  <div className="p-1.5 flex-1 h-full min-h-0 min-w-0 w-full overflow-y-auto">
                     <pre
-                      className="whitespace-pre-wrap outline-none leading-relaxed"
+                      className="p-1.5 whitespace-pre-wrap outline-none leading-relaxed"
                       style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}
                       dangerouslySetInnerHTML={{ __html: getBodyHtml() }}
                     />
