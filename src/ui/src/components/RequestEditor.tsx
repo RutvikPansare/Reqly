@@ -339,7 +339,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>
       {/* URL bar */}
       <div className="flex p-2 gap-2" style={{ background: 'var(--surface-1)' }}>
-        <div className="flex items-stretch flex-1" style={{ border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+        <div className="flex items-stretch flex-1 bg-black" style={{ border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
           <select
             className="px-2 text-sm font-bold focus:outline-none"
             style={{ background: 'transparent', border: 'none', borderRight: '1px solid var(--border-strong)', color: methodColor(method) }}
@@ -354,7 +354,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
           </select>
           <VariableInput
             variables={availableVariables}
-            className="flex-1 px-3 py-1.5 text-sm bg-transparent focus:outline-none"
+            className="flex-1 px-3 py-1.5 text-sm bg-black focus:outline-none"
             value={url}
             onChange={val => handleUrlChange(val)}
             placeholder="https://api.example.com/v1/users"
