@@ -24,7 +24,7 @@ export function InteractiveJsonTree({ data, name, isLast = true, defaultOpen = t
 
   if (!isObj) {
     return (
-      <div className="font-mono text-[11px] leading-[18px]">
+      <div className="json-line font-mono text-[11px] leading-[18px]">
         {name && <span style={{ color: '#7dd3fc' }}>"{name}"</span>}
         {name && <span className="text-gray-400 mr-1">:</span>}
         <span
@@ -44,7 +44,7 @@ export function InteractiveJsonTree({ data, name, isLast = true, defaultOpen = t
 
   return (
     <div className="font-mono text-[11px] leading-[18px]">
-      <div className="flex items-center">
+      <div className="json-line flex items-center">
         {!isEmpty && (
           <button
             onClick={() => setOpen(!open)}
@@ -84,7 +84,7 @@ export function InteractiveJsonTree({ data, name, isLast = true, defaultOpen = t
               />
             ))}
           </div>
-          <div className="ml-1.5 pl-3">
+          <div className="json-line ml-1.5 pl-3 items-center">
             <span className="text-gray-400">{isArray ? ']' : '}'}</span>
             {!isLast && <span className="text-gray-400">,</span>}
           </div>
@@ -107,7 +107,7 @@ export function CollapsibleJson({ label, data, defaultOpen = true, accent, filte
     const lines = html.split('\n');
     const kept = lines.filter(l => l.toLowerCase().includes(q));
     if (kept.length === 0) html = `<span style="color:var(--text-muted);font-style:italic">No lines match "${filter}"</span>`;
-    else html = kept.join('\n');
+    else html = kept.map(l => `<div class="json-line">${l}</div>`).join('');
   }
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -143,7 +143,7 @@ export function CollapsibleJson({ label, data, defaultOpen = true, accent, filte
       </div>
       {open && (
         <div
-          className="p-3 overflow-auto flex-1"
+          className="p-3 overflow-auto flex-1 json-tree"
           style={{ background: 'var(--surface-1)', color: 'var(--text-secondary)' }}
         >
           {hasFilter ? (
