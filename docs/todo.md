@@ -13,13 +13,6 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 
 
-- [ ] **T-155** `require()` in scripts - safelisted Node built-ins
-  - Allow `require()` inside pre and post scripts with a safelist of built-in Node modules: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`
-  - Covers the primary use case: `const { createHmac } = require('crypto')` for HMAC signing
-  - Modules outside the safelist throw a clear error: "require('module-name') is not allowed in Reqly scripts. Allowed modules: crypto, buffer, path, url, querystring, util"
-  - No npm module resolution - built-ins only; no filesystem access via `require()`
-  - TDD required: `script-require.test.ts` - require('crypto') works, require('fs') throws with message, require('axios') throws with message
-
 - [ ] **T-156** Script flow control for collection runner
   - `reqly.setNextRequest(name)` - jumps to the named request in the collection run, skipping everything between; name must match a request in the same collection
   - `reqly.runner.stop()` - halts the collection run immediately; remaining requests are skipped, not failed

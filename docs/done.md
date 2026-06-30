@@ -1,5 +1,13 @@
 # Reqly - Done
 
+## 2026-06-29
+
+- [x] **T-155** `require()` in scripts - safelisted Node built-ins
+  - `require()` available in pre/post scripts for: `crypto`, `buffer`, `path`, `url`, `querystring`, `util`
+  - Blocked modules throw: "require('name') is not allowed in Reqly scripts. Allowed modules: crypto, buffer, path, url, querystring, util"
+  - No npm or filesystem module resolution; built-ins only via `sandboxRequire` injected into the vm sandbox
+  - TDD: `script-require.test.ts` - 9 tests covering all allowed modules and blocked modules (fs, axios, child_process)
+
 ## 2026-06-30
 
 - [x] **T-158** Homebrew cask for Reqly.app

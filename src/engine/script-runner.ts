@@ -1,5 +1,29 @@
 import vm from 'vm';
 import { expect as chaiExpect } from 'chai';
+import nodeCrypto from 'crypto';
+import nodeBuffer from 'buffer';
+import nodePath from 'path';
+import nodeUrl from 'url';
+import nodeQuerystring from 'querystring';
+import nodeUtil from 'util';
+
+const ALLOWED_MODULES: Record<string, unknown> = {
+  crypto: nodeCrypto,
+  buffer: nodeBuffer,
+  path: nodePath,
+  url: nodeUrl,
+  querystring: nodeQuerystring,
+  util: nodeUtil,
+};
+
+const ALLOWED_LIST = Object.keys(ALLOWED_MODULES).join(', ');
+
+function sandboxRequire(name: string): unknown {
+  if (Object.prototype.hasOwnProperty.call(ALLOWED_MODULES, name)) {
+    return ALLOWED_MODULES[name];
+  }
+  throw new Error(`require('${name}') is not allowed in Reqly scripts. Allowed modules: ${ALLOWED_LIST}`);
+}
 
 export interface ScriptContext {
   env: Record<string, string>;
@@ -58,6 +82,7 @@ export function runScript(script: string, context: ScriptContext): ScriptResult 
         testResults.push({ name, passed: false, error: err.message ?? String(err) });
       }
     },
+    require: sandboxRequire,
     console: {
       log:   (...args: unknown[]) => consoleLogs.push(`[log] ${formatArgs(...args)}`),
       warn:  (...args: unknown[]) => consoleLogs.push(`[warn] ${formatArgs(...args)}`),
