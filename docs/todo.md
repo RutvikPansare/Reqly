@@ -39,16 +39,6 @@
 
 
 
-- [ ] **T-190** UI: `RealtimeCollectionsPanel`
-  - **File: `src/ui/src/components/RealtimeCollectionsPanel.tsx`** (NEW, <150 lines)
-  - Props: `{ activeProtocol: string; onSelectRequest: (req: any, col: string) => void; onNewTab: (protocol: string) => void }`
-  - Fetches collections on mount via `fetchCollections()`, re-fetches on `reqly-reload` window event
-  - Filters per collection: only show requests where `req.type` in `['websocket','sse','socketio','mqtt']`
-  - Groups by collection, collapsible (same styling as `CollectionsPanel` - `surface-2` header, `var(--border)` dividers, chevron toggle)
-  - `useLocalStorage('reqly.realtimeExpanded', {})` for expand/collapse state per collection
-  - Each row: `requestBadgeInfo(req.type, undefined)` badge + name, click → `onSelectRequest`
-  - Top: search input + "New" dropdown button (opens protocol picker: WS / SSE / SIO / MQTT)
-  - Empty state: "No realtime requests saved yet" + hint to click "New" above
 
 - [ ] **T-191** UI: WebSocketPanel + SSEPanel (browser-native APIs, no server proxy)
   - **File: `src/ui/src/components/WebSocketPanel.tsx`** (NEW, <180 lines)

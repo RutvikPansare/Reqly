@@ -2,6 +2,10 @@
 
 ## 2026-07-01
 
+- [x] **T-190** UI: `RealtimeCollectionsPanel`
+  - NEW `src/ui/src/components/RealtimeCollectionsPanel.tsx`
+
+
 - [x] **T-189** UI: shared display component + tab system
   - NEW `src/ui/src/components/RealtimeMessageLog.tsx`
   - NEW `src/ui/src/hooks/useRealtimeTabs.ts`
