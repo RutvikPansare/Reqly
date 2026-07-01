@@ -40,27 +40,6 @@
 
 
 
-- [ ] **T-191** UI: WebSocketPanel + SSEPanel (browser-native APIs, no server proxy)
-  - **File: `src/ui/src/components/WebSocketPanel.tsx`** (NEW, <180 lines)
-  - Props: `{ tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void }`
-  - State: `status: 'disconnected'|'connecting'|'connected'`, `messages: UIRealtimeMessage[]`, `messageText: string`, `subTab: 'communication'|'protocols'`
-  - Connection: `const wsRef = useRef<WebSocket | null>(null)` - uses **native browser `WebSocket`** API directly (zero packages)
-    - `connect()`: `wsRef.current = new WebSocket(tab.url, tab.realtime?.protocols ?? [])`. Status to `'connecting'`, info log "Connecting...". `ws.onopen` → connected. `ws.onmessage` → server message. `ws.onerror` → error log. `ws.onclose` → disconnected.
-    - `send()`: `wsRef.current?.send(messageText)`, add client message to log
-    - `disconnect()`: `wsRef.current?.close()`
-  - Cleanup on unmount: `wsRef.current?.close()`
-  - Layout (flex column, fills height):
-    - URL bar row (8px padding, `surface-2` bg, `var(--border)` bottom): URL input (disabled connected), Bookmark icon (onSave), Connect/Disconnect button
-    - Sub-tab pills: Communication / Protocols
-    - Communication: CodeMirror `minHeight: 80px`, JSON/Raw type picker, Send button (disabled disconnected/empty)
-    - Protocols sub-tab: list of protocol string inputs (add/remove rows) → `onTabUpdate({ realtime: { ...tab.realtime, protocols: [...] } })`
-    - `<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />` (flex-1 min-h-0)
-  - **File: `src/ui/src/components/SSEPanel.tsx`** (NEW, <110 lines)
-  - Props: same shape as WebSocketPanel
-  - Connection: `const evsRef = useRef<EventSource | null>(null)` - uses **native browser `EventSource`** (zero packages)
-    - `start()`: `new EventSource(tab.url)`. `evs.onopen` → started. `evs.addEventListener(eventType, handler)` → server messages. `evs.onerror` → error, auto-stop.
-    - `stop()`: `evsRef.current?.close()`
-  - Layout: URL + Event Type input row + Start/Stop button, then `<RealtimeMessageLog>` fills rest
 
 - [ ] **T-192** UI: SocketIOPanel + MQTTPanel (browser-build packages in `src/ui/package.json`)
   - **npm install in `src/ui/`** (before writing any component):

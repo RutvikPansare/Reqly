@@ -2,6 +2,11 @@
 
 ## 2026-07-01
 
+- [x] **T-191** UI: WebSocketPanel + SSEPanel
+  - NEW `src/ui/src/components/WebSocketPanel.tsx`
+  - NEW `src/ui/src/components/SSEPanel.tsx`
+
+
 - [x] **T-190** UI: `RealtimeCollectionsPanel`
   - NEW `src/ui/src/components/RealtimeCollectionsPanel.tsx`
 
