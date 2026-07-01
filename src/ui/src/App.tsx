@@ -17,6 +17,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
 import { GrpcWorkspace } from './components/GrpcWorkspace';
+import { RealtimeWorkspace } from './components/RealtimeWorkspace';
 import { FlowsPanel } from './components/FlowsPanel';
 import { FlowWorkspace } from './components/FlowWorkspace';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
@@ -149,6 +150,7 @@ function App() {
   const [flowLastResults, setFlowLastResults] = useState<Record<string, any>>({});
   const [graphqlRequest, setGraphqlRequest] = useLocalStorage<any>('reqly.graphqlRequest', null);
   const [grpcRequest, setGrpcRequest] = useLocalStorage<any>('reqly.grpcRequest', null);
+  const [realtimeRequest, setRealtimeRequest] = useLocalStorage<any>('reqly.realtimeRequest', null);
 
   const startTabRename = (id: string, currentName: string) => {
     setRenamingTabId(id);
@@ -410,6 +412,11 @@ function App() {
       setGrpcRequest({ ...req, _collection: col });
       setActivePanel('grpc');
     }
+    // Route realtime requests
+    if (['websocket', 'sse', 'socketio', 'mqtt'].includes(req.type)) {
+      setRealtimeRequest({ ...req, _collection: col });
+      setActivePanel('realtime');
+    }
   };
 
   const createNewTab = () => {
@@ -540,7 +547,7 @@ function App() {
             }
           }}
         />
-        {activePanel !== 'graphql' && activePanel !== 'grpc' && (
+        {activePanel !== 'graphql' && activePanel !== 'grpc' && activePanel !== 'realtime' && (
           <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--border)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
@@ -576,6 +583,8 @@ function App() {
             <GraphQLWorkspace initialRequest={graphqlRequest} />
           ) : activePanel === 'grpc' ? (
             <GrpcWorkspace initialRequest={grpcRequest} onUpdate={setGrpcRequest} />
+          ) : activePanel === 'realtime' ? (
+            <RealtimeWorkspace initialRequest={realtimeRequest} onUpdate={setRealtimeRequest} />
           ) : activePanel === 'flows' ? (
             selectedFlowName ? (
               <FlowWorkspace

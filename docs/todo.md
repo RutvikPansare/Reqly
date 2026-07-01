@@ -37,19 +37,6 @@
 > - `onUpdate` propagation: see `GrpcWorkspace` → `setGrpcRequest` in `App.tsx`
 > - Badge system: `requestBadgeInfo()` in `src/ui/src/lib/colors.ts`
 
-- [ ] **T-188** UI: `api.ts` additions + NavRail + App.tsx routing
-  - **File: `src/ui/src/api.ts`** (EDIT - small addition)
-    - Add one function: `runRealtimeCapture(req: { type: string; url: string; captureTimeout?: number; sendMessages?: any[]; config?: any }): Promise<{ messages: any[]; truncated: boolean; isError?: boolean; errorMessage?: string }>` - calls `POST /api/run/realtime`, returns parsed JSON `.response`. This is used to run saved collection requests from the UI.
-  - **File: `src/ui/src/components/NavRail.tsx`** (EDIT)
-    - Add `'realtime'` to `NavPanel` type export
-    - Import `Wifi` from `lucide-react`
-    - Add `{ id: 'realtime', label: 'Realtime', icon: <Wifi size={18} /> }` between `grpc` and `capture`
-  - **File: `src/ui/src/App.tsx`** (EDIT)
-    - `const [realtimeRequest, setRealtimeRequest] = useLocalStorage<any>('reqly.realtimeRequest', null)`
-    - In `handleSelectRequestFromSidebar`: if `req.type` in `['websocket','sse','socketio','mqtt']` → `setRealtimeRequest({ ...req, _collection: col }); setActivePanel('realtime')`
-    - Sidebar hide condition: add `activePanel !== 'realtime'`
-    - Panel routing: `activePanel === 'realtime' ? <RealtimeWorkspace initialRequest={realtimeRequest} onUpdate={setRealtimeRequest} /> : ...`
-  - Run `npm test`.
 
 - [ ] **T-189** UI: shared display component + tab system
   - **File: `src/ui/src/components/RealtimeMessageLog.tsx`** (NEW, <150 lines)

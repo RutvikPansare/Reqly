@@ -483,3 +483,16 @@ export async function updateLoginItem(enabled: boolean): Promise<{ enabled: bool
   if (!res.ok) throw new Error('Failed to update login item setting');
   return res.json();
 }
+
+export async function runRealtimeCapture(req: { type: string; url: string; captureTimeout?: number; sendMessages?: any[]; config?: any }): Promise<{ messages: any[]; truncated: boolean; isError?: boolean; errorMessage?: string }> {
+  const res = await fetch('/api/run/realtime', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ request: req })
+  });
+  const data = await res.json();
+  if (data.error) {
+    return { messages: [], truncated: false, isError: true, errorMessage: data.error };
+  }
+  return data.response;
+}

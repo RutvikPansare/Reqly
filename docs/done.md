@@ -2,6 +2,11 @@
 
 ## 2026-07-01
 
+- [x] **T-188** UI: `api.ts` additions + NavRail + App.tsx routing
+  - Added `runRealtimeCapture` to `api.ts`
+  - Added realtime panel to `NavRail`
+  - Added routing for realtime workspace to `App.tsx`
+
 - [x] **T-187** MCP tool: `run_realtime` + Express route
   - NEW `src/mcp/tools/run-realtime.ts`: `run_realtime` tool - calls `runRealtimeCapture`, returns JSON result
   - Registered in `src/mcp/server.ts`
