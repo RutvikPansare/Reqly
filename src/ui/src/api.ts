@@ -1,11 +1,11 @@
 export async function fetchCollections() {
-  const res = await fetch('/api/collections');
+  const res = await fetch(`/api/collections?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch collections');
   return res.json();
 }
 
 export async function fetchEnvironments() {
-  const res = await fetch('/api/environments');
+  const res = await fetch(`/api/environments?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch environments');
   return res.json();
 }
@@ -49,7 +49,7 @@ export const duplicateEnvironment = async (name: string) => {
 };
 
 export async function getCollectionVariables(collectionName: string): Promise<Record<string, string>> {
-  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/variables`);
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/variables?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch collection variables');
   return res.json();
 }
@@ -73,7 +73,7 @@ export async function deleteCollectionVariable(collectionName: string, key: stri
 }
 
 export async function getCollectionAuth(collectionName: string): Promise<{ type: string; profileId?: string; credentials?: Record<string, string> } | null> {
-  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/auth`);
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/auth?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch collection auth');
   return res.json();
 }
@@ -97,7 +97,7 @@ export async function deleteCollectionAuth(collectionName: string) {
 }
 
 export async function getCollectionSpec(collectionName: string): Promise<{ specPath?: string; specUrl?: string; operationCount: number; loaded: boolean }> {
-  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/spec`);
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/spec?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch collection spec');
   return res.json();
 }
@@ -121,7 +121,7 @@ export async function deleteCollectionSpec(collectionName: string) {
 }
 
 export async function exportEnvironment(name: string): Promise<void> {
-  const res = await fetch(`/api/environments/${encodeURIComponent(name)}/export`);
+  const res = await fetch(`/api/environments/${encodeURIComponent(name)}/export?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to export environment');
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -237,7 +237,7 @@ export async function deleteRequest(collectionName: string, requestName: string)
 }
 
 export async function fetchAuthProfiles() {
-  const res = await fetch('/api/auth-profiles');
+  const res = await fetch(`/api/auth-profiles?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch auth profiles');
   return res.json();
 }
@@ -351,7 +351,7 @@ export async function saveExample(
 
 export async function listExamples(collectionName: string, requestName: string) {
   const res = await fetch(
-    `/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}/examples`,
+    `/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}/examples?t=${Date.now()}`,
   );
   if (!res.ok) throw new Error('Failed to list examples');
   return res.json();
@@ -367,13 +367,13 @@ export async function deleteExample(collectionName: string, requestName: string,
 }
 
 export async function fetchFlows() {
-  const res = await fetch('/api/flows');
+  const res = await fetch(`/api/flows?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch flows');
   return res.json();
 }
 
 export async function getFlow(name: string) {
-  const res = await fetch(`/api/flows/${encodeURIComponent(name)}`);
+  const res = await fetch(`/api/flows/${encodeURIComponent(name)}?t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch flow');
   return res.json();
 }
