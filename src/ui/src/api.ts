@@ -209,7 +209,7 @@ export async function duplicateCollection(name: string) {
 }
 
 export async function addRequest(collectionName: string, request: any) {
-  const res = await fetch(`/api/collections/${collectionName}/requests`, {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/requests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)
@@ -219,7 +219,7 @@ export async function addRequest(collectionName: string, request: any) {
 }
 
 export async function updateRequest(collectionName: string, oldRequestName: string, request: any) {
-  const res = await fetch(`/api/collections/${collectionName}/requests/${oldRequestName}`, {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(oldRequestName)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)

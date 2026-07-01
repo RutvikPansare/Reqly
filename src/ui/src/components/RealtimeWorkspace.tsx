@@ -65,18 +65,23 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
   };
 
   const handleSaved = (collectionName: string, requestName: string, requestId?: string) => {
-    updateTab(activeTabId, { _collection: collectionName, name: requestName, tabName: requestName, id: requestId || activeTab.id });
-    savedSnapshotRef.current = { url: activeTab.url || '', realtime: activeTab.realtime ?? {} };
+    updateTab(activeTabId, { name: requestName, _collection: collectionName, tabName: requestName, id: requestId || activeTab?.id });
+    savedSnapshotRef.current = { url: activeTab?.url || '', realtime: activeTab?.realtime ?? {} };
     setSaveModalOpen(false);
     flashSaved();
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('reqly-request-saved', { detail: { col: collectionName } }));
+    }, 100);
   };
 
   const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave, flashSaved: savedFlash };
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="w-72 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
-        <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} defaultRequestType="websocket" />
+      <div className="w-72 shrink-0 border-r flex flex-col bg-sidebar" style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}>
+        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+          <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} defaultRequestType="websocket" />
+        </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'websocket', label: 'WebSocket' }, { id: 'sse', label: 'Server-Sent Events' }, { id: 'socketio', label: 'Socket.IO' }, { id: 'mqtt', label: 'MQTT' }]} />

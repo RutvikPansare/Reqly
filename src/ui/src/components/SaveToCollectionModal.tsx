@@ -50,6 +50,7 @@ export function SaveToCollectionModal({ request, defaultName, onClose, onSaved }
       }
       await addRequest(collectionName, requestToSave);
       window.dispatchEvent(new Event('reqly-reload'));
+      window.dispatchEvent(new CustomEvent('reqly-request-saved', { detail: { col: collectionName } }));
       onSaved(collectionName, name, requestToSave.id);
     } catch (e: any) {
       setError(e.message || 'Failed to save request');

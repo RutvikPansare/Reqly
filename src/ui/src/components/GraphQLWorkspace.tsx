@@ -278,6 +278,7 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
       setShowSaveForm(false);
       setTimeout(() => setSaveSuccess(false), 2000);
       window.dispatchEvent(new Event('reqly-reload'));
+      window.dispatchEvent(new CustomEvent('reqly-request-saved', { detail: { col } }));
       if (onUpdate) onUpdate({ ...reqToSave, _collection: col });
     } catch (e: any) {
       setSaveError(e.message || 'Save failed.');
@@ -746,8 +747,10 @@ export function GraphQLWorkspace({ initialRequest, onUpdate }: { initialRequest?
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="w-72 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
-        <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['graphql', 'graphql-subscription']} defaultRequestType="graphql" />
+      <div className="w-72 shrink-0 border-r flex flex-col bg-sidebar" style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}>
+        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+          <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['graphql', 'graphql-subscription']} defaultRequestType="graphql" />
+        </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'graphql', label: 'GraphQL' }, { id: 'graphql-subscription', label: 'GraphQL Subscription' }]} />

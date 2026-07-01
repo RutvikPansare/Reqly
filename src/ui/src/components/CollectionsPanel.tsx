@@ -288,15 +288,21 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
       const { col, req } = (e as CustomEvent).detail;
       setExpandedReqs(p => ({ ...p, [`${col}/${req}`]: true }));
     };
+    const handleRequestSaved = (e: Event) => {
+      const { col } = (e as CustomEvent).detail;
+      setExpandedCols(p => ({ ...p, [col]: true }));
+    };
     const handleImportSuccess = (e: Event) => setImportSuccess((e as CustomEvent).detail);
     document.addEventListener('click', closeMenu);
     window.addEventListener('reqly-reload', loadData);
     window.addEventListener('reqly-example-saved', handleExampleSaved);
+    window.addEventListener('reqly-request-saved', handleRequestSaved as any);
     window.addEventListener('reqly-import-success', handleImportSuccess);
     return () => {
       document.removeEventListener('click', closeMenu);
       window.removeEventListener('reqly-reload', loadData);
       window.removeEventListener('reqly-example-saved', handleExampleSaved);
+      window.removeEventListener('reqly-request-saved', handleRequestSaved as any);
       window.removeEventListener('reqly-import-success', handleImportSuccess);
     };
   }, []);
@@ -497,7 +503,26 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
             ? col.requests.filter((r: any) => typeFilter.includes(r.type))
             : col.requests;
           return (
-            <div key={col.name} className="select-none">
+            <div 
+              key={col.name} 
+              className="select-none"
+              onDragOver={e => {
+                if (!draggedReq || draggedReq.col === col.name) return;
+                e.preventDefault();
+                setDragOverCol(col.name);
+              }}
+              onDragLeave={() => setDragOverCol(prev => (prev === col.name ? null : prev))}
+              onDrop={e => {
+                e.preventDefault();
+                setDragOverCol(null);
+                const raw = e.dataTransfer.getData('application/json');
+                if (!raw) return;
+                const source = JSON.parse(raw);
+                if (source.col === col.name) return;
+                handleMoveReq(source.col, source.req, col.name);
+                setDraggedReq(null);
+              }}
+            >
               <div
                 className="flex items-center justify-between group rounded px-1.5 py-1 cursor-pointer transition-colors"
                 style={{
@@ -509,22 +534,6 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setContextMenu({ x: e.pageX, y: e.pageY, type: 'col', col: col.name });
-                }}
-                onDragOver={e => {
-                  if (!draggedReq || draggedReq.col === col.name) return;
-                  e.preventDefault();
-                  setDragOverCol(col.name);
-                }}
-                onDragLeave={() => setDragOverCol(prev => (prev === col.name ? null : prev))}
-                onDrop={e => {
-                  e.preventDefault();
-                  setDragOverCol(null);
-                  const raw = e.dataTransfer.getData('application/json');
-                  if (!raw) return;
-                  const source = JSON.parse(raw);
-                  if (source.col === col.name) return;
-                  handleMoveReq(source.col, source.req, col.name);
-                  setDraggedReq(null);
                 }}
               >
                 <div
