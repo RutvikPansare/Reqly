@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Send as SendIcon, Loader2, Save, Bookmark, Copy, Check, Search, X,
+  Send as SendIcon, Loader2, Save, Copy, Check, Search, X,
 } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
 import { SplitPane } from './SplitPane';
+import { CollectionsPanel } from './CollectionsPanel';
+import { WorkspaceTabBar } from './WorkspaceTabBar';
+import { useWorkspaceTabs } from '../hooks/useWorkspaceTabs';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
@@ -55,20 +58,14 @@ function headersToKv(headers: Record<string, string> | undefined): KeyValuePair[
 // Component
 // ---------------------------------------------------------------------------
 
-const GRPC_STATE_KEY = 'reqly.grpcWorkspaceState';
-
 interface GrpcWorkspaceProps {
   initialRequest?: any;
   onUpdate?: (state: any) => void;
 }
 
-function loadPersistedState() {
-  try { return JSON.parse(localStorage.getItem(GRPC_STATE_KEY) ?? 'null'); } catch { return null; }
-}
-
-export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps = {}) {
+export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspaceProps = {}) {
   // Seed: explicit initialRequest (sidebar click) wins; otherwise fall back to last-saved workspace state
-  const seed = initialRequest ?? loadPersistedState();
+  const seed = initialRequest;
 
   // --- Request state ---
   const [url, setUrl]               = useState(seed?.url ?? '');
@@ -89,8 +86,6 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
   const [copied, setCopied]         = useState(false);
 
   // --- Save state ---
-  const [showSaved, setShowSaved]         = useState(false);
-  const [savedRequests, setSavedRequests] = useState<{ collection: string; request: any }[]>([]);
   const [collections, setCollections]     = useState<string[]>([]);
   const [saveCollection, setSaveCollection] = useState('');
   const [saveName, setSaveName]           = useState('');
@@ -145,27 +140,18 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
         headers: Object.fromEntries(metadata.filter(m => m.enabled && m.key.trim()).map(m => [m.key, m.value])),
         body: { type: 'raw', raw: messageJson },
       };
-      localStorage.setItem(GRPC_STATE_KEY, JSON.stringify(state));
       // Propagate back to App so reqly.grpcRequest stays current for refresh
       onUpdate?.(state);
     }, 600);
     return () => clearTimeout(t);
   }, [url, protoFile, service, method, insecure, streamTimeout, streamingType, messageJson, metadata, activeCollection, activeRequestName, onUpdate]);
 
-  // --- Load collections + saved gRPC requests ---
-  const reloadSaved = () => {
+  // --- Load collections for save form ---
+  useEffect(() => {
     fetchCollections().then((cols: any[]) => {
       setCollections(cols.map((c: any) => c.name));
-      const reqs: { collection: string; request: any }[] = [];
-      for (const col of cols) {
-        for (const req of (col.requests ?? [])) {
-          if (req.type === 'grpc') reqs.push({ collection: col.name, request: req });
-        }
-      }
-      setSavedRequests(reqs);
     }).catch(() => {});
-  };
-  useEffect(() => { reloadSaved(); }, []);
+  }, []);
 
   // --- Load env / dotenv vars for autocomplete ---
   useEffect(() => {
@@ -190,23 +176,6 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
     return () => window.removeEventListener('reqly-reload', load);
   }, [activeCollection]);
 
-  // --- Sync when initialRequest changes (sidebar click) ---
-  useEffect(() => {
-    if (!initialRequest) return;
-    setUrl(initialRequest.url ?? '');
-    setProtoFile(initialRequest.grpc?.protoFile ?? '');
-    setService(initialRequest.grpc?.service ?? '');
-    setMethod(initialRequest.grpc?.method ?? '');
-    setInsecure(initialRequest.grpc?.insecure ?? true);
-    setStreamTimeout(initialRequest.grpc?.streamTimeout ?? 10);
-    setStreamingType(initStreamingType(initialRequest));
-    setMessageJson(initMessageJson(initialRequest));
-    setMetadata(headersToKv(initialRequest.headers));
-    setActiveCollection(initialRequest._collection);
-    setActiveRequestName(initialRequest.name);
-    setResponse(null);
-    setSendError(null);
-  }, [initialRequest]);
 
   // --- Available variables for autocomplete ---
   const availableVariables: VariableItem[] = useMemo(() => [
@@ -310,7 +279,6 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
       setSaveSuccess(true);
       setShowSaveForm(false);
       setTimeout(() => setSaveSuccess(false), 2000);
-      reloadSaved();
       window.dispatchEvent(new Event('reqly-reload'));
     } catch (e: any) {
       setSaveError(e.message || 'Save failed');
@@ -328,21 +296,6 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
     }
   };
 
-  const loadSaved = (req: any, col: string) => {
-    setUrl(req.url ?? '');
-    setProtoFile(req.grpc?.protoFile ?? '');
-    setService(req.grpc?.service ?? '');
-    setMethod(req.grpc?.method ?? '');
-    setInsecure(req.grpc?.insecure ?? true);
-    setStreamTimeout(req.grpc?.streamTimeout ?? 10);
-    setStreamingType(initStreamingType(req));
-    setMessageJson(initMessageJson(req));
-    setMetadata(headersToKv(req.headers));
-    setActiveCollection(col);
-    setActiveRequestName(req.name);
-    setResponse(null);
-    setSendError(null);
-  };
 
   const handleCopyResponse = () => {
     navigator.clipboard.writeText(JSON.stringify(response, null, 2)).catch(() => {});
@@ -365,68 +318,6 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
   return (
     <div className="absolute inset-0 flex overflow-hidden" style={{ background: 'var(--surface-1)' }}>
 
-      {/* Saved requests sidebar */}
-      {showSaved && (
-        <div
-          className="w-60 shrink-0 flex flex-col overflow-hidden order-first"
-          style={{ borderRight: '1px solid var(--border)', background: 'var(--surface-1)' }}
-        >
-          <div
-            className="flex items-center gap-2 px-3 py-2 shrink-0"
-            style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#06b6d4' }} />
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Saved gRPC Requests</span>
-          </div>
-          <div className="flex-1 overflow-y-auto py-1">
-            {collections.map(col => {
-              const reqs = savedRequests.filter(r => r.collection === col);
-              if (reqs.length === 0) return null;
-              return (
-                <div key={col} className="mb-2">
-                  <div
-                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    {col}
-                  </div>
-                  {reqs.map(({ request }) => {
-                    const isActive = activeCollection === col && activeRequestName === request.name;
-                    const s = request.grpc?.streaming;
-                    const short = s ? STREAMING_META[s as StreamingType]?.short : 'UNR';
-                    return (
-                      <button
-                        key={request.name}
-                        onClick={() => loadSaved(request, col)}
-                        className="w-full text-left flex items-center gap-2 px-3 py-1.5 transition-colors"
-                        style={{
-                          background: isActive ? 'rgba(6,182,212,0.1)' : 'transparent',
-                          color: isActive ? '#06b6d4' : 'var(--text-secondary)',
-                        }}
-                        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)'; }}
-                        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-                      >
-                        <span
-                          className="text-[9px] font-bold font-mono shrink-0 px-1 rounded"
-                          style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.12)' }}
-                        >
-                          {short}
-                        </span>
-                        <span className="text-xs truncate">{request.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-            {savedRequests.length === 0 && (
-              <div className="px-3 py-6 text-center text-xs italic" style={{ color: 'var(--text-muted)' }}>
-                No saved gRPC requests yet.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Main workspace */}
       <div className="flex-1 min-w-0 overflow-hidden" style={{ height: '100%' }}>
@@ -446,7 +337,6 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps =
             availableVariables={availableVariables}
             isSending={isSending}
             sendError={sendError}
-            showSaved={showSaved} setShowSaved={setShowSaved}
             showSaveForm={showSaveForm} setShowSaveForm={setShowSaveForm}
             saveSuccess={saveSuccess}
             saveCollection={saveCollection} setSaveCollection={setSaveCollection}
@@ -489,7 +379,6 @@ interface RequestPanelProps {
   availableVariables: VariableItem[];
   isSending: boolean;
   sendError: string | null;
-  showSaved: boolean; setShowSaved: (v: boolean) => void;
   showSaveForm: boolean; setShowSaveForm: (fn: (v: boolean) => boolean) => void;
   saveSuccess: boolean;
   saveCollection: string; setSaveCollection: (v: string) => void;
@@ -512,14 +401,6 @@ function RequestPanel(p: RequestPanelProps) {
         className="flex items-center gap-2 shrink-0"
         style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}
       >
-        <button
-          className={`btn ${p.showSaved ? 'btn-primary' : 'btn-secondary'} rounded shrink-0`}
-          onClick={() => p.setShowSaved(!p.showSaved)}
-          style={{ padding: '0 10px', height: '32px' }}
-          title="Toggle saved requests"
-        >
-          <Bookmark size={14} />
-        </button>
 
         <div
           className="flex-1 flex items-center overflow-hidden"
@@ -980,6 +861,56 @@ function StreamMessageList({ messages }: { messages: StreamMessage[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+export function GrpcWorkspace({ initialRequest, onUpdate }: { initialRequest?: any; onUpdate?: (state: any) => void }) {
+  const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useWorkspaceTabs('grpc', 'grpc', 'New gRPC Request');
+  const prevRequestIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Only react to sidebar-selected requests (must have _collection + name).
+    if (!initialRequest?._collection || !initialRequest?.name) return;
+    const identity = `${initialRequest._collection}::${initialRequest.name}`;
+    if (identity === prevRequestIdRef.current) return;
+    prevRequestIdRef.current = identity;
+    loadTab(initialRequest);
+  }, [initialRequest]);
+
+  return (
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="w-72 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
+        <CollectionsPanel
+          activeRequest={activeTab}
+          onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })}
+          onRunCollection={() => {}}
+          typeFilter={['grpc']}
+          defaultRequestType="grpc"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <WorkspaceTabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onSelect={setActiveTabId}
+          onClose={closeTab}
+          onNew={() => addTab('grpc')}
+          protocols={[{ id: 'grpc', label: 'gRPC' }]}
+        />
+        <div className="relative min-h-0 flex-1">
+          {activeTab && (
+            <GrpcWorkspaceInner
+              key={activeTab.id}
+              initialRequest={activeTab}
+              onUpdate={(state: any) => {
+                updateTab(activeTab.id, state);
+                onUpdate?.(state);
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
