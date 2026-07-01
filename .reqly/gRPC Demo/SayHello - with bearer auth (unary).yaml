@@ -1,0 +1,15 @@
+id: grpc-reflection-demo
+name: SayHello - with bearer auth (unary)
+method: POST
+url: grpcb.in:9000
+type: grpc
+headers:
+  x-request-id: reqly-test-123
+  x-custom-header: hello-from-reqly
+grpc:
+  protoFile: grpcbin.proto
+  service: hello.HelloService
+  method: SayHello
+  message:
+    greeting: Auth metadata test
+  insecure: true

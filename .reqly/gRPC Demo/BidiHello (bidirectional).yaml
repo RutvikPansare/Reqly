@@ -1,0 +1,15 @@
+id: grpc-bidi-stream
+name: BidiHello (bidirectional)
+method: POST
+url: grpcb.in:9000
+type: grpc
+grpc:
+  protoFile: grpcbin.proto
+  service: hello.HelloService
+  method: BidiHello
+  messages:
+    - greeting: ping 1
+    - greeting: ping 2
+  insecure: true
+  streaming: bidirectional
+  streamTimeout: 5

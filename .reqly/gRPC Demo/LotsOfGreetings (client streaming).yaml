@@ -1,0 +1,15 @@
+id: grpc-client-stream
+name: LotsOfGreetings (client streaming)
+method: POST
+url: grpcb.in:9000
+type: grpc
+grpc:
+  protoFile: grpcbin.proto
+  service: hello.HelloService
+  method: LotsOfGreetings
+  messages:
+    - greeting: Hello 1
+    - greeting: Hello 2
+    - greeting: Hello 3
+  insecure: true
+  streaming: client

@@ -1,0 +1,12 @@
+id: grpc-local-hello
+name: SayHello - localhost (unary)
+method: POST
+url: localhost:50051
+type: grpc
+grpc:
+  protoFile: helloworld.proto
+  service: helloworld.Greeter
+  method: SayHello
+  message:
+    name: Reqly
+  insecure: true

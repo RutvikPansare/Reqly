@@ -21,6 +21,24 @@ import { execute as executeHttp } from '../engine/http-executor.js';
 import { detectFramework } from '../engine/framework-detector.js';
 import { attachTerminal } from './terminal.js';
 
+function injectGrpcAuth(auth: any, metadata: Record<string, string>) {
+  const creds = auth.credentials ?? {};
+  switch (auth.type) {
+    case 'bearer':
+      if (creds.token) metadata['authorization'] = `Bearer ${creds.token}`;
+      break;
+    case 'apiKey':
+      if (creds.key && creds.value) metadata[creds.key.toLowerCase()] = creds.value;
+      break;
+    case 'basic':
+      if (creds.username && creds.password) {
+        const encoded = Buffer.from(`${creds.username}:${creds.password}`).toString('base64');
+        metadata['authorization'] = `Basic ${encoded}`;
+      }
+      break;
+  }
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export function startExpressServer(context: EngineContext, port: number = 4242) {
@@ -1036,10 +1054,61 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       } else {
         env = await context.environmentManager.getActiveEnvironment() || undefined;
       }
-      
+
+      // Normalise: some callers send the request at the top level (legacy), others
+      // wrap it in { request: {...} }. Support both.
+      const requestBody = req.body.request ?? req.body;
+
+      // Route gRPC requests to the dedicated runner (T-164/T-168).
+      if (requestBody.type === 'grpc') {
+        const { runGrpcAdhoc } = await import('../engine/grpc-adhoc.js');
+        const collectionName = requestBody._collection;
+        const collectionVars = collectionName
+          ? await context.collectionManager.getCollectionVariables(collectionName).catch(() => ({}))
+          : {};
+        const envVars = env?.variables ?? {};
+
+        const { resolveVariables } = await import('../engine/variable-substitutor.js');
+        const resolvedUrl = resolveVariables(requestBody.url, [collectionVars, envVars]);
+
+        // Build metadata from headers + auth
+        const metadata: Record<string, string> = {};
+        if (collectionName) {
+          const { resolveCollectionAuth } = await import('../engine/collection-auth.js');
+          const colAuthCfg = await context.collectionManager.getCollectionAuth(collectionName).catch(() => undefined);
+          const colAuth = await resolveCollectionAuth(colAuthCfg, context.authManager);
+          if (colAuth) injectGrpcAuth(colAuth, metadata);
+        }
+        if (requestBody.authProfileId) {
+          try {
+            const reqAuth = await context.authManager.getProfile(requestBody.authProfileId);
+            if (reqAuth) injectGrpcAuth(reqAuth, metadata);
+          } catch { /* no auth profile */ }
+        }
+        if (requestBody.headers) Object.assign(metadata, requestBody.headers);
+
+        const grpcCfg = requestBody.grpc;
+        const protosDir = context.collectionManager.getBaseDir() + '/protos';
+
+        const result = await runGrpcAdhoc({
+          serverUrl: resolvedUrl,
+          protoFile: grpcCfg.protoFile,
+          service: grpcCfg.service,
+          method: grpcCfg.method,
+          message: grpcCfg.message ?? {},
+          messages: grpcCfg.messages,
+          metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+          insecure: grpcCfg.insecure !== false,
+          streaming: grpcCfg.streaming,
+          streamTimeout: grpcCfg.streamTimeout,
+        }, protosDir);
+
+        return res.json({ response: result });
+      }
+
       let auth = undefined;
-      if (req.body.request.authProfileId) {
-        auth = await context.authManager.getProfile(req.body.request.authProfileId);
+      if (requestBody.authProfileId) {
+        auth = await context.authManager.getProfile(requestBody.authProfileId);
         // Auto-refresh OAuth2 token if expired or expiring within 60 seconds
         if (auth.type === 'oauth2' && auth.credentials.refreshToken) {
           const expiresAt = Number(auth.credentials.expiresAt || 0);
@@ -1055,7 +1124,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
       const { substituteConfig } = await import('../engine/variable-substitutor.js');
       const envVars = env ? env.variables : {};
-      const collectionName = req.body.request._collection;
+      const collectionName = requestBody._collection;
       const collectionVars = collectionName
         ? await context.collectionManager.getCollectionVariables(collectionName).catch(() => ({}))
         : {};
@@ -1066,15 +1135,15 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         collectionAuth = await resolveCollectionAuth(colAuthCfg, context.authManager);
       }
       // Layered scope: collection vars win over env vars on collision.
-      const config = substituteConfig(req.body.request, [collectionVars, envVars], context.responseStore);
+      const config = substituteConfig(requestBody, [collectionVars, envVars], context.responseStore);
 
       const response = await context.executeRequest(config, env, auth, undefined, undefined, collectionVars, collectionAuth, collectionName);
-      context.responseStore.set(req.body.request.name, response);
-      context.historyStore.append(req.body.request, response);
+      context.responseStore.set(requestBody.name, response);
+      context.historyStore.append(requestBody, response);
 
       // Compute diff against previous run
       let diff = undefined;
-      const lastTwo = context.historyStore.getLastTwo(req.body.request.name);
+      const lastTwo = context.historyStore.getLastTwo(requestBody.name);
       if (lastTwo.length === 2) {
         const { diffResponses } = await import('../engine/response-differ.js');
         diff = diffResponses(lastTwo[1], lastTwo[0]);
@@ -1082,15 +1151,15 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       
       const { runAssertions } = await import('../engine/assertion-runner.js');
       let assertions: any[] = [];
-      if (req.body.request.assertions) {
-        assertions = runAssertions(response, req.body.request.assertions);
+      if (requestBody.assertions) {
+        assertions = runAssertions(response, requestBody.assertions);
       }
 
       let contractViolations = null;
       let contractMatch = null;
       if (collectionName) {
         const { checkContract } = await import('../mcp/tools/contract-helper.js');
-        const contractResult = await checkContract(context, collectionName, req.body.request, response);
+        const contractResult = await checkContract(context, collectionName, requestBody, response);
         if (contractResult) {
           contractViolations = contractResult.violations;
           contractMatch = {

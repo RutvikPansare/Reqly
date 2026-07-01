@@ -10,8 +10,8 @@ import { Collection, CollectionRequest, ExampleResponse, CollectionMeta, Collect
 const META_FILE = 'collection.yaml';
 
 // Top-level directories reserved by other managers sharing the same .reqly
-// base dir (e.g. FlowManager's `flows/`) - never treated as collections.
-const RESERVED_DIRS = new Set(['flows']);
+// base dir (e.g. FlowManager's `flows/`, proto files for gRPC) - never treated as collections.
+const RESERVED_DIRS = new Set(['flows', 'protos', '.schema-cache']);
 
 export class CollectionNotFoundError extends Error {
   constructor(message: string) {

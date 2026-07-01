@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+// grpcb.in public test service - use with grpcb.in:9000 (plaintext)
+// or grpcb.in:9001 (TLS). This is the standard hello service.
+package hello;
+
+service HelloService {
+  // Unary: send one greeting, get one reply
+  rpc SayHello(HelloRequest) returns (HelloResponse);
+
+  // Server streaming: send one greeting, get multiple replies
+  rpc LotsOfReplies(HelloRequest) returns (stream HelloResponse);
+
+  // Client streaming: send multiple greetings, get one reply
+  rpc LotsOfGreetings(stream HelloRequest) returns (HelloResponse);
+
+  // Bidirectional streaming: send and receive simultaneously
+  rpc BidiHello(stream HelloRequest) returns (stream HelloResponse);
+}
+
+message HelloRequest {
+  string greeting = 1;
+}
+
+message HelloResponse {
+  string reply = 1;
+}

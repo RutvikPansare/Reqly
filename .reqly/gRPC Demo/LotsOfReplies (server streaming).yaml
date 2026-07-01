@@ -1,0 +1,14 @@
+id: grpc-server-stream
+name: LotsOfReplies (server streaming)
+method: POST
+url: grpcb.in:9000
+type: grpc
+grpc:
+  protoFile: grpcbin.proto
+  service: hello.HelloService
+  method: LotsOfReplies
+  message:
+    greeting: stream me!
+  insecure: true
+  streaming: server
+  streamTimeout: 5

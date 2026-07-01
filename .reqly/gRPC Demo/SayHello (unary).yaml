@@ -1,0 +1,12 @@
+id: grpc-say-hello
+name: SayHello (unary)
+method: POST
+url: grpcb.in:9000
+type: grpc
+grpc:
+  protoFile: grpcbin.proto
+  service: hello.HelloService
+  method: SayHello
+  message:
+    greeting: Hello from Reqly!
+  insecure: true
