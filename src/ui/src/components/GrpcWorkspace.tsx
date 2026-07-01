@@ -780,24 +780,26 @@ function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelPro
       </div>
 
       {/* ── Body content ─────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-auto p-2">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-2 gap-1.5">
         {activeTab === 'raw' ? (
-          <pre className="text-xs font-mono whitespace-pre-wrap break-all p-2 rounded" style={{ color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <pre className="flex-1 overflow-auto text-xs font-mono whitespace-pre-wrap break-all p-2 rounded m-0" style={{ color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             {JSON.stringify(response, null, 2)}
           </pre>
         ) : isStreamResponse ? (
-          <StreamMessageList messages={response.messages} />
+          <div className="flex-1 overflow-auto">
+            <StreamMessageList messages={response.messages} />
+          </div>
         ) : response.isError ? (
           <div
-            className="text-sm font-mono p-2 rounded"
+            className="text-sm font-mono p-2 rounded shrink-0"
             style={{ color: '#f87171', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.2)' }}
           >
             {response.errorMessage || 'RPC error'}
           </div>
         ) : response.body != null ? (
-          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} />
+          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} className="flex-1" />
         ) : response.response != null ? (
-          <CollapsibleJson label="response" data={response.response} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} />
+          <CollapsibleJson label="response" data={response.response} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} className="flex-1" />
         ) : (
           <div className="text-xs italic p-2" style={{ color: 'var(--text-muted)' }}>Empty response body</div>
         )}
