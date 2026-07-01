@@ -63,6 +63,7 @@ import * as duplicateEnvironment from './tools/duplicate-environment.js';
 import * as moveRequest from './tools/move-request.js';
 import * as introspectGraphql from './tools/introspect-graphql.js';
 import * as listGrpcServices from './tools/list-grpc-services.js';
+import * as runRealtime from './tools/run-realtime.js';
 
 const tools = [
   runRequest,
@@ -122,6 +123,7 @@ const tools = [
   moveRequest,
   introspectGraphql,
   listGrpcServices,
+  runRealtime,
 ];
 
 import { z } from 'zod';

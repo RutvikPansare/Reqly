@@ -1287,6 +1287,20 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.post('/api/run/realtime', async (req, res) => {
+    try {
+      const { type, url, captureTimeout, sendMessages, config } = req.body;
+      const { runRealtimeCapture } = await import('../engine/realtime-executor.js');
+      const result = await runRealtimeCapture(
+        { type, url, config: config ?? {}, sendMessages: sendMessages ?? [] },
+        { captureTimeout: captureTimeout ?? 5 },
+      );
+      res.json({ response: result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/config', async (req, res) => {
     try {
       const data = await fs.readFile(globalConfigPath, 'utf-8');

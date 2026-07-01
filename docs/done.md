@@ -2,6 +2,13 @@
 
 ## 2026-07-01
 
+- [x] **T-187** MCP tool: `run_realtime` + Express route
+  - NEW `src/mcp/tools/run-realtime.ts`: `run_realtime` tool - calls `runRealtimeCapture`, returns JSON result
+  - Registered in `src/mcp/server.ts`
+  - NEW `src/mcp/tools/run-realtime.test.ts`: 11 tests covering definition shape, handler routing, defaults, error passthrough
+  - EDIT `src/server/express.ts`: added `POST /api/run/realtime` route mirroring the MCP tool
+  - 820 tests total, all pass
+
 - [x] **T-186** Engine: `realtime-executor.ts` - buffered capture for MCP/agent use
   - NEW `src/engine/realtime-executor.ts`: `runRealtimeCapture()` supports websocket, sse, socketio, mqtt
   - Uses injectable adapters pattern (`RealtimeAdapters`) for clean TDD without constructor mocking issues

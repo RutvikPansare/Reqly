@@ -37,26 +37,6 @@
 > - `onUpdate` propagation: see `GrpcWorkspace` → `setGrpcRequest` in `App.tsx`
 > - Badge system: `requestBadgeInfo()` in `src/ui/src/lib/colors.ts`
 
-- [ ] **T-187** MCP tool: `run_realtime` + Express route
-  - **File: `src/mcp/tools/run-realtime.ts`** (NEW, <80 lines)
-    - Tool name: `run_realtime`
-    - Description: "Connects to a realtime endpoint (WebSocket, SSE, Socket.IO, or MQTT), captures messages for captureTimeout seconds, then disconnects and returns all received messages. Use this to verify a realtime endpoint works, test pub/sub flows, or capture a message sample. Returns { messages: [{ id, ts, source, payload, topic?, event? }], truncated, isError?, errorMessage? }. source values: 'server' = received from target, 'client' = sent by you, 'info' = connection events, 'error' = errors. Provide sendMessages to send messages after connecting (useful for WebSocket echo tests or MQTT publish). For types: 'websocket' expects ws:// or wss:// URLs; 'sse' expects http:// or https://; 'socketio' expects http:// or https://; 'mqtt' expects mqtt:// or ws:// URLs."
-    - Input schema:
-      ```json
-      {
-        "type": { "enum": ["websocket","sse","socketio","mqtt"] },
-        "url": { "type": "string" },
-        "captureTimeout": { "type": "number", "default": 5 },
-        "sendMessages": { "type": "array", "items": { "type": "object", "properties": { "message": { "type": "string" }, "eventName": { "type": "string" }, "topic": { "type": "string" }, "retain": { "type": "boolean" } }, "required": ["message"] } },
-        "config": { "type": "object" }
-      }
-      ```
-    - Handler: calls `runRealtimeCapture({ type, url, config: args.config ?? {}, sendMessages: args.sendMessages ?? [] }, { captureTimeout: args.captureTimeout ?? 5 })`, returns JSON result.
-  - Register in `src/mcp/server.ts`.
-  - **File: `src/server/express.ts`** (EDIT - add ONE route only, ~15 lines)
-    - `POST /api/run/realtime` - mirrors `/api/run/adhoc` for gRPC. Body: `{ type, url, captureTimeout?, sendMessages?, config? }`. Calls `runRealtimeCapture(...)`. Returns `res.json({ response: result })`. This lets the UI trigger a bounded capture from a saved collection request.
-  - **TDD**: Test `definition` shape and `handler` with mocked `runRealtimeCapture`. Test Express route via supertest. Run `npm test`.
-
 - [ ] **T-188** UI: `api.ts` additions + NavRail + App.tsx routing
   - **File: `src/ui/src/api.ts`** (EDIT - small addition)
     - Add one function: `runRealtimeCapture(req: { type: string; url: string; captureTimeout?: number; sendMessages?: any[]; config?: any }): Promise<{ messages: any[]; truncated: boolean; isError?: boolean; errorMessage?: string }>` - calls `POST /api/run/realtime`, returns parsed JSON `.response`. This is used to run saved collection requests from the UI.
