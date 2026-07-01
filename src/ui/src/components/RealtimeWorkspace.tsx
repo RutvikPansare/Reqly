@@ -15,15 +15,17 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
   const [savedFlash, setSavedFlash] = useState(false);
   const prevRequestIdRef = useRef<string | null>(null);
   const onUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Snapshot of the last-persisted url+realtime for the active saved request.
+  // Used to detect whether anything changed before showing the Saved flash.
+  const savedSnapshotRef = useRef<{ url: string; realtime: any } | null>(null);
 
   useEffect(() => {
     // Only react to sidebar-selected requests (must have _collection + name).
-    // Ignoring onUpdate feedback (which lacks _collection or has a generated id but same name)
-    // prevents the cycle: onUpdate → setRealtimeRequest → initialRequest change → loadTab → setActiveTabId switches tab.
     if (!initialRequest?._collection || !initialRequest?.name) return;
     const identity = `${initialRequest._collection}::${initialRequest.name}`;
     if (identity === prevRequestIdRef.current) return;
     prevRequestIdRef.current = identity;
+    savedSnapshotRef.current = { url: initialRequest.url || '', realtime: initialRequest.realtime ?? {} };
     loadTab(initialRequest);
   }, [initialRequest]);
 
@@ -36,12 +38,22 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
     };
   }, [activeTab, onUpdate]);
 
+  const isDirty = () => {
+    if (!activeTab?._collection) return true; // unsaved tab, always needs save modal
+    const snap = savedSnapshotRef.current;
+    if (!snap) return true;
+    return snap.url !== (activeTab.url || '') ||
+      JSON.stringify(snap.realtime ?? {}) !== JSON.stringify(activeTab.realtime ?? {});
+  };
+
   const flashSaved = () => { setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2000); };
 
   const handleSave = async () => {
     if (activeTab._collection && (activeTab.name || activeTab.tabName)) {
+      if (!isDirty()) return; // nothing changed, skip silently
       try {
         await updateRequest(activeTab._collection, activeTab.name || activeTab.tabName || '', { name: activeTab.name || activeTab.tabName, type: activeTab.protocol, url: activeTab.url, realtime: activeTab.realtime });
+        savedSnapshotRef.current = { url: activeTab.url || '', realtime: activeTab.realtime ?? {} };
         window.dispatchEvent(new Event('reqly-reload'));
         flashSaved();
       } catch (e: any) {
@@ -54,6 +66,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
 
   const handleSaved = (collectionName: string, requestName: string, requestId?: string) => {
     updateTab(activeTabId, { _collection: collectionName, name: requestName, tabName: requestName, id: requestId || activeTab.id });
+    savedSnapshotRef.current = { url: activeTab.url || '', realtime: activeTab.realtime ?? {} };
     setSaveModalOpen(false);
     flashSaved();
   };
