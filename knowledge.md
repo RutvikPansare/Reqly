@@ -32,6 +32,40 @@ Reqly is an execution engine, not an AI product. The AI always lives outside Req
 - **Plain Text:** Collections are YAML. No binary formats, no proprietary DB.
 - **BYOK:** The user's API key stays on their machine. Nothing sent to Reqly servers.
 
+## Protocol Architecture Rule: Request/Response vs. Long-Lived Connections
+
+This distinction is **mandatory reading before implementing any new protocol**.
+
+### Request/Response protocols (REST, GraphQL, gRPC)
+The server owns the full lifecycle. Engine class executes the request, returns a result. MCP tool and Express route both call the same engine. UI calls the Express route and renders the result. This is the standard Reqly pattern.
+
+```
+Agent / UI → MCP tool or POST /api/run/adhoc
+           → Engine (grpc-runner, http-executor, etc.)
+           → External server
+           ← Result returned to caller
+```
+
+### Realtime protocols (WebSocket, SSE, Socket.IO, MQTT)
+Connections are long-lived - potentially open for minutes or hours. A server-side proxy (holding the connection on the Reqly Node.js process and SSE-piping messages to the browser) creates serious problems: double-hop latency on every message, sessions lost on server restart, doubled file descriptors per session, and a fundamental mismatch with the singleton-server model.
+
+**The correct split:**
+
+**For agents (MCP use case):** A buffered executor - connect, capture messages for `captureTimeout` seconds, disconnect, return `{ messages, truncated }`. Same pattern as `grpc-streaming.ts`. Stateless and ephemeral. Lives in `src/engine/realtime-executor.ts`, exposed via MCP `run_realtime` tool and Express `/api/run/realtime` (for the UI to trigger ad-hoc captures).
+
+**For humans (interactive UI use case):** Direct browser connections using native and browser-compatible APIs. No proxy hop. Sessions survive server restarts.
+- WebSocket: `new WebSocket(url)` - native browser API, zero packages
+- SSE: `new EventSource(url)` - native browser API, zero packages
+- Socket.IO: `socket.io-client` in `src/ui/package.json` (browser-compatible build)
+- MQTT: `mqtt` in `src/ui/package.json` (browser-compatible build via WebSocket transport)
+
+**What this means in practice:**
+- `ws`, `eventsource` (Node.js versions) are NOT added to root `package.json` for a proxy. They are not needed.
+- `socket.io-client` and `mqtt` ARE added to `src/ui/package.json` for the browser panels.
+- The MCP `run_realtime` tool covers the "verify this endpoint works" agent use case via a short-lived buffered capture.
+- The interactive UI provides a richer live session experience that agents don't replicate directly - and that is acceptable because the two use cases are fundamentally different.
+- Realtime requests ARE saved to collections as YAML (`type: websocket`, `type: sse`, `type: socketio`, `type: mqtt`) so agents can reference them and re-run them via `run_realtime`.
+
 ## Competitive Advantages (vs Postman / Insomnia / Bruno)
 
 | Advantage | Detail |

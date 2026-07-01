@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RealtimeCollectionsPanel } from './RealtimeCollectionsPanel';
 import { RealtimeTabBar } from './RealtimeTabBar';
 import { WebSocketPanel } from './WebSocketPanel';
@@ -9,21 +9,38 @@ import { useRealtimeTabs } from '../hooks/useRealtimeTabs';
 import { SaveToCollectionModal } from './SaveToCollectionModal';
 import { updateRequest } from '../api';
 
-export function RealtimeWorkspace({ initialRequest }: { initialRequest?: any }) {
+export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest?: any; onUpdate?: (state: any) => void }) {
   const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useRealtimeTabs();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const prevRequestIdRef = useRef<string | null>(null);
+  const onUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sidebar click: only load tab when identity (collection::name) actually changes
   useEffect(() => {
-    if (initialRequest) {
-      loadTab(initialRequest);
-    }
+    if (!initialRequest) return;
+    const identity = `${initialRequest._collection ?? ''}::${initialRequest.name ?? ''}::${initialRequest.id ?? ''}`;
+    if (identity === prevRequestIdRef.current) return;
+    prevRequestIdRef.current = identity;
+    loadTab(initialRequest);
   }, [initialRequest]);
 
+  // Propagate active tab changes back to App.tsx for refresh persistence (debounced)
+  useEffect(() => {
+    if (!activeTab || !onUpdate) return;
+    if (onUpdateTimerRef.current) clearTimeout(onUpdateTimerRef.current);
+    onUpdateTimerRef.current = setTimeout(() => {
+      onUpdate(activeTab);
+    }, 600);
+    return () => {
+      if (onUpdateTimerRef.current) clearTimeout(onUpdateTimerRef.current);
+    };
+  }, [activeTab, onUpdate]);
+
   const handleSave = async () => {
-    if (activeTab._collection) {
+    if (activeTab._collection && (activeTab.name || activeTab.tabName)) {
       try {
         const reqToSave = {
-          id: activeTab.id,
           name: activeTab.name || activeTab.tabName,
           type: activeTab.protocol,
           url: activeTab.url,
@@ -31,6 +48,8 @@ export function RealtimeWorkspace({ initialRequest }: { initialRequest?: any }) 
         };
         await updateRequest(activeTab._collection, activeTab.name || activeTab.tabName || '', reqToSave);
         window.dispatchEvent(new Event('reqly-reload'));
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 2000);
       } catch (e: any) {
         alert(e.message || 'Failed to update request');
       }
@@ -47,6 +66,8 @@ export function RealtimeWorkspace({ initialRequest }: { initialRequest?: any }) 
       id: requestId || activeTab.id
     });
     setSaveModalOpen(false);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
   };
 
   const renderActivePanel = () => {
@@ -83,6 +104,11 @@ export function RealtimeWorkspace({ initialRequest }: { initialRequest?: any }) 
           onNew={addTab}
         />
         <div className="flex-1 min-h-0 relative">
+          {savedFlash && (
+            <div className="absolute top-2 right-3 z-50 text-xs px-2 py-1 rounded" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#4ade80' }}>
+              Saved
+            </div>
+          )}
           {renderActivePanel()}
         </div>
         {saveModalOpen && (

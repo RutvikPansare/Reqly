@@ -149,11 +149,28 @@ All Windows Support items shipped (T-115 through T-119).
 
 ---
 
-## Later: Protocol Expansion
+## Later: Realtime Protocol Workspace (WebSocket, SSE, Socket.IO, MQTT)
 
-**Why post-M7:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
+**Why here:** REST, GraphQL, and gRPC cover the synchronous API surface. Realtime protocols are a distinct interaction model - long-lived connections, bidirectional message streams, pub/sub. Each requires a different UI paradigm and a different MCP execution model.
 
-- [ ] **T-151 WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` / `type: sse` requests.
+**Architecture (non-negotiable - see `knowledge.md` for rationale):**
+- MCP/agent use: buffered executor (`src/engine/realtime-executor.ts`) - connect, capture for N seconds, disconnect, return messages. Same pattern as `grpc-streaming.ts`.
+- UI interactive use: direct browser connections (native WebSocket/EventSource for WS+SSE; `socket.io-client` and `mqtt` browser builds for SIO+MQTT). No server-side proxy.
+- Protocol npm packages (`socket.io-client`, `mqtt`) go in `src/ui/package.json` only. Root `package.json` gets nothing new for this feature.
+
+**Tasks scoped in `docs/todo.md` (T-185 to T-194):**
+- T-185: Types + badge colors
+- T-186: Engine: `realtime-executor.ts` (buffered capture, TDD)
+- T-187: Engine context wiring + Express `/api/run/realtime` route
+- T-188: MCP tool: `run_realtime` (connect-buffer-disconnect pattern)
+- T-189: UI: `api.ts` client + shared `RealtimeMessageLog` display component
+- T-190: UI: NavRail `Wifi` icon + App.tsx routing
+- T-191: UI: `RealtimeCollectionsPanel` + `useRealtimeTabs` + `RealtimeTabBar`
+- T-192: UI: `WebSocketPanel` + `SSEPanel` (native browser APIs, no packages)
+- T-193: UI: `SocketIOPanel` + `MQTTPanel` (browser-build packages in `src/ui/package.json`)
+- T-194: UI: `RealtimeWorkspace` shell + save/load + state persistence
+
+
 - [x] **gRPC Epic (T-164 through T-168)** - Full BloomRPC-beating gRPC support. Shipped:
   - **T-164** Core engine: unary RPCs, multi-file proto support via `.reqly/protos/` with `includeDirs`, gRPC status codes distinct from HTTP, `run_request` MCP transparent routing
   - **T-165** Metadata + auth: headers map to gRPC Metadata automatically; existing Bearer/API Key/Basic auth profiles inject into Metadata without manual config

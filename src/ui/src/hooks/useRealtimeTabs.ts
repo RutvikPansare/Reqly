@@ -75,6 +75,25 @@ export function useRealtimeTabs() {
     setTabs(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
   };
 
+  const loadTab = (req: any) => {
+    const existing = tabs.find(t => t.id === req.id || (t._collection === req._collection && t.name === req.name));
+    if (existing) {
+      setActiveTabId(existing.id);
+      return;
+    }
+    const newTab: RealtimeTab = {
+      id: req.id || 'rt-' + Date.now(),
+      protocol: req.type as any,
+      url: req.url || '',
+      tabName: req.name,
+      name: req.name,
+      _collection: req._collection,
+      realtime: req.realtime || {}
+    };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(newTab.id);
+  };
+
   return {
     tabs,
     activeTabId,
@@ -82,6 +101,7 @@ export function useRealtimeTabs() {
     addTab,
     closeTab,
     updateTab,
+    loadTab,
     setActiveTabId,
   };
 }

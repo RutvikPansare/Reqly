@@ -44,7 +44,7 @@ export function SSEPanel({ tab, onTabUpdate, onSave }: SSEPanelProps) {
         setMessages(prev => [...prev, { id: Date.now().toString(), ts: Date.now(), source: 'info', payload: 'Connected' }]);
       };
 
-      const eventType = tab.realtime?.sseEventType || 'message';
+      const eventType = tab.realtime?.eventType || 'message';
       
       evs.addEventListener(eventType, (e: any) => {
         setMessages(prev => [...prev, { 
@@ -81,8 +81,8 @@ export function SSEPanel({ tab, onTabUpdate, onSave }: SSEPanelProps) {
         />
         <input 
           type="text" 
-          value={tab.realtime?.sseEventType || ''}
-          onChange={e => onTabUpdate({ realtime: { ...tab.realtime, sseEventType: e.target.value } })}
+          value={tab.realtime?.eventType || ''}
+          onChange={e => onTabUpdate({ realtime: { ...tab.realtime, eventType: e.target.value } })}
           disabled={status !== 'disconnected'}
           placeholder="Event type (default: message)"
           className="w-48 bg-transparent border rounded px-2 py-1 text-sm focus:outline-none disabled:opacity-50"

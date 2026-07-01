@@ -584,7 +584,7 @@ function App() {
           ) : activePanel === 'grpc' ? (
             <GrpcWorkspace initialRequest={grpcRequest} onUpdate={setGrpcRequest} />
           ) : activePanel === 'realtime' ? (
-            <RealtimeWorkspace initialRequest={realtimeRequest} />
+            <RealtimeWorkspace initialRequest={realtimeRequest} onUpdate={setRealtimeRequest} />
           ) : activePanel === 'flows' ? (
             selectedFlowName ? (
               <FlowWorkspace
