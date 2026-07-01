@@ -552,6 +552,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   )}
                 </div>
                 <div className="flex items-center gap-0.5">
+                  {!typeFilter && (
                   <button
                     className="px-1.5 flex items-center transition-colors"
                     style={{ color: 'var(--text-muted)' }}
@@ -562,6 +563,8 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   >
                     <Plus size={14} />
                   </button>
+                  )}
+                  {!typeFilter && (
                   <button
                     className="px-1.5 flex items-center transition-colors"
                     style={{ color: 'var(--text-muted)' }}
@@ -572,6 +575,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   >
                     <Play size={14} />
                   </button>
+                  )}
                   <button
                     className="px-1.5 flex items-center transition-colors"
                     style={{ color: 'var(--text-muted)' }}
@@ -597,7 +601,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
               {isExpanded && (
                 <ul className="pl-4 ml-1.5 space-y-0.5 mt-0.5 mb-1" style={{ borderLeft: '1px solid var(--border)' }}>
-                  {addingReqTo === col.name && (
+                  {!typeFilter && addingReqTo === col.name && (
                     <li className="py-1 pl-2">
                       <input
                         autoFocus
