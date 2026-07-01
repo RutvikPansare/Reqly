@@ -2,6 +2,14 @@
 
 ## 2026-07-01
 
+- [x] **T-184** gRPC UI workspace
+  - New `GrpcWorkspace.tsx` component with full gRPC panel: streaming type selector (Unary/Server/Client/Bidi), proto/service/method inputs, TLS toggle, CodeMirror JSON message editor, metadata key-value editor, saved requests sidebar
+  - Response panel: gRPC status badge with colour coding (green OK / red error), latency, stream message timeline with RECV/SENT direction indicators and timestamps, copy to clipboard
+  - `NavRail.tsx`: added `Server` icon + `grpc` nav panel; `NavPanel` type extended
+  - `App.tsx`: gRPC request routing - clicking a `type: grpc` request in the sidebar routes to `GrpcWorkspace`; sidebar hidden when `grpc` panel active (same pattern as GraphQL); `gRPC` badge on tabs
+  - Fixed two pre-existing TypeScript strictness errors in `grpc-reflection.ts` and `grpc-streaming.ts` that blocked `npm run build`
+  - Non-breaking: REST and GraphQL workspaces unchanged
+
 - [x] **T-164** Core gRPC engine - unary RPCs + multi-file proto support
   - `src/engine/grpc-runner.ts`: `runGrpcRequest()` loads `.proto` files from `.reqly/protos/` via `@grpc/proto-loader` with `includeDirs` so cross-file imports resolve; executes unary RPC; returns `{ grpcStatus, grpcStatusCode, body, latency }` - gRPC status is a distinct field (not HTTP status)
   - `RequestConfig.type: 'grpc'` added; `GrpcConfig` interface in `src/types/request.ts`

@@ -82,8 +82,7 @@ async function loadStub(
   }
 
   const creds = grpcJs.credentials.createInsecure();
-  return { stub: null, error: undefined, ...{ stub: null } };
-  // We return the constructor so callers can instantiate with a URL
+  void creds; // used below by callers that instantiate the stub
   return { stub: ServiceCtor, error: undefined };
 }
 

@@ -108,17 +108,13 @@ export async function discoverServicesViaReflection(
 
       // Use loadPackageDefinition with a minimal descriptor to get the stub.
       // In production this resolves to the real grpc.reflection.v1alpha package.
-      const pkgDef = grpcLoader.loadSync
-        ? (() => {
+      const pkgDef = (() => {
             try {
-              // Try to load the inline proto using a temp approach.
-              // Fall back to an empty object - the mock will provide the pkg.
               return {} as grpcLoader.PackageDefinition;
             } catch {
               return {} as grpcLoader.PackageDefinition;
             }
-          })()
-        : {};
+          })();
 
       const pkg = grpcJs.loadPackageDefinition(pkgDef as any) as any;
 

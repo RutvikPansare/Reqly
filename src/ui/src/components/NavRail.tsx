@@ -1,6 +1,6 @@
-import { Folder, Globe, History, Network, GitBranch, Radio, Settings } from 'lucide-react';
+import { Folder, Globe, History, Network, GitBranch, Radio, Settings, Server } from 'lucide-react';
 
-export type NavPanel = 'collections' | 'environments' | 'history' | 'graphql' | 'flows' | 'capture' | 'settings';
+export type NavPanel = 'collections' | 'environments' | 'history' | 'graphql' | 'grpc' | 'flows' | 'capture' | 'settings';
 
 interface NavRailProps {
   active: NavPanel;
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'flows', label: 'Flows', icon: <GitBranch size={18} /> },
   { id: 'history', label: 'History', icon: <History size={18} /> },
   { id: 'graphql', label: 'GraphQL', icon: <Network size={18} /> },
+  { id: 'grpc', label: 'gRPC', icon: <Server size={18} /> },
   { id: 'capture', label: 'Capture', icon: <Radio size={18} /> },
   { id: 'settings', label: 'Settings', icon: <Settings size={18} /> },
 ];

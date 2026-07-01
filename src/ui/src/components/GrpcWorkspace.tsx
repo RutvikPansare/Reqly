@@ -1,0 +1,862 @@
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Send as SendIcon, Loader2, Save, Bookmark, Copy, Check,
+} from 'lucide-react';
+import CodeMirror from '@uiw/react-codemirror';
+import { json } from '@codemirror/lang-json';
+import { SplitPane } from './SplitPane';
+import { KeyValueEditor } from './KeyValueEditor';
+import type { KeyValuePair } from './KeyValueEditor';
+import { VariableInput } from './VariableInput';
+import type { VariableItem } from './VariableInput';
+import { CollapsibleJson } from './InteractiveJsonTree';
+import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles } from '../api';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type StreamingType = 'unary' | 'server' | 'client' | 'bidirectional';
+
+const STREAMING_META: Record<StreamingType, { label: string; short: string; desc: string }> = {
+  unary:         { label: 'Unary',         short: 'UNR', desc: '1 request, 1 response' },
+  server:        { label: 'Server Stream', short: 'SRV', desc: '1 request, many responses' },
+  client:        { label: 'Client Stream', short: 'CLT', desc: 'Many requests, 1 response' },
+  bidirectional: { label: 'Bidi Stream',   short: 'BDI', desc: 'Many requests, many responses' },
+};
+
+function grpcStatusStyle(status: string | undefined): { color: string; bg: string; border: string } {
+  if (!status || status === 'OK') return { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.25)' };
+  return { color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)' };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function initStreamingType(req: any): StreamingType {
+  const s = req?.grpc?.streaming;
+  if (s === 'server' || s === 'client' || s === 'bidirectional') return s;
+  return 'unary';
+}
+
+function initMessageJson(req: any): string {
+  if (req?.grpc?.messages) return JSON.stringify(req.grpc.messages, null, 2);
+  if (req?.grpc?.message) return JSON.stringify(req.grpc.message, null, 2);
+  return '{\n  \n}';
+}
+
+function headersToKv(headers: Record<string, string> | undefined): KeyValuePair[] {
+  if (!headers) return [];
+  return Object.entries(headers).map(([key, value]) => ({ key, value, enabled: true }));
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+interface GrpcWorkspaceProps {
+  initialRequest?: any;
+}
+
+export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
+  // --- Request state ---
+  const [url, setUrl]               = useState(initialRequest?.url ?? '');
+  const [protoFile, setProtoFile]   = useState(initialRequest?.grpc?.protoFile ?? '');
+  const [service, setService]       = useState(initialRequest?.grpc?.service ?? '');
+  const [method, setMethod]         = useState(initialRequest?.grpc?.method ?? '');
+  const [insecure, setInsecure]     = useState<boolean>(initialRequest?.grpc?.insecure ?? true);
+  const [streamTimeout, setStreamTimeout] = useState<number>(initialRequest?.grpc?.streamTimeout ?? 10);
+  const [streamingType, setStreamingType] = useState<StreamingType>(initStreamingType(initialRequest));
+  const [messageJson, setMessageJson]     = useState(initMessageJson(initialRequest));
+  const [metadata, setMetadata]     = useState<KeyValuePair[]>(headersToKv(initialRequest?.headers));
+
+  // --- UI state ---
+  const [inputTab, setInputTab]     = useState<'message' | 'metadata'>('message');
+  const [response, setResponse]     = useState<any>(null);
+  const [isSending, setIsSending]   = useState(false);
+  const [sendError, setSendError]   = useState<string | null>(null);
+  const [copied, setCopied]         = useState(false);
+
+  // --- Save state ---
+  const [showSaved, setShowSaved]         = useState(false);
+  const [savedRequests, setSavedRequests] = useState<{ collection: string; request: any }[]>([]);
+  const [collections, setCollections]     = useState<string[]>([]);
+  const [saveCollection, setSaveCollection] = useState('');
+  const [saveName, setSaveName]           = useState('');
+  const [saveError, setSaveError]         = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess]     = useState(false);
+  const [showSaveForm, setShowSaveForm]   = useState(false);
+
+  // --- Context tracking ---
+  const [activeCollection, setActiveCollection]   = useState<string | undefined>(initialRequest?._collection);
+  const [activeRequestName, setActiveRequestName] = useState<string | undefined>(initialRequest?.name);
+  const [activeEnvVars, setActiveEnvVars]   = useState<Record<string, string>>({});
+  const [activeEnvName, setActiveEnvName]   = useState('');
+  const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
+  const [dotenvVars, setDotenvVars]         = useState<{ key: string; source: string }[]>([]);
+
+  const isMultiMessage = streamingType === 'client' || streamingType === 'bidirectional';
+  const isStreaming    = streamingType !== 'unary';
+
+  // --- Load collections + saved gRPC requests ---
+  const reloadSaved = () => {
+    fetchCollections().then((cols: any[]) => {
+      setCollections(cols.map((c: any) => c.name));
+      const reqs: { collection: string; request: any }[] = [];
+      for (const col of cols) {
+        for (const req of (col.requests ?? [])) {
+          if (req.type === 'grpc') reqs.push({ collection: col.name, request: req });
+        }
+      }
+      setSavedRequests(reqs);
+    }).catch(() => {});
+  };
+  useEffect(() => { reloadSaved(); }, []);
+
+  // --- Load env / dotenv vars for autocomplete ---
+  useEffect(() => {
+    const load = () => {
+      fetchEnvironments().then((data: any) => {
+        const active = data.environments?.find((e: any) => e.name === data.active);
+        setActiveEnvName(active?.name ?? '');
+        setActiveEnvVars(active?.variables ?? {});
+      }).catch(() => {});
+      fetchDotenvFiles().then((data: any) => setDotenvVars(data.variables ?? [])).catch(() => {});
+    };
+    load();
+    window.addEventListener('reqly-reload', load);
+    return () => window.removeEventListener('reqly-reload', load);
+  }, []);
+
+  useEffect(() => {
+    if (!activeCollection) { setCollectionVars({}); return; }
+    const load = () => getCollectionVariables(activeCollection).then(setCollectionVars).catch(() => {});
+    load();
+    window.addEventListener('reqly-reload', load);
+    return () => window.removeEventListener('reqly-reload', load);
+  }, [activeCollection]);
+
+  // --- Sync when initialRequest changes (sidebar click) ---
+  useEffect(() => {
+    if (!initialRequest) return;
+    setUrl(initialRequest.url ?? '');
+    setProtoFile(initialRequest.grpc?.protoFile ?? '');
+    setService(initialRequest.grpc?.service ?? '');
+    setMethod(initialRequest.grpc?.method ?? '');
+    setInsecure(initialRequest.grpc?.insecure ?? true);
+    setStreamTimeout(initialRequest.grpc?.streamTimeout ?? 10);
+    setStreamingType(initStreamingType(initialRequest));
+    setMessageJson(initMessageJson(initialRequest));
+    setMetadata(headersToKv(initialRequest.headers));
+    setActiveCollection(initialRequest._collection);
+    setActiveRequestName(initialRequest.name);
+    setResponse(null);
+    setSendError(null);
+  }, [initialRequest]);
+
+  // --- Available variables for autocomplete ---
+  const availableVariables: VariableItem[] = useMemo(() => [
+    ...Object.entries(collectionVars).map(([k, v]) => ({
+      name: k, sourceType: 'collection', sourceName: activeCollection ?? 'collection', value: v,
+    })),
+    ...Object.entries(activeEnvVars)
+      .filter(([k]) => !(k in collectionVars))
+      .map(([k, v]) => ({ name: k, sourceType: 'env', sourceName: activeEnvName || 'env', value: v })),
+    ...dotenvVars
+      .filter(v => !(v.key in collectionVars) && !(v.key in activeEnvVars))
+      .map(v => ({ name: v.key, sourceType: 'dotenv', sourceName: v.source, value: '' })),
+  ], [collectionVars, activeEnvVars, activeEnvName, dotenvVars, activeCollection]);
+
+  // --- Build gRPC config from form state ---
+  const buildGrpcConfig = (parsedMessage: any) => {
+    const cfg: any = {
+      protoFile: protoFile.trim(),
+      service: service.trim(),
+      method: method.trim(),
+      insecure,
+    };
+    if (streamingType !== 'unary') cfg.streaming = streamingType;
+    if (isStreaming) cfg.streamTimeout = streamTimeout;
+    if (isMultiMessage && Array.isArray(parsedMessage)) cfg.messages = parsedMessage;
+    else cfg.message = parsedMessage ?? {};
+    return cfg;
+  };
+
+  const parseMessageJson = (): { ok: boolean; value?: any; error?: string } => {
+    const trimmed = messageJson.trim();
+    if (!trimmed || trimmed === '{\n  \n}' || trimmed === '[\n  {\n    \n  }\n]') return { ok: true, value: isMultiMessage ? [] : {} };
+    try { return { ok: true, value: JSON.parse(trimmed) }; }
+    catch { return { ok: false, error: 'Message JSON is invalid - fix before invoking' }; }
+  };
+
+  // --- Handlers ---
+  const handleSend = async () => {
+    if (!url.trim())       { setSendError('Enter the gRPC server URL (host:port)'); return; }
+    if (!protoFile.trim()) { setSendError('Enter the proto file name (e.g. grpcbin.proto)'); return; }
+    if (!service.trim())   { setSendError('Enter the service name (e.g. hello.HelloService)'); return; }
+    if (!method.trim())    { setSendError('Enter the method name (e.g. SayHello)'); return; }
+
+    const parsed = parseMessageJson();
+    if (!parsed.ok) { setSendError(parsed.error!); return; }
+
+    setSendError(null);
+    setIsSending(true);
+    setResponse(null);
+
+    const enabledMeta: Record<string, string> = {};
+    for (const m of metadata) {
+      if (m.enabled && m.key.trim()) enabledMeta[m.key.trim()] = m.value;
+    }
+
+    const grpcCfg = buildGrpcConfig(parsed.value);
+    if (Object.keys(enabledMeta).length > 0) grpcCfg.metadata = enabledMeta;
+
+    try {
+      const res = await fetch('/api/run/adhoc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request: { type: 'grpc', _collection: activeCollection, url: url.trim(), grpc: grpcCfg }
+        }),
+      });
+      const data = await res.json();
+      if (data.response) setResponse(data.response);
+      else setSendError(data.error || 'RPC failed - check server URL and proto config');
+    } catch (e: any) {
+      setSendError(e.message);
+    } finally {
+      setIsSending(false);
+      window.dispatchEvent(new Event('reqly-reload'));
+    }
+  };
+
+  const handleSave = async () => {
+    setSaveError(null);
+    if (!saveName.trim() || !saveCollection.trim()) { setSaveError('Collection and name are required'); return; }
+    const parsed = parseMessageJson();
+    if (!parsed.ok) { setSaveError(parsed.error!); return; }
+
+    const enabledMeta = Object.fromEntries(metadata.filter(m => m.enabled && m.key.trim()).map(m => [m.key, m.value]));
+    const grpcCfg = buildGrpcConfig(parsed.value);
+    try {
+      await addRequest(saveCollection, {
+        id: Date.now().toString(),
+        name: saveName.trim(),
+        method: 'POST',
+        url: url.trim(),
+        type: 'grpc',
+        ...(Object.keys(enabledMeta).length > 0 ? { headers: enabledMeta } : {}),
+        grpc: grpcCfg,
+      });
+      setSaveSuccess(true);
+      setShowSaveForm(false);
+      setTimeout(() => setSaveSuccess(false), 2000);
+      reloadSaved();
+      window.dispatchEvent(new Event('reqly-reload'));
+    } catch (e: any) {
+      setSaveError(e.message || 'Save failed');
+    }
+  };
+
+  const loadSaved = (req: any, col: string) => {
+    setUrl(req.url ?? '');
+    setProtoFile(req.grpc?.protoFile ?? '');
+    setService(req.grpc?.service ?? '');
+    setMethod(req.grpc?.method ?? '');
+    setInsecure(req.grpc?.insecure ?? true);
+    setStreamTimeout(req.grpc?.streamTimeout ?? 10);
+    setStreamingType(initStreamingType(req));
+    setMessageJson(initMessageJson(req));
+    setMetadata(headersToKv(req.headers));
+    setActiveCollection(col);
+    setActiveRequestName(req.name);
+    setResponse(null);
+    setSendError(null);
+  };
+
+  const handleCopyResponse = () => {
+    navigator.clipboard.writeText(JSON.stringify(response, null, 2)).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleStreamingChange = (next: StreamingType) => {
+    const wasMulti = streamingType === 'client' || streamingType === 'bidirectional';
+    const willBeMulti = next === 'client' || next === 'bidirectional';
+    setStreamingType(next);
+    if (wasMulti !== willBeMulti) {
+      setMessageJson(willBeMulti ? '[\n  {\n    \n  }\n]' : '{\n  \n}');
+    }
+  };
+
+  const metadataCount = metadata.filter(m => m.enabled && m.key.trim()).length;
+
+  // --- Render ---
+  return (
+    <div className="absolute inset-0 flex overflow-hidden" style={{ background: 'var(--surface-1)' }}>
+
+      {/* Saved requests sidebar */}
+      {showSaved && (
+        <div
+          className="w-60 shrink-0 flex flex-col overflow-hidden order-first"
+          style={{ borderRight: '1px solid var(--border)', background: 'var(--surface-1)' }}
+        >
+          <div
+            className="flex items-center gap-2 px-3 py-2 shrink-0"
+            style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#06b6d4' }} />
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Saved gRPC Requests</span>
+          </div>
+          <div className="flex-1 overflow-y-auto py-1">
+            {collections.map(col => {
+              const reqs = savedRequests.filter(r => r.collection === col);
+              if (reqs.length === 0) return null;
+              return (
+                <div key={col} className="mb-2">
+                  <div
+                    className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {col}
+                  </div>
+                  {reqs.map(({ request }) => {
+                    const isActive = activeCollection === col && activeRequestName === request.name;
+                    const s = request.grpc?.streaming;
+                    const short = s ? STREAMING_META[s as StreamingType]?.short : 'UNR';
+                    return (
+                      <button
+                        key={request.name}
+                        onClick={() => loadSaved(request, col)}
+                        className="w-full text-left flex items-center gap-2 px-3 py-1.5 transition-colors"
+                        style={{
+                          background: isActive ? 'rgba(6,182,212,0.1)' : 'transparent',
+                          color: isActive ? '#06b6d4' : 'var(--text-secondary)',
+                        }}
+                        onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-3)'; }}
+                        onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                      >
+                        <span
+                          className="text-[9px] font-bold font-mono shrink-0 px-1 rounded"
+                          style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.12)' }}
+                        >
+                          {short}
+                        </span>
+                        <span className="text-xs truncate">{request.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {savedRequests.length === 0 && (
+              <div className="px-3 py-6 text-center text-xs italic" style={{ color: 'var(--text-muted)' }}>
+                No saved gRPC requests yet.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main workspace */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <SplitPane
+          defaultSplit={48}
+          top={<RequestPanel
+            url={url} setUrl={setUrl}
+            protoFile={protoFile} setProtoFile={setProtoFile}
+            service={service} setService={setService}
+            method={method} setMethod={setMethod}
+            insecure={insecure} setInsecure={setInsecure}
+            streamTimeout={streamTimeout} setStreamTimeout={setStreamTimeout}
+            streamingType={streamingType} onStreamingChange={handleStreamingChange}
+            messageJson={messageJson} setMessageJson={setMessageJson}
+            metadata={metadata} setMetadata={setMetadata}
+            inputTab={inputTab} setInputTab={setInputTab}
+            availableVariables={availableVariables}
+            isSending={isSending}
+            sendError={sendError}
+            showSaved={showSaved} setShowSaved={setShowSaved}
+            showSaveForm={showSaveForm} setShowSaveForm={setShowSaveForm}
+            saveSuccess={saveSuccess}
+            saveCollection={saveCollection} setSaveCollection={setSaveCollection}
+            saveName={saveName} setSaveName={setSaveName}
+            saveError={saveError}
+            collections={collections}
+            metadataCount={metadataCount}
+            isMultiMessage={isMultiMessage}
+            isStreaming={isStreaming}
+            onSend={handleSend}
+            onSave={handleSave}
+          />}
+          bottom={<ResponsePanel
+            response={response}
+            isSending={isSending}
+            copied={copied}
+            onCopy={handleCopyResponse}
+          />}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Request panel (extracted for readability)
+// ---------------------------------------------------------------------------
+
+interface RequestPanelProps {
+  url: string; setUrl: (v: string) => void;
+  protoFile: string; setProtoFile: (v: string) => void;
+  service: string; setService: (v: string) => void;
+  method: string; setMethod: (v: string) => void;
+  insecure: boolean; setInsecure: (v: boolean) => void;
+  streamTimeout: number; setStreamTimeout: (v: number) => void;
+  streamingType: StreamingType; onStreamingChange: (v: StreamingType) => void;
+  messageJson: string; setMessageJson: (v: string) => void;
+  metadata: KeyValuePair[]; setMetadata: (v: KeyValuePair[]) => void;
+  inputTab: 'message' | 'metadata'; setInputTab: (v: 'message' | 'metadata') => void;
+  availableVariables: VariableItem[];
+  isSending: boolean;
+  sendError: string | null;
+  showSaved: boolean; setShowSaved: (v: boolean) => void;
+  showSaveForm: boolean; setShowSaveForm: (fn: (v: boolean) => boolean) => void;
+  saveSuccess: boolean;
+  saveCollection: string; setSaveCollection: (v: string) => void;
+  saveName: string; setSaveName: (v: string) => void;
+  saveError: string | null;
+  collections: string[];
+  metadataCount: number;
+  isMultiMessage: boolean;
+  isStreaming: boolean;
+  onSend: () => void;
+  onSave: () => void;
+}
+
+function RequestPanel(p: RequestPanelProps) {
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* Row 1: URL bar */}
+      <div className="flex items-center gap-2 px-2 pt-2 pb-1 shrink-0">
+        <button
+          className={`btn ${p.showSaved ? 'btn-primary' : 'btn-secondary'} rounded shrink-0`}
+          onClick={() => p.setShowSaved(!p.showSaved)}
+          style={{ padding: '0 8px', height: '32px' }}
+          title="Toggle saved requests"
+        >
+          <Bookmark size={14} />
+        </button>
+
+        <div
+          className="flex-1 flex items-center overflow-hidden h-8"
+          style={{ border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'transparent' }}
+        >
+          <span
+            className="shrink-0 text-[11px] font-bold ml-2 px-1.5 py-0.5 rounded"
+            style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.12)', letterSpacing: '0.02em' }}
+          >
+            gRPC
+          </span>
+          <VariableInput
+            variables={p.availableVariables}
+            className="flex-1 px-3 text-sm bg-transparent focus:outline-none h-full font-mono"
+            value={p.url}
+            onChange={p.setUrl}
+            placeholder="host:port  (e.g. grpcb.in:9000)"
+          />
+        </div>
+
+        <button
+          className="btn rounded gap-1.5 h-8 shrink-0 font-medium"
+          onClick={p.onSend}
+          disabled={p.isSending}
+          style={{
+            background: p.isSending ? 'var(--surface-3)' : '#0891b2',
+            borderColor: '#0e7490',
+            color: '#fff',
+          }}
+        >
+          {p.isSending
+            ? <><Loader2 size={13} className="animate-spin" /> Invoking</>
+            : <><SendIcon size={13} /> Invoke</>}
+        </button>
+
+        <button
+          className="btn btn-secondary rounded gap-1.5 h-8 shrink-0"
+          style={p.saveSuccess ? { background: '#16a34a', borderColor: '#16a34a', color: '#fff' } : undefined}
+          onClick={() => p.setShowSaveForm(v => !v)}
+          title="Save to collection"
+        >
+          <Save size={13} />
+          {p.saveSuccess ? 'Saved!' : 'Save'}
+        </button>
+      </div>
+
+      {/* Save form */}
+      {p.showSaveForm && (
+        <div className="flex items-center gap-2 px-2 pb-1 shrink-0">
+          <div
+            className="flex flex-1 items-center gap-2 p-2 rounded"
+            style={{ border: '1px solid var(--border)', background: 'var(--surface-2)' }}
+          >
+            <select
+              className="text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)' }}
+              value={p.saveCollection}
+              onChange={e => p.setSaveCollection(e.target.value)}
+            >
+              <option value="">-- collection --</option>
+              {p.collections.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input
+              className="flex-1 text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)' }}
+              value={p.saveName}
+              onChange={e => p.setSaveName(e.target.value)}
+              placeholder="Request name"
+              onKeyDown={e => e.key === 'Enter' && p.onSave()}
+            />
+            <button
+              className="btn btn-primary rounded text-xs px-3 h-7"
+              style={{ background: '#0891b2', borderColor: '#0e7490' }}
+              onClick={p.onSave}
+            >
+              Save
+            </button>
+            {p.saveError && <span className="text-xs text-red-400">{p.saveError}</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Row 2: Streaming type selector */}
+      <div className="flex items-center gap-0.5 px-2 pb-1 shrink-0">
+        {(Object.entries(STREAMING_META) as [StreamingType, typeof STREAMING_META[StreamingType]][]).map(([type, meta]) => {
+          const active = p.streamingType === type;
+          return (
+            <button
+              key={type}
+              onClick={() => p.onStreamingChange(type)}
+              title={meta.desc}
+              className="px-2.5 py-1 text-xs font-medium rounded transition-colors"
+              style={{
+                background: active ? 'rgba(6,182,212,0.15)' : 'transparent',
+                color: active ? '#06b6d4' : 'var(--text-muted)',
+                border: `1px solid ${active ? 'rgba(6,182,212,0.4)' : 'transparent'}`,
+              }}
+            >
+              {meta.label}
+            </button>
+          );
+        })}
+        {p.isStreaming && (
+          <div className="ml-auto flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+            <span>timeout</span>
+            <input
+              type="number"
+              min={1}
+              max={300}
+              value={p.streamTimeout}
+              onChange={e => p.setStreamTimeout(Number(e.target.value))}
+              className="rounded px-2 py-0.5 text-xs focus:outline-none focus:border-cyan-500 w-14"
+              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)' }}
+            />
+            <span>s</span>
+          </div>
+        )}
+      </div>
+
+      {/* Row 3: Proto / service / method inputs */}
+      <div className="grid grid-cols-3 gap-2 px-2 pb-1 shrink-0">
+        {[
+          { label: 'Proto File', value: p.protoFile, setter: p.setProtoFile, placeholder: 'grpcbin.proto' },
+          { label: 'Service',    value: p.service,   setter: p.setService,   placeholder: 'hello.HelloService' },
+          { label: 'Method',     value: p.method,    setter: p.setMethod,    placeholder: 'SayHello' },
+        ].map(({ label, value, setter, placeholder }) => (
+          <div key={label} className="flex flex-col gap-0.5">
+            <label
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              {label}
+            </label>
+            <input
+              className="rounded px-2 py-1.5 text-xs font-mono focus:outline-none"
+              style={{
+                background: 'var(--surface-3)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-strong)',
+              }}
+              value={value}
+              onChange={e => setter(e.target.value)}
+              placeholder={placeholder}
+              onFocus={e => (e.currentTarget.style.borderColor = '#06b6d4')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Row 4: TLS toggle */}
+      <div className="flex items-center gap-2 px-2 pb-1 shrink-0">
+        <button
+          onClick={() => p.setInsecure(!p.insecure)}
+          className="flex items-center gap-2 select-none cursor-pointer bg-transparent border-none p-0"
+          title="Toggle TLS / plaintext"
+        >
+          <div
+            className="relative w-8 h-4 rounded-full transition-colors shrink-0"
+            style={{ background: p.insecure ? 'var(--surface-3)' : '#0891b2' }}
+          >
+            <div
+              className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
+              style={{ left: p.insecure ? '2px' : '18px' }}
+            />
+          </div>
+          <span
+            className="text-xs"
+            style={{ color: p.insecure ? 'var(--text-muted)' : '#06b6d4' }}
+          >
+            {p.insecure ? 'Plaintext (insecure)' : 'TLS enabled'}
+          </span>
+        </button>
+      </div>
+
+      {/* Tab bar */}
+      <div className="tab-bar shrink-0">
+        <button
+          className={`tab-btn ${p.inputTab === 'message' ? 'active' : ''}`}
+          onClick={() => p.setInputTab('message')}
+        >
+          {p.isMultiMessage ? 'Messages' : 'Message'}
+        </button>
+        <button
+          className={`tab-btn flex items-center gap-1 ${p.inputTab === 'metadata' ? 'active' : ''}`}
+          onClick={() => p.setInputTab('metadata')}
+        >
+          Metadata
+          {p.metadataCount > 0 && (
+            <span
+              className="ml-1 text-[10px] rounded-full px-1"
+              style={{ background: '#0891b2', color: '#fff' }}
+            >
+              {p.metadataCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Tab content */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {p.inputTab === 'message' ? (
+          <div className="h-full flex flex-col p-2 gap-1">
+            {p.isMultiMessage && (
+              <p className="text-[10px] shrink-0" style={{ color: 'var(--text-muted)' }}>
+                JSON array - each element is sent as a separate message
+              </p>
+            )}
+            <div
+              className="flex-1 min-h-0 overflow-hidden rounded"
+              style={{ border: '1px solid var(--border)' }}
+            >
+              <CodeMirror
+                value={p.messageJson}
+                height="100%"
+                theme="dark"
+                extensions={[json()]}
+                onChange={p.setMessageJson}
+                className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
+              />
+            </div>
+            {p.sendError && (
+              <div
+                className="shrink-0 text-xs px-2 py-1.5 rounded"
+                style={{ color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}
+              >
+                {p.sendError}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="h-full overflow-auto py-1">
+            <KeyValueEditor pairs={p.metadata} onChange={p.setMetadata} variables={p.availableVariables} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Response panel
+// ---------------------------------------------------------------------------
+
+interface ResponsePanelProps {
+  response: any;
+  isSending: boolean;
+  copied: boolean;
+  onCopy: () => void;
+}
+
+function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelProps) {
+  const isStreamResponse = response && Array.isArray(response.messages);
+
+  if (isSending) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
+        <Loader2 size={18} className="animate-spin" style={{ color: '#06b6d4' }} />
+        <span className="text-sm">Invoking...</span>
+      </div>
+    );
+  }
+
+  if (!response) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.18)' }}
+        >
+          <SendIcon size={15} style={{ color: '#06b6d4' }} />
+        </div>
+        <span className="text-xs">Invoke a method to see the response</span>
+      </div>
+    );
+  }
+
+  const statusStyle = grpcStatusStyle(response.grpcStatus);
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Status bar */}
+      <div
+        className="flex items-center gap-3 px-3 py-1.5 shrink-0"
+        style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
+      >
+        {response.grpcStatus && (
+          <span
+            className="text-xs font-bold font-mono px-2 py-0.5 rounded"
+            style={{ color: statusStyle.color, background: statusStyle.bg, border: `1px solid ${statusStyle.border}` }}
+          >
+            {response.grpcStatus}
+          </span>
+        )}
+
+        {isStreamResponse ? (
+          <>
+            <span className="text-xs font-medium" style={{ color: '#06b6d4' }}>
+              {response.messages.length} message{response.messages.length !== 1 ? 's' : ''}
+            </span>
+            {response.truncated && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded"
+                style={{ color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.08)' }}
+              >
+                truncated
+              </span>
+            )}
+          </>
+        ) : (
+          response.latency != null && (
+            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{response.latency}ms</span>
+          )
+        )}
+
+        {response.grpcStatusCode != null && (
+          <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
+            code {response.grpcStatusCode}
+          </span>
+        )}
+
+        <button
+          onClick={onCopy}
+          className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors"
+          style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          {copied ? <Check size={12} style={{ color: '#4ade80' }} /> : <Copy size={12} />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-auto p-2">
+        {isStreamResponse ? (
+          <StreamMessageList messages={response.messages} />
+        ) : response.isError ? (
+          <div
+            className="text-sm font-mono p-2 rounded"
+            style={{ color: '#f87171', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.2)' }}
+          >
+            {response.errorMessage || 'RPC error'}
+          </div>
+        ) : response.body != null ? (
+          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" />
+        ) : (
+          <div className="text-xs italic p-2" style={{ color: 'var(--text-muted)' }}>Empty response body</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stream message list
+// ---------------------------------------------------------------------------
+
+interface StreamMessage {
+  data: unknown;
+  timestamp: string;
+  direction: 'received' | 'sent';
+}
+
+function StreamMessageList({ messages }: { messages: StreamMessage[] }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {messages.map((msg, i) => {
+        const isRecv = msg.direction === 'received';
+        let timeStr = '';
+        try {
+          timeStr = new Date(msg.timestamp).toLocaleTimeString([], {
+            hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit',
+          });
+        } catch { /* ignore */ }
+
+        return (
+          <div
+            key={i}
+            className="rounded p-2"
+            style={{
+              background: isRecv ? 'rgba(6,182,212,0.04)' : 'rgba(168,85,247,0.04)',
+              border: `1px solid ${isRecv ? 'rgba(6,182,212,0.15)' : 'rgba(168,85,247,0.15)'}`,
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <span
+                className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
+                style={{
+                  color: isRecv ? '#06b6d4' : '#a855f7',
+                  background: isRecv ? 'rgba(6,182,212,0.12)' : 'rgba(168,85,247,0.12)',
+                }}
+              >
+                {isRecv ? '↓ RECV' : '↑ SENT'}
+              </span>
+              {timeStr && (
+                <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{timeStr}</span>
+              )}
+              <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>#{i + 1}</span>
+            </div>
+            <pre
+              className="text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-all m-0"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {JSON.stringify(msg.data, null, 2)}
+            </pre>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

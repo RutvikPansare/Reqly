@@ -16,6 +16,7 @@ import { ResponseViewer } from './components/ResponseViewer';
 import { SettingsPanel } from './components/SettingsPanel';
 import { CollectionRunnerPanel } from './components/CollectionRunnerPanel';
 import { GraphQLWorkspace } from './components/GraphQLWorkspace';
+import { GrpcWorkspace } from './components/GrpcWorkspace';
 import { FlowsPanel } from './components/FlowsPanel';
 import { FlowWorkspace } from './components/FlowWorkspace';
 import { SaveToCollectionModal } from './components/SaveToCollectionModal';
@@ -147,6 +148,7 @@ function App() {
   const [selectedFlowName, setSelectedFlowName] = useState<string | null>(null);
   const [flowLastResults, setFlowLastResults] = useState<Record<string, any>>({});
   const [graphqlRequest, setGraphqlRequest] = useLocalStorage<any>('reqly.graphqlRequest', null);
+  const [grpcRequest, setGrpcRequest] = useLocalStorage<any>('reqly.grpcRequest', null);
 
   const startTabRename = (id: string, currentName: string) => {
     setRenamingTabId(id);
@@ -403,6 +405,11 @@ function App() {
       setGraphqlRequest({ ...req, _collection: col });
       setActivePanel('graphql');
     }
+    // Route gRPC requests to the gRPC workspace
+    if (req.type === 'grpc') {
+      setGrpcRequest({ ...req, _collection: col });
+      setActivePanel('grpc');
+    }
   };
 
   const createNewTab = () => {
@@ -533,7 +540,7 @@ function App() {
             }
           }}
         />
-        {activePanel !== 'graphql' && (
+        {activePanel !== 'graphql' && activePanel !== 'grpc' && (
           <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--border)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
@@ -567,6 +574,8 @@ function App() {
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 relative" style={{ background: 'var(--surface-1)' }}>
           {activePanel === 'graphql' ? (
             <GraphQLWorkspace initialRequest={graphqlRequest} />
+          ) : activePanel === 'grpc' ? (
+            <GrpcWorkspace initialRequest={grpcRequest} />
           ) : activePanel === 'flows' ? (
             selectedFlowName ? (
               <FlowWorkspace
@@ -611,6 +620,8 @@ function App() {
                             <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-blue-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500" />
                           </span>
+                        ) : tab.request.type === 'grpc' ? (
+                          <span className="text-[10px] font-bold shrink-0" style={{ color: '#06b6d4' }}>gRPC</span>
                         ) : (
                           <span className={`text-[10px] font-bold shrink-0 ${methodColorClass(tab.request.method)}`}>
                             {tab.request.method}
