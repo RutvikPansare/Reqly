@@ -52,6 +52,9 @@ class FakeServerStream {
 class FakeClientStream {
   private _listeners: Record<string, Function[]> = {};
   public written: any[] = [];
+  private _callback: ((err: any, res: any) => void) | null = null;
+
+  setCallback(cb: (err: any, res: any) => void) { this._callback = cb; }
 
   on(event: string, fn: Function) {
     if (!this._listeners[event]) this._listeners[event] = [];
@@ -65,11 +68,10 @@ class FakeClientStream {
     const self = this;
     setTimeout(() => {
       if (_sMock.clientStreamError) {
-        self._emit('error', _sMock.clientStreamError);
+        if (self._callback) self._callback(_sMock.clientStreamError, null);
+        else self._emit('error', _sMock.clientStreamError);
       } else {
-        self._emit('data', _sMock.clientStreamResponse);
-        self._emit('status', { code: 0 });
-        self._emit('end');
+        if (self._callback) self._callback(null, _sMock.clientStreamResponse);
       }
     }, _sMock.delay);
   }
@@ -122,7 +124,11 @@ function FakeStreamingStub(this: any, _url: string, _creds: any) {
     s.start();
     return s;
   };
-  this.ClientStream = (_meta: any) => new FakeClientStream();
+  this.ClientStream = (_meta: any, callback?: (err: any, res: any) => void) => {
+    const s = new FakeClientStream();
+    if (callback) s.setCallback(callback);
+    return s;
+  };
   this.BidiStream = (_meta: any) => new FakeBidiStream();
 }
 

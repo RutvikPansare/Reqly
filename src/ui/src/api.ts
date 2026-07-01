@@ -274,6 +274,7 @@ export interface HistoryEntry {
   body?: string;
   requestName?: string;
   collectionName?: string;
+  requestType?: string;
 }
 
 export async function importCollection(content: string, format: 'postman' | 'bruno' | 'insomnia' | 'openapi', collectionName?: string) {

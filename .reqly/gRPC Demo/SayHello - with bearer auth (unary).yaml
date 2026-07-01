@@ -1,4 +1,4 @@
-id: grpc-reflection-demo
+id: '1782912519217'
 name: SayHello - with bearer auth (unary)
 method: POST
 url: grpcb.in:9000
@@ -10,6 +10,6 @@ grpc:
   protoFile: grpcbin.proto
   service: hello.HelloService
   method: SayHello
+  insecure: true
   message:
     greeting: Auth metadata test
-  insecure: true

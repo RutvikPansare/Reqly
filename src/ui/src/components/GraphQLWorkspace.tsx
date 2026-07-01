@@ -238,7 +238,12 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
 
   const handleSave = async () => {
     setSaveError(null);
-    if (!saveName.trim() || !saveCollection.trim()) {
+
+    // If already saved (has collection + name), use them directly
+    const col = activeCollection || saveCollection;
+    const name = activeRequestName || saveName;
+
+    if (!name.trim() || !col.trim()) {
       setSaveError('Collection and request name are required.');
       return;
     }
@@ -248,9 +253,9 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         try { parsedVariables = JSON.parse(variables); } catch { setSaveError('Variables must be valid JSON.'); return; }
       }
       const savedHeaders = Object.keys(enabledHeaders).length > 0 ? enabledHeaders : undefined;
-      await addRequest(saveCollection, {
+      await addRequest(col, {
         id: Date.now().toString(),
-        name: saveName.trim(),
+        name: name.trim(),
         method: 'POST',
         url: url.trim(),
         type: 'graphql',
@@ -266,6 +271,14 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (e: any) {
       setSaveError(e.message || 'Save failed.');
+    }
+  };
+
+  const handleSaveClick = () => {
+    if (activeCollection && activeRequestName) {
+      handleSave();
+    } else {
+      setShowSaveForm(v => !v);
     }
   };
 
@@ -489,7 +502,7 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
             <button
               className={`btn ${saveSuccess ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5 h-8`}
               style={saveSuccess ? { background: '#16a34a', borderColor: '#16a34a' } : undefined}
-              onClick={() => setShowSaveForm(v => !v)}
+              onClick={handleSaveClick}
               title="Save to collection"
             >
               <Save size={13} />

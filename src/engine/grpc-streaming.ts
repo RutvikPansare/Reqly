@@ -201,21 +201,20 @@ export async function runGrpcClientStream(
       resolve(result);
     };
 
-    const call = stub[req.method](meta);
-
-    call.on('data', (response: any) => {
-      finish({ response, latency: Date.now() - start });
+    // Client streaming: server replies ONCE - use callback (not .on('data'))
+    const call = stub[req.method](meta, (err: any, response: any) => {
+      if (err) {
+        finish({ response: null, latency: Date.now() - start, isError: true, errorMessage: err?.details ?? err?.message ?? String(err) });
+      } else {
+        finish({ response, latency: Date.now() - start });
+      }
     });
 
     call.on('error', (err: any) => {
       finish({ response: null, latency: Date.now() - start, isError: true, errorMessage: err?.details ?? err?.message ?? String(err) });
     });
 
-    call.on('end', () => {
-      if (!settled) finish({ response: null, latency: Date.now() - start });
-    });
-
-    // Send all messages
+    // Send all client messages then close the write side
     for (const msg of req.messages ?? []) {
       call.write(msg);
     }

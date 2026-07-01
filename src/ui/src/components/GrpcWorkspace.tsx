@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Send as SendIcon, Loader2, Save, Bookmark, Copy, Check,
+  Send as SendIcon, Loader2, Save, Bookmark, Copy, Check, Search, X,
 } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
@@ -55,21 +55,31 @@ function headersToKv(headers: Record<string, string> | undefined): KeyValuePair[
 // Component
 // ---------------------------------------------------------------------------
 
+const GRPC_STATE_KEY = 'reqly.grpcWorkspaceState';
+
 interface GrpcWorkspaceProps {
   initialRequest?: any;
+  onUpdate?: (state: any) => void;
+}
+
+function loadPersistedState() {
+  try { return JSON.parse(localStorage.getItem(GRPC_STATE_KEY) ?? 'null'); } catch { return null; }
 }
 
 export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
+  // Seed: explicit initialRequest (sidebar click) wins; otherwise fall back to last-saved workspace state
+  const seed = initialRequest ?? loadPersistedState();
+
   // --- Request state ---
-  const [url, setUrl]               = useState(initialRequest?.url ?? '');
-  const [protoFile, setProtoFile]   = useState(initialRequest?.grpc?.protoFile ?? '');
-  const [service, setService]       = useState(initialRequest?.grpc?.service ?? '');
-  const [method, setMethod]         = useState(initialRequest?.grpc?.method ?? '');
-  const [insecure, setInsecure]     = useState<boolean>(initialRequest?.grpc?.insecure ?? true);
-  const [streamTimeout, setStreamTimeout] = useState<number>(initialRequest?.grpc?.streamTimeout ?? 10);
-  const [streamingType, setStreamingType] = useState<StreamingType>(initStreamingType(initialRequest));
-  const [messageJson, setMessageJson]     = useState(initMessageJson(initialRequest));
-  const [metadata, setMetadata]     = useState<KeyValuePair[]>(headersToKv(initialRequest?.headers));
+  const [url, setUrl]               = useState(seed?.url ?? '');
+  const [protoFile, setProtoFile]   = useState(seed?.grpc?.protoFile ?? '');
+  const [service, setService]       = useState(seed?.grpc?.service ?? '');
+  const [method, setMethod]         = useState(seed?.grpc?.method ?? '');
+  const [insecure, setInsecure]     = useState<boolean>(seed?.grpc?.insecure ?? true);
+  const [streamTimeout, setStreamTimeout] = useState<number>(seed?.grpc?.streamTimeout ?? 10);
+  const [streamingType, setStreamingType] = useState<StreamingType>(initStreamingType(seed));
+  const [messageJson, setMessageJson]     = useState(initMessageJson(seed));
+  const [metadata, setMetadata]     = useState<KeyValuePair[]>(headersToKv(seed?.headers));
 
   // --- UI state ---
   const [inputTab, setInputTab]     = useState<'message' | 'metadata'>('message');
@@ -89,8 +99,8 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
   const [showSaveForm, setShowSaveForm]   = useState(false);
 
   // --- Context tracking ---
-  const [activeCollection, setActiveCollection]   = useState<string | undefined>(initialRequest?._collection);
-  const [activeRequestName, setActiveRequestName] = useState<string | undefined>(initialRequest?.name);
+  const [activeCollection, setActiveCollection]   = useState<string | undefined>(seed?._collection);
+  const [activeRequestName, setActiveRequestName] = useState<string | undefined>(seed?.name);
   const [activeEnvVars, setActiveEnvVars]   = useState<Record<string, string>>({});
   const [activeEnvName, setActiveEnvName]   = useState('');
   const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
@@ -98,6 +108,20 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
 
   const isMultiMessage = streamingType === 'client' || streamingType === 'bidirectional';
   const isStreaming    = streamingType !== 'unary';
+
+  // --- Persist workspace state to localStorage (debounced 600ms) ---
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const state = {
+        url, name: activeRequestName, _collection: activeCollection,
+        grpc: { protoFile, service, method, insecure, streamTimeout, streaming: streamingType === 'unary' ? undefined : streamingType },
+        headers: Object.fromEntries(metadata.filter(m => m.enabled && m.key.trim()).map(m => [m.key, m.value])),
+        body: { type: 'raw', raw: messageJson },
+      };
+      localStorage.setItem(GRPC_STATE_KEY, JSON.stringify(state));
+    }, 600);
+    return () => clearTimeout(t);
+  }, [url, protoFile, service, method, insecure, streamTimeout, streamingType, messageJson, metadata, activeCollection, activeRequestName]);
 
   // --- Load collections + saved gRPC requests ---
   const reloadSaved = () => {
@@ -233,16 +257,21 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
 
   const handleSave = async () => {
     setSaveError(null);
-    if (!saveName.trim() || !saveCollection.trim()) { setSaveError('Collection and name are required'); return; }
+
+    // If already saved (has collection + name), use them directly
+    const col = activeCollection || saveCollection;
+    const name = activeRequestName || saveName;
+
+    if (!name.trim() || !col.trim()) { setSaveError('Collection and name are required'); return; }
     const parsed = parseMessageJson();
     if (!parsed.ok) { setSaveError(parsed.error!); return; }
 
     const enabledMeta = Object.fromEntries(metadata.filter(m => m.enabled && m.key.trim()).map(m => [m.key, m.value]));
     const grpcCfg = buildGrpcConfig(parsed.value);
     try {
-      await addRequest(saveCollection, {
+      await addRequest(col, {
         id: Date.now().toString(),
-        name: saveName.trim(),
+        name: name.trim(),
         method: 'POST',
         url: url.trim(),
         type: 'grpc',
@@ -256,6 +285,17 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
       window.dispatchEvent(new Event('reqly-reload'));
     } catch (e: any) {
       setSaveError(e.message || 'Save failed');
+    }
+  };
+
+  // Only show the save form when there's no pre-existing collection+name
+  const handleSaveClick = () => {
+    if (activeCollection && activeRequestName) {
+      handleSave();
+    } else {
+      setSaveCollection(saveCollection || '');
+      setSaveName(saveName || '');
+      setShowSaveForm(v => !v);
     }
   };
 
@@ -360,7 +400,7 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
       )}
 
       {/* Main workspace */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden" style={{ height: '100%' }}>
         <SplitPane
           defaultSplit={48}
           top={<RequestPanel
@@ -388,7 +428,7 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
             isMultiMessage={isMultiMessage}
             isStreaming={isStreaming}
             onSend={handleSend}
-            onSave={handleSave}
+            onSave={handleSaveClick}
           />}
           bottom={<ResponsePanel
             response={response}
@@ -436,17 +476,17 @@ interface RequestPanelProps {
 
 function RequestPanel(p: RequestPanelProps) {
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: 'var(--surface-1)' }}>
 
-      {/* ── URL bar ─────────────────────────────────────────────────────── */}
+      {/* ── URL bar ──────────────────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-2 px-4 shrink-0"
-        style={{ height: '52px', borderBottom: '1px solid var(--border)' }}
+        className="flex items-center gap-2 shrink-0"
+        style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}
       >
         <button
           className={`btn ${p.showSaved ? 'btn-primary' : 'btn-secondary'} rounded shrink-0`}
           onClick={() => p.setShowSaved(!p.showSaved)}
-          style={{ padding: '0 10px', height: '34px' }}
+          style={{ padding: '0 10px', height: '32px' }}
           title="Toggle saved requests"
         >
           <Bookmark size={14} />
@@ -454,20 +494,15 @@ function RequestPanel(p: RequestPanelProps) {
 
         <div
           className="flex-1 flex items-center overflow-hidden"
-          style={{
-            height: '34px',
-            border: '1px solid var(--border-strong)',
-            borderRadius: '6px',
-            background: 'var(--surface-2)',
-          }}
+          style={{ height: '32px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface-2)' }}
         >
           <span
-            className="shrink-0 text-[11px] font-bold mx-2 px-1.5 py-0.5 rounded"
+            className="shrink-0 text-[11px] font-bold mx-2.5 px-1.5 py-0.5 rounded"
             style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.14)', letterSpacing: '0.03em' }}
           >
             gRPC
           </span>
-          <div className="w-px h-4 shrink-0" style={{ background: 'var(--border)' }} />
+          <div className="w-px self-stretch my-1.5 shrink-0" style={{ background: 'var(--border-strong)' }} />
           <VariableInput
             variables={p.availableVariables}
             className="flex-1 px-3 text-sm bg-transparent focus:outline-none h-full font-mono"
@@ -481,15 +516,7 @@ function RequestPanel(p: RequestPanelProps) {
           className="btn rounded gap-1.5 shrink-0 font-medium"
           onClick={p.onSend}
           disabled={p.isSending}
-          style={{
-            height: '34px',
-            paddingLeft: '14px',
-            paddingRight: '14px',
-            background: p.isSending ? 'var(--surface-3)' : '#0891b2',
-            borderColor: '#0e7490',
-            color: '#fff',
-            fontSize: '0.8125rem',
-          }}
+          style={{ height: '32px', padding: '0 14px', background: p.isSending ? 'var(--surface-3)' : '#0891b2', borderColor: '#0e7490', color: '#fff', fontSize: '0.8125rem' }}
         >
           {p.isSending
             ? <><Loader2 size={13} className="animate-spin" /> Invoking</>
@@ -500,10 +527,10 @@ function RequestPanel(p: RequestPanelProps) {
           className="btn btn-secondary rounded gap-1.5 shrink-0"
           style={
             p.saveSuccess
-              ? { height: '34px', background: '#16a34a', borderColor: '#16a34a', color: '#fff', fontSize: '0.8125rem' }
-              : { height: '34px', fontSize: '0.8125rem' }
+              ? { height: '32px', background: '#16a34a', borderColor: '#16a34a', color: '#fff', fontSize: '0.8125rem' }
+              : { height: '32px', fontSize: '0.8125rem' }
           }
-          onClick={() => p.setShowSaveForm(v => !v)}
+          onClick={p.onSave}
           title="Save to collection"
         >
           <Save size={13} />
@@ -511,15 +538,15 @@ function RequestPanel(p: RequestPanelProps) {
         </button>
       </div>
 
-      {/* ── Save form (inline, collapsible) ─────────────────────────────── */}
+      {/* ── Save form ────────────────────────────────────────────────────── */}
       {p.showSaveForm && (
         <div
-          className="flex items-center gap-2 px-4 py-2 shrink-0"
-          style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
+          className="flex items-center gap-2 shrink-0"
+          style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}
         >
           <select
-            className="text-xs rounded px-2 py-1.5 focus:outline-none"
-            style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
+            className="text-xs rounded px-2 focus:outline-none"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
             value={p.saveCollection}
             onChange={e => p.setSaveCollection(e.target.value)}
           >
@@ -528,7 +555,7 @@ function RequestPanel(p: RequestPanelProps) {
           </select>
           <input
             className="flex-1 text-xs rounded px-3 focus:outline-none"
-            style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
+            style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
             value={p.saveName}
             onChange={e => p.setSaveName(e.target.value)}
             placeholder="Request name"
@@ -547,12 +574,15 @@ function RequestPanel(p: RequestPanelProps) {
         </div>
       )}
 
-      {/* ── Streaming type selector ──────────────────────────────────────── */}
+      {/* ── Mode + TLS + Timeout ─────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-1 px-4 shrink-0"
-        style={{ height: '44px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
+        className="flex items-center gap-1.5 shrink-0"
+        style={{ padding: '7px 16px', borderBottom: '1px solid var(--border)' }}
       >
-        <span className="text-[11px] font-semibold uppercase tracking-wider mr-2" style={{ color: 'var(--text-muted)' }}>
+        <span
+          className="text-[10px] font-bold uppercase tracking-widest shrink-0 mr-1"
+          style={{ color: 'var(--text-muted)', minWidth: '38px' }}
+        >
           Mode
         </span>
         {(Object.entries(STREAMING_META) as [StreamingType, typeof STREAMING_META[StreamingType]][]).map(([type, meta]) => {
@@ -562,39 +592,64 @@ function RequestPanel(p: RequestPanelProps) {
               key={type}
               onClick={() => p.onStreamingChange(type)}
               title={meta.desc}
-              className="px-3 py-1 text-xs font-medium rounded transition-colors"
+              className="px-3 text-xs font-medium rounded transition-colors"
               style={{
-                height: '28px',
+                height: '26px',
                 background: active ? 'rgba(6,182,212,0.14)' : 'transparent',
                 color: active ? '#06b6d4' : 'var(--text-muted)',
-                border: `1px solid ${active ? 'rgba(6,182,212,0.4)' : 'var(--border)'}`,
+                border: `1px solid ${active ? 'rgba(6,182,212,0.45)' : 'var(--border)'}`,
               }}
             >
               {meta.label}
             </button>
           );
         })}
-        {p.isStreaming && (
-          <div className="ml-auto flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-            <span className="text-xs">Timeout</span>
-            <input
-              type="number"
-              min={1}
-              max={300}
-              value={p.streamTimeout}
-              onChange={e => p.setStreamTimeout(Number(e.target.value))}
-              className="rounded px-2 text-xs focus:outline-none w-14"
-              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '28px' }}
-            />
-            <span className="text-xs">s</span>
-          </div>
-        )}
+
+        <div className="ml-auto flex items-center gap-4">
+          <button
+            onClick={() => p.setInsecure(!p.insecure)}
+            className="flex items-center gap-2 select-none cursor-pointer bg-transparent border-none p-0"
+            title="Toggle TLS / plaintext"
+          >
+            <span
+              className="text-xs"
+              style={{ color: p.insecure ? 'var(--text-muted)' : '#06b6d4', minWidth: '52px', textAlign: 'right' }}
+            >
+              {p.insecure ? 'Plaintext' : 'TLS enabled'}
+            </span>
+            <div
+              className="relative w-8 h-4 rounded-full transition-colors shrink-0"
+              style={{ background: p.insecure ? 'var(--surface-3)' : '#0891b2' }}
+            >
+              <div
+                className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-[left]"
+                style={{ left: p.insecure ? '2px' : '17px' }}
+              />
+            </div>
+          </button>
+
+          {p.isStreaming && (
+            <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-xs">Timeout</span>
+              <input
+                type="number"
+                min={1}
+                max={300}
+                value={p.streamTimeout}
+                onChange={e => p.setStreamTimeout(Number(e.target.value))}
+                className="rounded px-2 text-xs focus:outline-none w-14"
+                style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '26px' }}
+              />
+              <span className="text-xs">s</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Proto / Service / Method ─────────────────────────────────────── */}
+      {/* ── Proto / Service / Method ──────────────────────────────────────── */}
       <div
-        className="grid grid-cols-3 gap-3 px-4 shrink-0"
-        style={{ paddingTop: '14px', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}
+        className="grid grid-cols-3 gap-3 shrink-0"
+        style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}
       >
         {[
           { label: 'Proto File', value: p.protoFile, setter: p.setProtoFile, placeholder: 'grpcbin.proto' },
@@ -602,20 +657,12 @@ function RequestPanel(p: RequestPanelProps) {
           { label: 'Method',     value: p.method,    setter: p.setMethod,    placeholder: 'SayHello' },
         ].map(({ label, value, setter, placeholder }) => (
           <div key={label} className="flex flex-col gap-1.5">
-            <label
-              className="text-[10px] font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--text-muted)' }}
-            >
+            <label className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               {label}
             </label>
             <input
               className="rounded px-3 text-sm font-mono focus:outline-none"
-              style={{
-                height: '32px',
-                background: 'var(--surface-3)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-strong)',
-              }}
+              style={{ height: '30px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
               value={value}
               onChange={e => setter(e.target.value)}
               placeholder={placeholder}
@@ -625,36 +672,6 @@ function RequestPanel(p: RequestPanelProps) {
           </div>
         ))}
       </div>
-
-      {/* ── TLS toggle ──────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center gap-3 px-4 shrink-0"
-        style={{ height: '40px', borderBottom: '1px solid var(--border)' }}
-      >
-        <button
-          onClick={() => p.setInsecure(!p.insecure)}
-          className="flex items-center gap-2.5 select-none cursor-pointer bg-transparent border-none p-0"
-          title="Toggle TLS / plaintext"
-        >
-          <div
-            className="relative w-8 h-4 rounded-full transition-colors shrink-0"
-            style={{ background: p.insecure ? 'var(--surface-4, #374151)' : '#0891b2' }}
-          >
-            <div
-              className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
-              style={{ left: p.insecure ? '2px' : '18px' }}
-            />
-          </div>
-          <span
-            className="text-xs font-medium"
-            style={{ color: p.insecure ? 'var(--text-muted)' : '#06b6d4' }}
-          >
-            {p.insecure ? 'Plaintext (insecure)' : 'TLS enabled'}
-          </span>
-        </button>
-      </div>
-
-      {/* Tab bar */}
       <div className="tab-bar shrink-0">
         <button
           className={`tab-btn ${p.inputTab === 'message' ? 'active' : ''}`}
@@ -679,7 +696,7 @@ function RequestPanel(p: RequestPanelProps) {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden" style={{ minHeight: '140px' }}>
         {p.inputTab === 'message' ? (
           <div className="h-full flex flex-col p-2 gap-1">
             {p.isMultiMessage && (
@@ -689,11 +706,12 @@ function RequestPanel(p: RequestPanelProps) {
             )}
             <div
               className="flex-1 min-h-0 overflow-hidden rounded"
-              style={{ border: '1px solid var(--border)' }}
+              style={{ border: '1px solid var(--border)', minHeight: '120px' }}
             >
               <CodeMirror
                 value={p.messageJson}
                 height="100%"
+                minHeight="120px"
                 theme="dark"
                 extensions={[json()]}
                 onChange={p.setMessageJson}
@@ -731,27 +749,32 @@ interface ResponsePanelProps {
 }
 
 function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelProps) {
+  const [activeTab, setActiveTab] = useState<'body' | 'raw'>('body');
+  const [bodyFilter, setBodyFilter] = useState('');
   const isStreamResponse = response && Array.isArray(response.messages);
 
-  if (isSending) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
-        <Loader2 size={18} className="animate-spin" style={{ color: '#06b6d4' }} />
-        <span className="text-sm">Invoking...</span>
-      </div>
-    );
-  }
+  // All branches share the same flex-1 root so the panel always fills the SplitPane bottom pane
+  const isEmpty = isSending || !response;
 
-  if (!response) {
+  if (isEmpty) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.18)' }}
-        >
-          <SendIcon size={15} style={{ color: '#06b6d4' }} />
-        </div>
-        <span className="text-xs">Invoke a method to see the response</span>
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2" style={{ background: 'var(--surface-1)', color: 'var(--text-muted)' }}>
+        {isSending ? (
+          <>
+            <Loader2 size={18} className="animate-spin" style={{ color: '#06b6d4' }} />
+            <span className="text-sm">Invoking...</span>
+          </>
+        ) : (
+          <>
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.18)' }}
+            >
+              <SendIcon size={15} style={{ color: '#06b6d4' }} />
+            </div>
+            <span className="text-xs">Invoke a method to see the response</span>
+          </>
+        )}
       </div>
     );
   }
@@ -759,62 +782,100 @@ function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelPro
   const statusStyle = grpcStatusStyle(response.grpcStatus);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Status bar */}
-      <div
-        className="flex items-center gap-3 px-3 py-1.5 shrink-0"
-        style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
-      >
-        {response.grpcStatus && (
-          <span
-            className="text-xs font-bold font-mono px-2 py-0.5 rounded"
-            style={{ color: statusStyle.color, background: statusStyle.bg, border: `1px solid ${statusStyle.border}` }}
-          >
-            {response.grpcStatus}
-          </span>
-        )}
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: 'var(--surface-1)' }}>
 
-        {isStreamResponse ? (
-          <>
-            <span className="text-xs font-medium" style={{ color: '#06b6d4' }}>
-              {response.messages.length} message{response.messages.length !== 1 ? 's' : ''}
+      {/* ── Header: status + actions ─────────────────────────────────────── */}
+      <div className="panel-header">
+        <div className="flex items-center gap-3 text-xs font-mono">
+          {response.grpcStatus && (
+            <span
+              className="font-bold px-2 py-0.5 rounded"
+              style={{ color: statusStyle.color, background: statusStyle.bg, border: `1px solid ${statusStyle.border}` }}
+            >
+              {response.grpcStatus}
             </span>
-            {response.truncated && (
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded"
-                style={{ color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.08)' }}
-              >
-                truncated
+          )}
+          {isStreamResponse ? (
+            <>
+              <span style={{ color: '#06b6d4' }}>
+                {response.messages.length} message{response.messages.length !== 1 ? 's' : ''}
               </span>
-            )}
-          </>
-        ) : (
-          response.latency != null && (
-            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{response.latency}ms</span>
-          )
-        )}
+              {response.truncated && (
+                <span
+                  className="px-1.5 py-0.5 rounded text-[10px]"
+                  style={{ color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.08)' }}
+                >
+                  truncated
+                </span>
+              )}
+            </>
+          ) : (
+            response.latency != null && (
+              <span style={{ color: 'var(--text-muted)' }}>{response.latency}ms</span>
+            )
+          )}
+          {response.grpcStatusCode != null && (
+            <span style={{ color: 'var(--text-muted)' }}>code {response.grpcStatusCode}</span>
+          )}
+        </div>
 
-        {response.grpcStatusCode != null && (
-          <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>
-            code {response.grpcStatusCode}
-          </span>
-        )}
-
-        <button
-          onClick={onCopy}
-          className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors"
-          style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-        >
-          {copied ? <Check size={12} style={{ color: '#4ade80' }} /> : <Copy size={12} />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onCopy}
+            className="icon-btn"
+            style={{ color: copied ? '#4ade80' : undefined }}
+            title={copied ? 'Copied!' : 'Copy response'}
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+          </button>
+        </div>
       </div>
 
-      {/* Body */}
+      {/* ── Tab bar ──────────────────────────────────────────────────────── */}
+      <div className="tab-bar">
+        <button
+          className={`tab-btn ${activeTab === 'body' ? 'active' : ''}`}
+          onClick={() => setActiveTab('body')}
+        >
+          {isStreamResponse ? 'Messages' : 'Body'}
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'raw' ? 'active' : ''}`}
+          onClick={() => setActiveTab('raw')}
+        >
+          Raw
+        </button>
+
+        {/* Filter - only on body tab for non-stream responses */}
+        {activeTab === 'body' && !isStreamResponse && response.body != null && (
+          <div className="ml-auto flex items-center pr-2">
+            <div className="flex items-center gap-1 px-2" style={{ height: '24px' }}>
+              <Search size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={bodyFilter}
+                onChange={e => setBodyFilter(e.target.value)}
+                className="bg-transparent outline-none text-xs w-24"
+                style={{ color: 'var(--text-secondary)' }}
+              />
+              {bodyFilter && (
+                <button onClick={() => setBodyFilter('')} className="icon-btn p-0" style={{ color: 'var(--text-muted)' }}>
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Body content ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-auto p-2">
-        {isStreamResponse ? (
+        {activeTab === 'raw' ? (
+          <pre className="text-xs font-mono whitespace-pre-wrap break-all p-2 rounded" style={{ color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            {JSON.stringify(response, null, 2)}
+          </pre>
+        ) : isStreamResponse ? (
           <StreamMessageList messages={response.messages} />
         ) : response.isError ? (
           <div
@@ -824,7 +885,7 @@ function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelPro
             {response.errorMessage || 'RPC error'}
           </div>
         ) : response.body != null ? (
-          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" />
+          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} />
         ) : (
           <div className="text-xs italic p-2" style={{ color: 'var(--text-muted)' }}>Empty response body</div>
         )}
