@@ -1,0 +1,7 @@
+name: mosquitto-mqtt
+type: mqtt
+url: wss://test.mosquitto.org:8081
+realtime:
+  mqttTopics:
+    - name: reqly/test
+      qos: 0

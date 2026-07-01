@@ -23,13 +23,18 @@ function makeFakeWs(): WsLike & { _emit: (e: string, ...a: any[]) => void; send:
   } as any;
 }
 
-function makeFakeEs(): EsLike & { _emit: (e: string, ...a: any[]) => void; close: ReturnType<typeof vi.fn> } {
+function makeFakeEs(): EsLike & { _emitOpen: () => void; _emitEvent: (type: string, data: string) => void; _emitError: (err: any) => void; close: ReturnType<typeof vi.fn> } {
   const listeners: Record<string, Function[]> = {};
-  return {
-    on(event: string, fn: (...args: any[]) => void) { (listeners[event] = listeners[event] ?? []).push(fn); },
+  const fake = {
+    onopen: null as ((evt: any) => void) | null,
+    onerror: null as ((err: any) => void) | null,
+    addEventListener(event: string, fn: (...args: any[]) => void) { (listeners[event] = listeners[event] ?? []).push(fn); },
     close: vi.fn(),
-    _emit(event: string, ...args: any[]) { (listeners[event] ?? []).forEach(fn => fn(...args)); },
-  } as any;
+    _emitOpen() { fake.onopen?.({}); },
+    _emitEvent(type: string, data: string) { (listeners[type] ?? []).forEach(fn => fn({ data })); },
+    _emitError(err: any) { fake.onerror?.(err); },
+  };
+  return fake as any;
 }
 
 function makeFakeSio(): SioLike & { _emit: (e: string, ...a: any[]) => void; _fireAny: (e: string, ...a: any[]) => void; emit: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> } {
@@ -193,8 +198,8 @@ describe('runRealtimeCapture - SSE', () => {
     const adapters: RealtimeAdapters = { createEventSource: () => es };
 
     setImmediate(() => {
-      es._emit('open');
-      es._emit('message', { data: 'sse-data', lastEventId: '1' });
+      es._emitOpen();
+      es._emitEvent('message', 'sse-data');
     });
 
     const result = await runRealtimeCapture(
@@ -212,7 +217,7 @@ describe('runRealtimeCapture - SSE', () => {
   it('returns isError: true on SSE error', async () => {
     const es = makeFakeEs();
     const adapters: RealtimeAdapters = { createEventSource: () => es };
-    setImmediate(() => es._emit('error', { message: 'SSE connection failed' }));
+    setImmediate(() => es._emitError({ message: 'SSE connection failed' }));
 
     const result = await runRealtimeCapture(
       { type: 'sse', url: 'http://localhost:9999/events', config: {} },
@@ -229,8 +234,8 @@ describe('runRealtimeCapture - SSE', () => {
     const adapters: RealtimeAdapters = { createEventSource: () => es };
 
     setImmediate(() => {
-      es._emit('open');
-      es._emit('update', { data: 'custom-event-data' });
+      es._emitOpen();
+      es._emitEvent('update', 'custom-event-data');
     });
 
     const result = await runRealtimeCapture(

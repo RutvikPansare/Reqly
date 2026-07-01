@@ -1,0 +1,5 @@
+name: echo-websocket
+type: websocket
+url: wss://echo.websocket.org
+realtime:
+  protocols: []

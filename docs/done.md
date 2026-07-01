@@ -2,10 +2,19 @@
 
 ## 2026-07-01
 
-- [x] **T-194** Final epic verification
-  - Ran `npm test` at root (passed)
-  - Ran `npm run build` in `src/ui/` (passed)
-  - Verified MCP tools and browser realtime UI
+- [x] **T-197** End-to-end realtime feature verification + 3 bug fixes
+  - Fixed `eventsource` ESM import: `* as EventSourceLib` → named import `{ EventSource }` 
+  - Fixed SSE `EsLike` interface to use W3C API (`addEventListener`/`onopen`/`onerror`) instead of `.on()`
+  - Fixed SSE graceful close: `onerror` after successful connect no longer marks `isError: true`
+  - Fixed test mocks to match new `EsLike` interface (`_emitOpen`, `_emitEvent`, `_emitError`)
+  - Verified all 4 protocols end-to-end via `POST /api/run/realtime`:
+    - WebSocket: connected to `wss://echo.websocket.org`, sent 2 messages, received echoes
+    - SSE: connected to local test server, captured 5 events
+    - Socket.IO: connected to local test server, sent `ping` event, received `pong` echo
+    - MQTT: connected to `wss://test.mosquitto.org:8081`, subscribed + published + received own message
+  - Verified collection save: created `realtime-demo` collection with WS/SSE/MQTT requests
+  - Verified MCP `run_realtime` tool registered in `src/mcp/server.ts`
+  - All 820 tests pass
 
 
 - [x] **T-193** UI: `RealtimeWorkspace` shell + save/load + state persistence

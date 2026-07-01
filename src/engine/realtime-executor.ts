@@ -1,7 +1,6 @@
 import * as crypto from 'crypto';
 import WebSocket from 'ws';
-import * as EventSourceLib from 'eventsource';
-const EventSource = (EventSourceLib as any).default || EventSourceLib;
+import { EventSource } from 'eventsource';
 import { io as socketIo } from 'socket.io-client';
 import mqtt from 'mqtt';
 import type { RealtimeConfig } from '../types/request.js';
@@ -67,7 +66,9 @@ export interface WsLike {
 }
 
 export interface EsLike {
-  on(event: string, fn: (...args: any[]) => void): void;
+  addEventListener(event: string, fn: (...args: any[]) => void): void;
+  onopen: ((evt: any) => void) | null;
+  onerror: ((err: any) => void) | null;
   close(): void;
 }
 
@@ -184,22 +185,28 @@ function captureSSE(
     const es = createES(req.url);
     const eventType = req.config.eventType ?? 'message';
 
-    es.on('open', () => {
+    es.onopen = () => {
       push(messages, makeMsg('info', 'connected'));
       timer = setTimeout(() => finish(messages.length >= RING_BUFFER_MAX), captureTimeoutMs);
-    });
+    };
 
-    es.on(eventType, (evt: any) => {
+    es.addEventListener(eventType, (evt: any) => {
       const payload = typeof evt?.data === 'string' ? evt.data : payloadString(evt?.data);
       if (!push(messages, makeMsg('server', payload, { event: eventType !== 'message' ? eventType : undefined }))) {
         finish(true);
       }
     });
 
-    es.on('error', (err: any) => {
-      const msg = err?.message ?? err?.type ?? 'SSE error';
-      finish(false, true, msg);
-    });
+    es.onerror = (err: any) => {
+      // If we already connected and captured messages, a close/error is just stream end - not a user-facing error
+      const connected = messages.some(m => m.source === 'info' && m.payload === 'connected');
+      if (connected) {
+        finish(false);
+      } else {
+        const msg = err?.message ?? err?.type ?? 'SSE error';
+        finish(false, true, msg);
+      }
+    };
   });
 }
 
