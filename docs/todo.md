@@ -43,19 +43,6 @@
 
 
 - [ ] **T-193** UI: `RealtimeWorkspace` shell + save/load + state persistence
-  - **File: `src/ui/src/components/RealtimeWorkspace.tsx`** (NEW, <160 lines)
-  - Props: `{ initialRequest?: any; onUpdate?: (state: any) => void }`
-  - Uses `useRealtimeTabs()` from T-189
-  - Sidebar-click handling: `useRef` identity check (`_collection::name`) → `updateTab(activeTabId, { url, protocol, realtime, name, _collection })` if same tab or `addTab` if new
-  - Debounced `onUpdate?.(activeTab)` (600ms) for refresh persistence
-  - Layout: `flex` `h-full`
-    - Left aside `w-64`: `<RealtimeCollectionsPanel onSelectRequest={handleSidebarSelect} onNewTab={protocol => addTab(protocol)} activeProtocol={activeTab.protocol} />`
-    - Right `flex-1 flex flex-col`:
-      - `<RealtimeTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} />`
-      - Protocol panel `flex-1 min-h-0`: switch on `activeTab.protocol` → `<WebSocketPanel>` / `<SSEPanel>` / `<SocketIOPanel>` / `<MQTTPanel>`. Pass `tab={activeTab}`, `onTabUpdate={u => updateTab(activeTabId, u)}`, `onSave={handleSave}`.
-  - **Save flow**: `handleSave()`:
-    - Already saved (`activeTab._collection && activeTab.name`): calls `updateRequest(col, name, { type: activeTab.protocol, url: activeTab.url, name: activeTab.name, realtime: activeTab.realtime })` from `../api`, flashes inline "Saved" for 2s.
-    - Not saved: shows modal (collection select + name input). On submit: `addRequest(col, { type: activeTab.protocol, url, name, realtime: config })`. On success: `updateTab(activeTabId, { name, _collection: col })`, dispatch `reqly-reload`, close modal.
   - **Collection YAML guard**: Check `src/engine/collection-manager.ts` - if `addRequest` validates/filters `method` and rejects non-HTTP-method values, fix the guard to allow realtime types. The `type` field should be preserved as-is in YAML.
   - **After all sub-tasks**: `npm test` (all pass), `npm run build` in `src/ui/`, copy `dist/ui/` → `dist/ui`, restart. Manual tests:
     1. Open Realtime workspace → WebSocket tab → connect `wss://echo.websocket.org` → send "hello" → see echo in log

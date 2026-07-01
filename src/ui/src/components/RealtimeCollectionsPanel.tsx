@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Plus, ChevronRight, ChevronDown, Folder } from 'lucide-react';
 import { fetchCollections } from '../api';
 import { requestBadgeInfo } from '../lib/colors';
@@ -10,7 +10,7 @@ interface RealtimeCollectionsPanelProps {
   onNewTab: (protocol: string) => void;
 }
 
-export function RealtimeCollectionsPanel({ activeProtocol, onSelectRequest, onNewTab }: RealtimeCollectionsPanelProps) {
+export function RealtimeCollectionsPanel({ onSelectRequest, onNewTab }: Omit<RealtimeCollectionsPanelProps, 'activeProtocol'>) {
   const [collections, setCollections] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useLocalStorage<Record<string, boolean>>('reqly.realtimeExpanded', {});
@@ -145,7 +145,7 @@ export function RealtimeCollectionsPanel({ activeProtocol, onSelectRequest, onNe
                             className="flex items-center px-4 py-1 cursor-pointer hover:bg-gray-800 transition-colors pl-8 group"
                             onClick={() => onSelectRequest(req, col.name)}
                           >
-                            <span className="text-[10px] font-bold w-12 shrink-0" style={{ color: badge.bg, filter: 'brightness(1.2)' }}>
+                            <span className="text-[10px] font-bold w-12 shrink-0" style={{ color: badge.style?.color || 'var(--text-secondary)', filter: 'brightness(1.2)' }}>
                               {badge.label}
                             </span>
                             <span className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>

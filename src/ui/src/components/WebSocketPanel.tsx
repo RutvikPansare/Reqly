@@ -1,8 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Bookmark, Send, Plus, X } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
-import { RealtimeMessageLog, UIRealtimeMessage } from './RealtimeMessageLog';
+import { RealtimeMessageLog } from './RealtimeMessageLog';
+import type { UIRealtimeMessage } from './RealtimeMessageLog';
 import type { RealtimeTab } from '../hooks/useRealtimeTabs';
 
 interface WebSocketPanelProps {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Plus, ChevronDown } from 'lucide-react';
 import type { RealtimeTab } from '../hooks/useRealtimeTabs';
 import { requestBadgeInfo } from '../lib/colors';
@@ -46,7 +46,7 @@ export function RealtimeTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: 
               {isActive && (
                 <span className="absolute left-0 bottom-0 right-0 h-0.5 bg-blue-500" aria-hidden="true" />
               )}
-              <span className="text-[10px] font-bold shrink-0" style={{ color: badge.bg, filter: 'brightness(1.2)' }}>{badge.label}</span>
+              <span className="text-[10px] font-bold shrink-0" style={{ color: badge.style?.color || 'var(--text-secondary)', filter: 'brightness(1.2)' }}>{badge.label}</span>
               <span
                 className="text-xs truncate flex-1"
                 style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}

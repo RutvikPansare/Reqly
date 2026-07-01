@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Bookmark, Play, Square } from 'lucide-react';
-import { RealtimeMessageLog, UIRealtimeMessage } from './RealtimeMessageLog';
+import { RealtimeMessageLog } from './RealtimeMessageLog';
+import type { UIRealtimeMessage } from './RealtimeMessageLog';
 import type { RealtimeTab } from '../hooks/useRealtimeTabs';
 
 interface SSEPanelProps {
@@ -55,7 +56,7 @@ export function SSEPanel({ tab, onTabUpdate, onSave }: SSEPanelProps) {
         }]);
       });
 
-      evs.onerror = (e: any) => {
+      evs.onerror = () => {
         evs.close();
         setStatus('disconnected');
         setMessages(prev => [...prev, { id: Date.now().toString() + Math.random(), ts: Date.now(), source: 'error', payload: 'SSE Error: connection lost or failed to connect' }]);

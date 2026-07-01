@@ -2,6 +2,11 @@
 
 ## 2026-07-01
 
+- [x] **T-193** UI: `RealtimeWorkspace` shell + save/load + state persistence
+  - EDITED `src/ui/src/components/RealtimeWorkspace.tsx`
+  - Added save modal logic and tab management
+
+
 - [x] **T-192** UI: SocketIOPanel + MQTTPanel
   - NEW `src/ui/src/components/SocketIOPanel.tsx`
   - NEW `src/ui/src/components/MQTTPanel.tsx`

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Trash, ArrowUpToLine, ArrowDownToLine, ToggleRight, ToggleLeft, ArrowUpRight, ArrowDownLeft, Info, AlertCircle, Copy } from 'lucide-react';
 
 export interface UIRealtimeMessage {
