@@ -19,7 +19,7 @@ import type { KeyValuePair } from './KeyValueEditor';
 import { GraphQLDocsExplorer } from './GraphQLDocsExplorer';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
-import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles } from '../api';
+import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
 
 const INTROSPECTION_QUERY = getIntrospectionQuery();
 
@@ -254,22 +254,31 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
         try { parsedVariables = JSON.parse(variables); } catch { setSaveError('Variables must be valid JSON.'); return; }
       }
       const savedHeaders = Object.keys(enabledHeaders).length > 0 ? enabledHeaders : undefined;
-      await addRequest(col, {
-        id: Date.now().toString(),
+      const reqToSave = {
+        id: initialRequest?.id || Date.now().toString(),
         name: name.trim(),
         method: 'POST',
         url: url.trim(),
-        type: 'graphql',
+        type: isSubscriptionQuery ? 'graphql-subscription' : 'graphql',
         ...(savedHeaders ? { headers: savedHeaders } : {}),
         graphql: {
           ...(useQueryFile && queryFile.trim() ? { queryFile: queryFile.trim() } : { query }),
           ...(parsedVariables !== undefined ? { variables: parsedVariables } : {}),
           ...(operationName.trim() ? { operationName: operationName.trim() } : {}),
         },
-      });
+      };
+      
+      if (activeCollection && activeRequestName) {
+        await updateRequest(col, activeRequestName, reqToSave);
+      } else {
+        await addRequest(col, reqToSave);
+      }
+
       setSaveSuccess(true);
       setShowSaveForm(false);
       setTimeout(() => setSaveSuccess(false), 2000);
+      window.dispatchEvent(new Event('reqly-reload'));
+      if (onUpdate) onUpdate({ ...reqToSave, _collection: col });
     } catch (e: any) {
       setSaveError(e.message || 'Save failed.');
     }

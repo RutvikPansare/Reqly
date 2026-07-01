@@ -14,7 +14,7 @@ import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 import { CollapsibleJson } from './InteractiveJsonTree';
-import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles } from '../api';
+import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -268,19 +268,27 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
     const enabledMeta = Object.fromEntries(metadata.filter(m => m.enabled && m.key.trim()).map(m => [m.key, m.value]));
     const grpcCfg = buildGrpcConfig(parsed.value);
     try {
-      await addRequest(col, {
-        id: Date.now().toString(),
+      const reqToSave = {
+        id: initialRequest?.id || Date.now().toString(),
         name: name.trim(),
         method: 'POST',
         url: url.trim(),
         type: 'grpc',
         ...(Object.keys(enabledMeta).length > 0 ? { headers: enabledMeta } : {}),
         grpc: grpcCfg,
-      });
+      };
+
+      if (activeCollection && activeRequestName) {
+        await updateRequest(col, activeRequestName, reqToSave);
+      } else {
+        await addRequest(col, reqToSave);
+      }
+
       setSaveSuccess(true);
       setShowSaveForm(false);
       setTimeout(() => setSaveSuccess(false), 2000);
       window.dispatchEvent(new Event('reqly-reload'));
+      if (onUpdate) onUpdate({ ...reqToSave, _collection: col });
     } catch (e: any) {
       setSaveError(e.message || 'Save failed');
     }
