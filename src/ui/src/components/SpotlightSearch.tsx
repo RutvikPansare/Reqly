@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { fetchCollections } from '../api';
-import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
+import { requestBadgeInfo } from '../lib/colors';
 
 interface SpotlightSearchProps {
   onSelectRequest: (req: any, collectionName: string) => void;
@@ -12,6 +12,7 @@ interface ResultItem {
   label: string;
   sublabel: string;
   method?: string;
+  reqType?: string;
   collectionName: string;
   request?: any;
 }
@@ -55,6 +56,7 @@ export function SpotlightSearch({ onSelectRequest, onClose }: SpotlightSearchPro
             label: req.name,
             sublabel: req.url,
             method: req.method,
+            reqType: req.type,
             collectionName: col.name,
             request: req
           });
@@ -124,10 +126,8 @@ export function SpotlightSearch({ onSelectRequest, onClose }: SpotlightSearchPro
               className="flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors"
               style={{ background: i === activeIndex ? 'var(--surface-3)' : 'transparent' }}
             >
-              {item.method ? (
-                <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(item.method)} shrink-0`}>
-                  {item.method}
-                </span>
+              {item.type === 'request' ? (
+                (() => { const b = requestBadgeInfo(item.reqType, item.method); return <span className={b.className} style={b.style}>{b.label}</span>; })()
               ) : (
                 <span className="text-[10px] w-12 shrink-0" style={{ color: 'var(--text-muted)' }}>COL</span>
               )}

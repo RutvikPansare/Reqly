@@ -438,27 +438,36 @@ function RequestPanel(p: RequestPanelProps) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
-      {/* Row 1: URL bar */}
-      <div className="flex items-center gap-2 px-2 pt-2 pb-1 shrink-0">
+      {/* ── URL bar ─────────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-2 px-4 shrink-0"
+        style={{ height: '52px', borderBottom: '1px solid var(--border)' }}
+      >
         <button
           className={`btn ${p.showSaved ? 'btn-primary' : 'btn-secondary'} rounded shrink-0`}
           onClick={() => p.setShowSaved(!p.showSaved)}
-          style={{ padding: '0 8px', height: '32px' }}
+          style={{ padding: '0 10px', height: '34px' }}
           title="Toggle saved requests"
         >
           <Bookmark size={14} />
         </button>
 
         <div
-          className="flex-1 flex items-center overflow-hidden h-8"
-          style={{ border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'transparent' }}
+          className="flex-1 flex items-center overflow-hidden"
+          style={{
+            height: '34px',
+            border: '1px solid var(--border-strong)',
+            borderRadius: '6px',
+            background: 'var(--surface-2)',
+          }}
         >
           <span
-            className="shrink-0 text-[11px] font-bold ml-2 px-1.5 py-0.5 rounded"
-            style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.12)', letterSpacing: '0.02em' }}
+            className="shrink-0 text-[11px] font-bold mx-2 px-1.5 py-0.5 rounded"
+            style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.14)', letterSpacing: '0.03em' }}
           >
             gRPC
           </span>
+          <div className="w-px h-4 shrink-0" style={{ background: 'var(--border)' }} />
           <VariableInput
             variables={p.availableVariables}
             className="flex-1 px-3 text-sm bg-transparent focus:outline-none h-full font-mono"
@@ -469,13 +478,17 @@ function RequestPanel(p: RequestPanelProps) {
         </div>
 
         <button
-          className="btn rounded gap-1.5 h-8 shrink-0 font-medium"
+          className="btn rounded gap-1.5 shrink-0 font-medium"
           onClick={p.onSend}
           disabled={p.isSending}
           style={{
+            height: '34px',
+            paddingLeft: '14px',
+            paddingRight: '14px',
             background: p.isSending ? 'var(--surface-3)' : '#0891b2',
             borderColor: '#0e7490',
             color: '#fff',
+            fontSize: '0.8125rem',
           }}
         >
           {p.isSending
@@ -484,8 +497,12 @@ function RequestPanel(p: RequestPanelProps) {
         </button>
 
         <button
-          className="btn btn-secondary rounded gap-1.5 h-8 shrink-0"
-          style={p.saveSuccess ? { background: '#16a34a', borderColor: '#16a34a', color: '#fff' } : undefined}
+          className="btn btn-secondary rounded gap-1.5 shrink-0"
+          style={
+            p.saveSuccess
+              ? { height: '34px', background: '#16a34a', borderColor: '#16a34a', color: '#fff', fontSize: '0.8125rem' }
+              : { height: '34px', fontSize: '0.8125rem' }
+          }
           onClick={() => p.setShowSaveForm(v => !v)}
           title="Save to collection"
         >
@@ -494,44 +511,50 @@ function RequestPanel(p: RequestPanelProps) {
         </button>
       </div>
 
-      {/* Save form */}
+      {/* ── Save form (inline, collapsible) ─────────────────────────────── */}
       {p.showSaveForm && (
-        <div className="flex items-center gap-2 px-2 pb-1 shrink-0">
-          <div
-            className="flex flex-1 items-center gap-2 p-2 rounded"
-            style={{ border: '1px solid var(--border)', background: 'var(--surface-2)' }}
+        <div
+          className="flex items-center gap-2 px-4 py-2 shrink-0"
+          style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
+        >
+          <select
+            className="text-xs rounded px-2 py-1.5 focus:outline-none"
+            style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
+            value={p.saveCollection}
+            onChange={e => p.setSaveCollection(e.target.value)}
           >
-            <select
-              className="text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
-              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)' }}
-              value={p.saveCollection}
-              onChange={e => p.setSaveCollection(e.target.value)}
-            >
-              <option value="">-- collection --</option>
-              {p.collections.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <input
-              className="flex-1 text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
-              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)' }}
-              value={p.saveName}
-              onChange={e => p.setSaveName(e.target.value)}
-              placeholder="Request name"
-              onKeyDown={e => e.key === 'Enter' && p.onSave()}
-            />
-            <button
-              className="btn btn-primary rounded text-xs px-3 h-7"
-              style={{ background: '#0891b2', borderColor: '#0e7490' }}
-              onClick={p.onSave}
-            >
-              Save
-            </button>
-            {p.saveError && <span className="text-xs text-red-400">{p.saveError}</span>}
-          </div>
+            <option value="">-- collection --</option>
+            {p.collections.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input
+            className="flex-1 text-xs rounded px-3 focus:outline-none"
+            style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
+            value={p.saveName}
+            onChange={e => p.setSaveName(e.target.value)}
+            placeholder="Request name"
+            onKeyDown={e => e.key === 'Enter' && p.onSave()}
+            onFocus={e => (e.currentTarget.style.borderColor = '#06b6d4')}
+            onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
+          />
+          <button
+            className="btn rounded text-xs px-4"
+            style={{ background: '#0891b2', borderColor: '#0e7490', color: '#fff', height: '30px' }}
+            onClick={p.onSave}
+          >
+            Save
+          </button>
+          {p.saveError && <span className="text-xs text-red-400">{p.saveError}</span>}
         </div>
       )}
 
-      {/* Row 2: Streaming type selector */}
-      <div className="flex items-center gap-0.5 px-2 pb-1 shrink-0">
+      {/* ── Streaming type selector ──────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-1 px-4 shrink-0"
+        style={{ height: '44px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wider mr-2" style={{ color: 'var(--text-muted)' }}>
+          Mode
+        </span>
         {(Object.entries(STREAMING_META) as [StreamingType, typeof STREAMING_META[StreamingType]][]).map(([type, meta]) => {
           const active = p.streamingType === type;
           return (
@@ -539,11 +562,12 @@ function RequestPanel(p: RequestPanelProps) {
               key={type}
               onClick={() => p.onStreamingChange(type)}
               title={meta.desc}
-              className="px-2.5 py-1 text-xs font-medium rounded transition-colors"
+              className="px-3 py-1 text-xs font-medium rounded transition-colors"
               style={{
-                background: active ? 'rgba(6,182,212,0.15)' : 'transparent',
+                height: '28px',
+                background: active ? 'rgba(6,182,212,0.14)' : 'transparent',
                 color: active ? '#06b6d4' : 'var(--text-muted)',
-                border: `1px solid ${active ? 'rgba(6,182,212,0.4)' : 'transparent'}`,
+                border: `1px solid ${active ? 'rgba(6,182,212,0.4)' : 'var(--border)'}`,
               }}
             >
               {meta.label}
@@ -551,30 +575,33 @@ function RequestPanel(p: RequestPanelProps) {
           );
         })}
         {p.isStreaming && (
-          <div className="ml-auto flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <span>timeout</span>
+          <div className="ml-auto flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+            <span className="text-xs">Timeout</span>
             <input
               type="number"
               min={1}
               max={300}
               value={p.streamTimeout}
               onChange={e => p.setStreamTimeout(Number(e.target.value))}
-              className="rounded px-2 py-0.5 text-xs focus:outline-none focus:border-cyan-500 w-14"
-              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)' }}
+              className="rounded px-2 text-xs focus:outline-none w-14"
+              style={{ background: 'var(--surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '28px' }}
             />
-            <span>s</span>
+            <span className="text-xs">s</span>
           </div>
         )}
       </div>
 
-      {/* Row 3: Proto / service / method inputs */}
-      <div className="grid grid-cols-3 gap-2 px-2 pb-1 shrink-0">
+      {/* ── Proto / Service / Method ─────────────────────────────────────── */}
+      <div
+        className="grid grid-cols-3 gap-3 px-4 shrink-0"
+        style={{ paddingTop: '14px', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}
+      >
         {[
           { label: 'Proto File', value: p.protoFile, setter: p.setProtoFile, placeholder: 'grpcbin.proto' },
           { label: 'Service',    value: p.service,   setter: p.setService,   placeholder: 'hello.HelloService' },
           { label: 'Method',     value: p.method,    setter: p.setMethod,    placeholder: 'SayHello' },
         ].map(({ label, value, setter, placeholder }) => (
-          <div key={label} className="flex flex-col gap-0.5">
+          <div key={label} className="flex flex-col gap-1.5">
             <label
               className="text-[10px] font-semibold uppercase tracking-wider"
               style={{ color: 'var(--text-muted)' }}
@@ -582,8 +609,9 @@ function RequestPanel(p: RequestPanelProps) {
               {label}
             </label>
             <input
-              className="rounded px-2 py-1.5 text-xs font-mono focus:outline-none"
+              className="rounded px-3 text-sm font-mono focus:outline-none"
               style={{
+                height: '32px',
                 background: 'var(--surface-3)',
                 color: 'var(--text-primary)',
                 border: '1px solid var(--border-strong)',
@@ -598,16 +626,19 @@ function RequestPanel(p: RequestPanelProps) {
         ))}
       </div>
 
-      {/* Row 4: TLS toggle */}
-      <div className="flex items-center gap-2 px-2 pb-1 shrink-0">
+      {/* ── TLS toggle ──────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-3 px-4 shrink-0"
+        style={{ height: '40px', borderBottom: '1px solid var(--border)' }}
+      >
         <button
           onClick={() => p.setInsecure(!p.insecure)}
-          className="flex items-center gap-2 select-none cursor-pointer bg-transparent border-none p-0"
+          className="flex items-center gap-2.5 select-none cursor-pointer bg-transparent border-none p-0"
           title="Toggle TLS / plaintext"
         >
           <div
             className="relative w-8 h-4 rounded-full transition-colors shrink-0"
-            style={{ background: p.insecure ? 'var(--surface-3)' : '#0891b2' }}
+            style={{ background: p.insecure ? 'var(--surface-4, #374151)' : '#0891b2' }}
           >
             <div
               className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
@@ -615,7 +646,7 @@ function RequestPanel(p: RequestPanelProps) {
             />
           </div>
           <span
-            className="text-xs"
+            className="text-xs font-medium"
             style={{ color: p.insecure ? 'var(--text-muted)' : '#06b6d4' }}
           >
             {p.insecure ? 'Plaintext (insecure)' : 'TLS enabled'}

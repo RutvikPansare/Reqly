@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, moveRequest, exportCollection, deleteExample } from '../api';
-import { METHOD_BADGE_BASE, methodBadgeClass } from '../lib/colors';
+import { requestBadgeInfo } from '../lib/colors';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { SidebarEnvSection } from './SidebarEnvSection';
 import { SuccessToast } from './ui/SuccessToast';
@@ -470,11 +470,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               onClick={() => { onSelectRequest(req, col); setSearch(''); }}
             >
-              {req.type === 'graphql' || req.type === 'graphql-subscription' ? (
-                <span className={`${METHOD_BADGE_BASE} shrink-0`} style={{ background: '#db2777', color: '#fff' }}>GQL</span>
-              ) : (
-                <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
-              )}
+              {(() => { const b = requestBadgeInfo(req.type, req.method); return <span className={b.className} style={b.style}>{b.label}</span>; })()}
               <div className="flex flex-col min-w-0">
                 <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{req.name}</span>
                 <span className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{col}</span>
@@ -633,11 +629,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                           }}
                           onDragEnd={() => { setDraggedReq(null); setDragOverCol(null); }}
                         >
-                          {req.type === 'graphql' || req.type === 'graphql-subscription' ? (
-                            <span className={`${METHOD_BADGE_BASE} shrink-0`} style={{ background: '#db2777', color: '#fff' }}>GQL</span>
-                          ) : (
-                            <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(req.method)} shrink-0`}>{req.method}</span>
-                          )}
+                          {(() => { const b = requestBadgeInfo(req.type, req.method); return <span className={b.className} style={b.style}>{b.label}</span>; })()}
                           {isRenaming ? (
                             <input
                               autoFocus

@@ -12,6 +12,7 @@ export interface HistoryEntry {
   body?: string;
   requestName?: string;
   collectionName?: string;
+  requestType?: string;
 }
 
 interface AppendMeta {
@@ -40,7 +41,8 @@ export class HistoryStore {
       latency: res.latency,
       body,
       requestName: req.name,
-      collectionName: meta.collectionName
+      collectionName: meta.collectionName,
+      requestType: (req as any).type,
     };
 
     this.entries.unshift(entry);

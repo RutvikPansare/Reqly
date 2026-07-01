@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchHistory, clearHistory } from '../api';
 import type { HistoryEntry } from '../api';
-import { METHOD_BADGE_BASE, methodBadgeClass, statusColorClass } from '../lib/colors';
+import { requestBadgeInfo, statusColorClass } from '../lib/colors';
 
 interface HistoryPanelProps {
   onSelectRequest: (req: any, collectionName: string) => void;
@@ -82,9 +82,7 @@ export function HistoryPanel({ onSelectRequest }: HistoryPanelProps) {
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            <span className={`${METHOD_BADGE_BASE} ${methodBadgeClass(entry.method)} shrink-0`}>
-              {entry.method}
-            </span>
+            {(() => { const b = requestBadgeInfo(entry.requestType, entry.method); return <span className={b.className} style={b.style}>{b.label}</span>; })()}
             <div className="flex-1 min-w-0">
               <div className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{entry.url}</div>
               <div className="text-[10px] flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>

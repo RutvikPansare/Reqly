@@ -28,6 +28,37 @@ export function methodBadgeClass(method: string): string {
   }
 }
 
+// Unified badge for any request type.
+// Returns { label, style } so the caller just renders one <span>.
+// gRPC  - neon cyan  (#06b6d4)  to match the gRPC workspace accent colour.
+// GQL   - pink       (#db2777)  existing convention.
+// REST  - falls back to methodBadgeClass(method).
+export function requestBadgeInfo(
+  type: string | undefined,
+  method: string | undefined,
+): { label: string; className: string; style?: React.CSSProperties } {
+  switch (type) {
+    case 'grpc':
+      return {
+        label: 'gRPC',
+        className: METHOD_BADGE_BASE + ' shrink-0',
+        style: { background: 'rgba(6,182,212,0.15)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.3)' },
+      };
+    case 'graphql':
+    case 'graphql-subscription':
+      return {
+        label: type === 'graphql-subscription' ? 'SUB' : 'GQL',
+        className: METHOD_BADGE_BASE + ' shrink-0',
+        style: { background: '#db277720', color: '#db2777', border: '1px solid #db277740' },
+      };
+    default:
+      return {
+        label: (method || 'GET').toUpperCase(),
+        className: `${METHOD_BADGE_BASE} ${methodBadgeClass(method || '')} shrink-0`,
+      };
+  }
+}
+
 export function statusColorClass(status: number): string {
   if (status >= 200 && status < 300) return 'text-green-400';
   if (status >= 300 && status < 400) return 'text-blue-400';

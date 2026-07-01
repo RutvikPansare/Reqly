@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Settings, X, Plus, ChevronDown, FolderInput } from 'lucide-react';
 import { updateRequest, fetchCollections, addRequest, fetchEnvironments, setActiveEnvironment, importCollection } from './api';
-import { methodColorClass } from './lib/colors';
+import { methodColorClass, requestBadgeInfo } from './lib/colors';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useServerEvents } from './hooks/useServerEvents';
 import { NavRail } from './components/NavRail';
@@ -620,13 +620,13 @@ function App() {
                             <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-blue-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500" />
                           </span>
-                        ) : tab.request.type === 'grpc' ? (
-                          <span className="text-[10px] font-bold shrink-0" style={{ color: '#06b6d4' }}>gRPC</span>
-                        ) : (
-                          <span className={`text-[10px] font-bold shrink-0 ${methodColorClass(tab.request.method)}`}>
-                            {tab.request.method}
-                          </span>
-                        )}
+                        ) : (() => {
+                          const b = requestBadgeInfo(tab.request.type, tab.request.method);
+                          // Tab bar uses a flat text-only style (no pill) to keep tabs compact
+                          if (tab.request.type === 'grpc') return <span className="text-[10px] font-bold shrink-0" style={{ color: '#06b6d4' }}>gRPC</span>;
+                          if (tab.request.type === 'graphql' || tab.request.type === 'graphql-subscription') return <span className="text-[10px] font-bold shrink-0" style={{ color: '#db2777' }}>{b.label}</span>;
+                          return <span className={`text-[10px] font-bold shrink-0 ${methodColorClass(tab.request.method)}`}>{tab.request.method}</span>;
+                        })()}
                         {isRenaming ? (
                           <input
                             autoFocus
