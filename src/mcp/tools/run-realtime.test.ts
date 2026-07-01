@@ -52,7 +52,7 @@ describe('run_realtime - definition', () => {
 describe('run_realtime - handler', () => {
   it('calls runRealtimeCapture with correct args and returns JSON result', async () => {
     const mockResult = {
-      messages: [{ id: '1', ts: 1000, source: 'server', payload: 'hi' }],
+      messages: [{ id: '1', ts: 1000, source: 'server' as 'server', payload: 'hi' }],
       truncated: false,
     };
     vi.mocked(runRealtimeCapture).mockResolvedValueOnce(mockResult);

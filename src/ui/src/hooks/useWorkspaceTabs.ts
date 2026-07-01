@@ -1,29 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 
-export interface RealtimeTab {
+export interface WorkspaceTab {
   id: string;
   tabName?: string;
-  protocol: 'websocket' | 'sse' | 'socketio' | 'mqtt';
+  protocol: string;
   url: string;
   realtime?: any;
+  graphql?: any;
+  grpc?: any;
+  headers?: any;
   name?: string;
   _collection?: string;
 }
 
-const TABS_KEY = 'reqly.realtimeTabs';
-const ACTIVE_TAB_KEY = 'reqly.realtimeActiveTabId';
+export function useWorkspaceTabs(namespace: string, defaultProtocol: string, defaultTabName: string) {
+  const TABS_KEY = `reqly.${namespace}Tabs`;
+  const ACTIVE_TAB_KEY = `reqly.${namespace}ActiveTabId`;
 
-export function useRealtimeTabs() {
-  const [tabs, setTabs] = useState<RealtimeTab[]>(() => {
+  const [tabs, setTabs] = useState<WorkspaceTab[]>(() => {
     try {
       const stored = localStorage.getItem(TABS_KEY);
       if (stored) return JSON.parse(stored);
     } catch {}
-    return [{ id: 'rt-default', protocol: 'websocket', url: '', tabName: 'New WebSocket' }];
+    return [{ id: `${namespace}-default`, protocol: defaultProtocol, url: '', tabName: defaultTabName }];
   });
 
   const [activeTabId, setActiveTabId] = useState<string>(() => {
-    return localStorage.getItem(ACTIVE_TAB_KEY) || tabs[0]?.id || 'rt-default';
+    return localStorage.getItem(ACTIVE_TAB_KEY) || tabs[0]?.id || `${namespace}-default`;
   });
 
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,17 +44,12 @@ export function useRealtimeTabs() {
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
 
-  const addTab = (protocol: string) => {
-    let defaultTabName = 'New WebSocket';
-    if (protocol === 'sse') defaultTabName = 'New SSE';
-    if (protocol === 'socketio') defaultTabName = 'New Socket.IO';
-    if (protocol === 'mqtt') defaultTabName = 'New MQTT';
-
-    const newTab: RealtimeTab = {
-      id: 'rt-' + Date.now(),
-      protocol: protocol as any,
+  const addTab = (protocol: string, name?: string) => {
+    const newTab: WorkspaceTab = {
+      id: `${namespace}-` + Date.now(),
+      protocol,
       url: '',
-      tabName: defaultTabName,
+      tabName: name || `New ${protocol.toUpperCase()}`,
     };
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);
@@ -71,7 +69,7 @@ export function useRealtimeTabs() {
     });
   };
 
-  const updateTab = (id: string, updates: Partial<RealtimeTab>) => {
+  const updateTab = (id: string, updates: Partial<WorkspaceTab>) => {
     setTabs(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
   };
 
@@ -81,14 +79,17 @@ export function useRealtimeTabs() {
       setActiveTabId(existing.id);
       return;
     }
-    const newTab: RealtimeTab = {
-      id: req.id || 'rt-' + Date.now(),
-      protocol: req.type as any,
+    const newTab: WorkspaceTab = {
+      id: req.id || `${namespace}-` + Date.now(),
+      protocol: req.type as string,
       url: req.url || '',
       tabName: req.name,
       name: req.name,
       _collection: req._collection,
-      realtime: req.realtime || {}
+      realtime: req.realtime,
+      graphql: req.graphql,
+      grpc: req.grpc,
+      headers: req.headers,
     };
     setTabs(prev => [...prev, newTab]);
     setActiveTabId(newTab.id);

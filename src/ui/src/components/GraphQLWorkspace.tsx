@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Send as SendIcon, Loader2, Save, BookOpen, Wand2, Terminal, Bookmark, FileCode2, CheckSquare, Square } from 'lucide-react';
+import { Send as SendIcon, Loader2, Save, BookOpen, Wand2, Terminal, FileCode2, CheckSquare, Square } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
 import { graphql } from 'cm6-graphql';
 import { buildClientSchema, getIntrospectionQuery, parse as gqlParse, print as gqlPrint } from 'graphql';
@@ -11,6 +11,9 @@ import type { CompletionContext } from '@codemirror/autocomplete';
 import { GraphQLResponseViewer } from './GraphQLResponseViewer';
 import { GraphQLSubscriptionStream } from './GraphQLSubscriptionStream';
 import { SplitPane } from './SplitPane';
+import { CollectionsPanel } from './CollectionsPanel';
+import { WorkspaceTabBar } from './WorkspaceTabBar';
+import { useWorkspaceTabs } from '../hooks/useWorkspaceTabs';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { GraphQLDocsExplorer } from './GraphQLDocsExplorer';
@@ -22,9 +25,10 @@ const INTROSPECTION_QUERY = getIntrospectionQuery();
 
 interface GraphQLWorkspaceProps {
   initialRequest?: any;
+  onUpdate?: (state: any) => void;
 }
 
-export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {}) {
+export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorkspaceProps = {}) {
   const [url, setUrl] = useState(initialRequest?.url ?? '');
   const [query, setQuery] = useState(initialRequest?.graphql?.query ?? '');
   const [variables, setVariables] = useState(
@@ -56,13 +60,21 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   const [activeEnvName, setActiveEnvName] = useState<string>('');
   const [collectionVars, setCollectionVars] = useState<Record<string, string>>({});
   const [dotenvVars, setDotenvVars] = useState<{ key: string; source: string }[]>([]);
-
-  const [showSaved, setShowSaved] = useState(false);
-  const [savedRequests, setSavedRequests] = useState<{ collection: string; request: any }[]>([]);
   const [activeCollection, setActiveCollection] = useState<string | undefined>(initialRequest?._collection);
   const [activeRequestName, setActiveRequestName] = useState<string | undefined>(initialRequest?.name);
   const [queryFile, setQueryFile] = useState<string>(initialRequest?.graphql?.queryFile ?? '');
   const [useQueryFile, setUseQueryFile] = useState<boolean>(!!initialRequest?.graphql?.queryFile);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      onUpdate?.({
+        url, name: activeRequestName, _collection: activeCollection,
+        graphql: { query, variables: (() => { try { return variables ? JSON.parse(variables) : undefined; } catch { return undefined; } })(), operationName, queryFile },
+        headers: Object.fromEntries(headers.filter(h => h.enabled && h.key.trim()).map(h => [h.key, h.value]))
+      });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [url, query, variables, operationName, queryFile, headers, activeCollection, activeRequestName, onUpdate]);
 
   const isDirty = useMemo(() => {
     if (!initialRequest) {
@@ -93,17 +105,6 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
   useEffect(() => {
     fetchCollections().then((cols: any[]) => {
       setCollections(cols.map((c: any) => c.name));
-      const reqs: { collection: string; request: any }[] = [];
-      for (const col of cols) {
-        if (col.requests) {
-          for (const req of col.requests) {
-            if (req.type === 'graphql' || req.type === 'graphql-subscription') {
-              reqs.push({ collection: col.name, request: req });
-            }
-          }
-        }
-      }
-      setSavedRequests(reqs);
     }).catch(() => {});
   }, []);
 
@@ -464,15 +465,6 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         top={
         <div className="flex flex-col h-full overflow-hidden p-0">
           <div className="flex items-center gap-2 mb-1 p-2 pb-0">
-            <button
-              className={`btn ${showSaved ? 'btn-primary' : 'btn-secondary'} rounded`}
-              onClick={() => setShowSaved(v => !v)}
-              title="Toggle saved requests"
-              style={{ padding: '0 8px', height: '32px' }}
-            >
-              <Bookmark size={14} />
-            </button>
-            
             <div className="flex-1 flex items-center border border-[var(--border-strong)] rounded bg-transparent overflow-hidden h-8">
               <span className="method-badge ml-2" style={{ background: '#db2777', color: '#fff' }}>GQL</span>
               <VariableInput
@@ -721,55 +713,6 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
         )}
       />
       </div>
-      {showSaved && (
-        <div className="w-64 shrink-0 border-l border-[var(--border)] overflow-hidden flex flex-col bg-[var(--surface-1)] order-first border-r">
-          <div className="p-2 border-b border-[var(--border)] bg-[var(--surface-2)] font-semibold text-xs text-gray-300">
-            Saved GraphQL Requests
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-4">
-            {collections.map(col => {
-              const reqs = savedRequests.filter(r => r.collection === col);
-              if (reqs.length === 0) return null;
-              return (
-                <div key={col} className="flex flex-col gap-1">
-                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-1">{col}</div>
-                  {reqs.map(({ request }) => (
-                    <button
-                      key={request.name}
-                      className="text-left text-xs px-2 py-1.5 rounded hover:bg-[var(--surface-3)] text-gray-300 truncate transition-colors"
-                      onClick={() => {
-                        setUrl(request.url ?? '');
-                        setQuery(request.graphql?.query ?? '');
-                        setQueryFile(request.graphql?.queryFile ?? '');
-                        setUseQueryFile(!!request.graphql?.queryFile);
-                        setVariables(request.graphql?.variables ? JSON.stringify(request.graphql.variables, null, 2) : '');
-                        setOperationName(request.graphql?.operationName ?? '');
-                        setHeaders(
-                          request.headers
-                            ? Object.entries(request.headers).map(([key, value]) => ({ key, value: value as string, enabled: true }))
-                            : []
-                        );
-                        setActiveCollection(col);
-                        setActiveRequestName(request.name);
-                      }}
-                    >
-                      <span className={`mr-2 ${request.type === 'graphql-subscription' ? 'text-purple-400' : 'text-pink-400'}`}>
-                        {request.type === 'graphql-subscription' ? 'SUB' : 'GQL'}
-                      </span>
-                      {request.name}
-                    </button>
-                  ))}
-                </div>
-              );
-            })}
-            {savedRequests.length === 0 && (
-              <div className="text-xs text-gray-500 italic p-2 text-center mt-4">
-                No saved GraphQL requests found in any collection.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
       {showDocs && schema && (
         <div className="w-64 shrink-0 border-l border-[var(--border)] overflow-hidden flex flex-col">
           <GraphQLDocsExplorer schema={schema} onInsertField={handleInsertField} />
@@ -778,3 +721,35 @@ export function GraphQLWorkspace({ initialRequest }: GraphQLWorkspaceProps = {})
     </div>
   );
 }
+
+export function GraphQLWorkspace({ initialRequest, onUpdate }: { initialRequest?: any; onUpdate?: (state: any) => void }) {
+  const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useWorkspaceTabs('graphql', 'graphql', 'New GraphQL');
+
+  const prevRequestIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!initialRequest?._collection || !initialRequest?.name) return;
+    const identity = `${initialRequest._collection}::${initialRequest.name}`;
+    if (identity === prevRequestIdRef.current) return;
+    prevRequestIdRef.current = identity;
+    loadTab(initialRequest);
+  }, [initialRequest]);
+
+  return (
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="w-72 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
+        <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['graphql', 'graphql-subscription']} defaultRequestType="graphql" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'graphql', label: 'GraphQL' }, { id: 'graphql-subscription', label: 'GraphQL Subscription' }]} />
+        <div className="relative min-h-0 flex-1">
+          {activeTab && <GraphQLWorkspaceInner key={activeTab.id} initialRequest={activeTab} onUpdate={(state) => {
+             updateTab(activeTab.id, state);
+             onUpdate?.(state);
+          }} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+

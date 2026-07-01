@@ -7,9 +7,9 @@ import { RealtimeMessageLog } from './RealtimeMessageLog.js';
 import type { UIRealtimeMessage } from './RealtimeMessageLog.js';
 import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
-import type { RealtimeTab } from '../hooks/useRealtimeTabs.js';
+import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 
-interface SocketIOPanelProps { tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void; flashSaved?: boolean; }
+interface SocketIOPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; }
 
 export function SocketIOPanel({ tab, onTabUpdate, onSave, flashSaved }: SocketIOPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');

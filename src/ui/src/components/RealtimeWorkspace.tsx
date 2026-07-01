@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { CollectionsPanel } from './CollectionsPanel.js';
-import { RealtimeTabBar } from './RealtimeTabBar.js';
+import { WorkspaceTabBar } from './WorkspaceTabBar.js';
 import { WebSocketPanel } from './WebSocketPanel.js';
 import { SSEPanel } from './SSEPanel.js';
 import { SocketIOPanel } from './SocketIOPanel.js';
 import { MQTTPanel } from './MQTTPanel.js';
-import { useRealtimeTabs } from '../hooks/useRealtimeTabs.js';
+import { useWorkspaceTabs } from '../hooks/useWorkspaceTabs.js';
 import { SaveToCollectionModal } from './SaveToCollectionModal.js';
 import { updateRequest } from '../api.js';
 
 export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest?: any; onUpdate?: (state: any) => void }) {
-  const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useRealtimeTabs();
+  const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useWorkspaceTabs('realtime', 'websocket', 'New WebSocket');
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const prevRequestIdRef = useRef<string | null>(null);
@@ -79,7 +79,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
         <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} defaultRequestType="websocket" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <RealtimeTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} />
+        <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'websocket', label: 'WebSocket' }, { id: 'sse', label: 'Server-Sent Events' }, { id: 'socketio', label: 'Socket.IO' }, { id: 'mqtt', label: 'MQTT' }]} />
         <div className="relative min-h-0 flex-1">
           {activeTab?.protocol === 'websocket' && props && <WebSocketPanel {...props} />}
           {activeTab?.protocol === 'sse' && props && <SSEPanel {...props} />}

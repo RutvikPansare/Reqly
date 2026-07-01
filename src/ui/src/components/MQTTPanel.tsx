@@ -7,9 +7,9 @@ import { RealtimeMessageLog } from './RealtimeMessageLog.js';
 import type { UIRealtimeMessage } from './RealtimeMessageLog.js';
 import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
-import type { RealtimeTab } from '../hooks/useRealtimeTabs.js';
+import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 
-interface MQTTPanelProps { tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void; flashSaved?: boolean; }
+interface MQTTPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; }
 
 export function MQTTPanel({ tab, onTabUpdate, onSave, flashSaved }: MQTTPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');

@@ -3,9 +3,9 @@ import { Play, Square } from 'lucide-react';
 import { RealtimeMessageLog } from './RealtimeMessageLog.js';
 import type { UIRealtimeMessage } from './RealtimeMessageLog.js';
 import { ProtocolUrlBar } from './RealtimePanelChrome.js';
-import type { RealtimeTab } from '../hooks/useRealtimeTabs.js';
+import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 
-interface SSEPanelProps { tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void; flashSaved?: boolean; }
+interface SSEPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; }
 
 export function SSEPanel({ tab, onTabUpdate, onSave, flashSaved }: SSEPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');

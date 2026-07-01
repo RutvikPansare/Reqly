@@ -2,6 +2,13 @@
 
 ## 2026-07-01
 
+- [x] **T-199** Refactor GraphQL and gRPC workspaces to use tab layout
+  - Extracted `WorkspaceTabBar` and `useWorkspaceTabs` from Realtime components for generic tab management
+  - Reused `CollectionsPanel` in GraphQL and gRPC workspaces with their respective `typeFilter`s
+  - Removed outdated bookmark button and saved request sidebar
+  - Ensured state persistence across tabs using `key` props and `-Inner` wrapper components
+  - Fixed TypeScript errors and verified all 822 backend/unit tests pass
+
 - [x] **T-198** Realtime workspace UI polish + collections sidebar unification
   - Replaced `RealtimeCollectionsPanel` with filtered `CollectionsPanel` so realtime tabs inherit project switching, search, drag-drop, context menus, rename, and delete
   - Added `typeFilter` support to `CollectionsPanel` and hid REST-only sidebar actions in realtime mode

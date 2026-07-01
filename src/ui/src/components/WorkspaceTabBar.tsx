@@ -1,24 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Plus, ChevronDown } from 'lucide-react';
-import type { RealtimeTab } from '../hooks/useRealtimeTabs.js';
+import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 import { requestBadgeInfo } from '../lib/colors.js';
 
-interface RealtimeTabBarProps {
-  tabs: RealtimeTab[];
+interface WorkspaceTabBarProps {
+  tabs: WorkspaceTab[];
   activeTabId: string;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   onNew: (protocol: string) => void;
+  protocols: { id: string; label: string }[];
 }
 
-const PROTOCOLS = [
-  { id: 'websocket', label: 'WebSocket' },
-  { id: 'sse', label: 'Server-Sent Events' },
-  { id: 'socketio', label: 'Socket.IO' },
-  { id: 'mqtt', label: 'MQTT' },
-];
-
-export function RealtimeTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: RealtimeTabBarProps) {
+export function WorkspaceTabBar({ tabs, activeTabId, onSelect, onClose, onNew, protocols }: WorkspaceTabBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -50,12 +44,18 @@ export function RealtimeTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: 
       </div>
       {/* + button is outside overflow-x-auto so the dropdown is not clipped */}
       <div ref={menuRef} className="relative flex h-full shrink-0 items-center border-l px-1.5" style={{ borderColor: 'var(--border)' }}>
-        <button onClick={() => setMenuOpen(v => !v)} className="btn btn-secondary h-7 rounded px-2" style={{ gap: '4px', minWidth: 'unset' }} title="New tab">
-          <Plus size={13} /><ChevronDown size={11} />
+        <button onClick={() => {
+          if (protocols.length === 1) {
+            onNew(protocols[0].id);
+          } else {
+            setMenuOpen(v => !v);
+          }
+        }} className="btn btn-secondary h-7 rounded px-2" style={{ gap: '4px', minWidth: 'unset' }} title="New tab">
+          <Plus size={13} />{protocols.length > 1 && <ChevronDown size={11} />}
         </button>
-        {menuOpen && (
+        {menuOpen && protocols.length > 1 && (
           <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded py-1" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}>
-            {PROTOCOLS.map(proto => (
+            {protocols.map(proto => (
               <button key={proto.id} className="w-full px-4 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-3)]" style={{ color: 'var(--text-primary)' }} onClick={() => { onNew(proto.id); setMenuOpen(false); }}>{proto.label}</button>
             ))}
           </div>
