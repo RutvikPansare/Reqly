@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import WebSocket from 'ws';
-import EventSource from 'eventsource';
+import * as EventSourceLib from 'eventsource';
+const EventSource = (EventSourceLib as any).default || EventSourceLib;
 import { io as socketIo } from 'socket.io-client';
 import mqtt from 'mqtt';
 import type { RealtimeConfig } from '../types/request.js';
