@@ -229,6 +229,55 @@ describe('runRealtimeCapture - SSE', () => {
     expect(result.errorMessage).toBeTruthy();
   });
 
+  // Bug fix: onerror fired after a successful connect (server closes the stream)
+  // must NOT produce isError:true - it is a normal graceful stream end.
+  it('does not set isError when server closes connection after successful connect', async () => {
+    const es = makeFakeEs();
+    const adapters: RealtimeAdapters = { createEventSource: () => es };
+
+    setImmediate(() => {
+      es._emitOpen();
+      es._emitEvent('message', 'event-1');
+      es._emitEvent('message', 'event-2');
+      es._emitError({}); // server closed the connection (EventSource fires onerror on EOF)
+    });
+
+    const result = await runRealtimeCapture(
+      { type: 'sse', url: 'http://localhost:9999/events', config: {} },
+      { captureTimeout: 5 },
+      adapters,
+    );
+
+    expect(result.isError).toBeFalsy();
+    const serverMsgs = result.messages.filter(m => m.source === 'server');
+    expect(serverMsgs).toHaveLength(2);
+    expect(serverMsgs[0].payload).toBe('event-1');
+    expect(serverMsgs[1].payload).toBe('event-2');
+  });
+
+  // Bug fix: EsLike interface uses W3C EventSource API (onopen/onerror properties +
+  // addEventListener) not Node.js EventEmitter .on() - verify executor wires correctly.
+  it('wires executor via onopen/addEventListener/onerror (W3C API not EventEmitter)', async () => {
+    const es = makeFakeEs();
+    const addEventListenerSpy = vi.spyOn(es, 'addEventListener');
+    const adapters: RealtimeAdapters = { createEventSource: () => es };
+
+    // Fire open synchronously after a microtask so the executor has set up handlers
+    setImmediate(() => es._emitOpen());
+
+    await runRealtimeCapture(
+      { type: 'sse', url: 'http://localhost:9999/events', config: {} },
+      { captureTimeout: 0.05 },
+      adapters,
+    );
+
+    // onopen and onerror must be set as properties (not via .on())
+    expect(typeof es.onopen).toBe('function');
+    expect(typeof es.onerror).toBe('function');
+    // addEventListener must be called for the event type (not .on())
+    expect(addEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+  });
+
   it('respects custom eventType from config', async () => {
     const es = makeFakeEs();
     const adapters: RealtimeAdapters = { createEventSource: () => es };
