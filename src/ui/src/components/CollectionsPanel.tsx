@@ -279,9 +279,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); setLastMcpActivityAt(d.lastMcpActivityAt ?? null); }).catch(() => {});
   };
 
-  const visibleCollections = typeFilter
-    ? collections.filter(col => col.requests.some((r: any) => typeFilter.includes(r.type)))
-    : collections;
+  const visibleCollections = collections;
 
   useEffect(() => {
     loadData();
