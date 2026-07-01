@@ -60,7 +60,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
   return (
     <div className="flex h-full w-full overflow-hidden">
       <div className="w-72 shrink-0 border-r" style={{ borderColor: 'var(--border)' }}>
-        <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} />
+        <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} defaultRequestType="websocket" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <RealtimeTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} />

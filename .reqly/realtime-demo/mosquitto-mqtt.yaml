@@ -5,3 +5,4 @@ realtime:
   mqttTopics:
     - name: reqly/test
       qos: 0
+  retain: false

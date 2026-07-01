@@ -13,7 +13,8 @@ interface CollectionsPanelProps {
   activeRequest: any;
   onSelectRequest: (req: any, collectionName: string) => void;
   onRunCollection: (name: string) => void;
-  typeFilter?: string[];
+  typeFilter?: string[];       // when set, only show requests with matching type
+  defaultRequestType?: string; // default type for new requests added via sidebar
 }
 
 function formatProjectPath(p: string) {
@@ -237,7 +238,7 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
   );
 }
 
-export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection, typeFilter = undefined }: CollectionsPanelProps) {
+export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection, typeFilter = undefined, defaultRequestType = undefined }: CollectionsPanelProps) {
   const [collections, setCollections] = useState<any[]>([]);
   const [projectPath, setProjectPath] = useState<string>('');
   const [lastMcpActivityAt, setLastMcpActivityAt] = useState<number | null>(null);
@@ -314,7 +315,9 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const handleAddReq = async (colName: string) => {
     if (newReqName.trim()) {
-      const req = { name: newReqName.trim(), method: 'GET', url: 'https://api.example.com' };
+      const req = defaultRequestType
+        ? { name: newReqName.trim(), type: defaultRequestType, url: '' }
+        : { name: newReqName.trim(), method: 'GET', url: 'https://api.example.com' };
       await addRequest(colName, req);
       onSelectRequest(req, colName);
       loadData();
@@ -549,30 +552,26 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   )}
                 </div>
                 <div className="flex items-center gap-0.5">
-                  {!typeFilter && (
-                    <>
-                      <button
-                        className="px-1.5 flex items-center transition-colors"
-                        style={{ color: 'var(--text-muted)' }}
-                        title="Add Request"
-                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                        onClick={(e) => { e.stopPropagation(); setAddingReqTo(col.name); setExpandedCols(p => ({ ...p, [col.name]: true })); }}
-                      >
-                        <Plus size={14} />
-                      </button>
-                      <button
-                        className="px-1.5 flex items-center transition-colors"
-                        style={{ color: 'var(--text-muted)' }}
-                        title="Run Collection"
-                        onMouseEnter={e => (e.currentTarget.style.color = '#60a5fa')}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                        onClick={(e) => { e.stopPropagation(); onRunCollection(col.name); }}
-                      >
-                        <Play size={14} />
-                      </button>
-                    </>
-                  )}
+                  <button
+                    className="px-1.5 flex items-center transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    title="Add Request"
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    onClick={(e) => { e.stopPropagation(); setAddingReqTo(col.name); setExpandedCols(p => ({ ...p, [col.name]: true })); }}
+                  >
+                    <Plus size={14} />
+                  </button>
+                  <button
+                    className="px-1.5 flex items-center transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    title="Run Collection"
+                    onMouseEnter={e => (e.currentTarget.style.color = '#60a5fa')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    onClick={(e) => { e.stopPropagation(); onRunCollection(col.name); }}
+                  >
+                    <Play size={14} />
+                  </button>
                   <button
                     className="px-1.5 flex items-center transition-colors"
                     style={{ color: 'var(--text-muted)' }}
@@ -598,7 +597,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
               {isExpanded && (
                 <ul className="pl-4 ml-1.5 space-y-0.5 mt-0.5 mb-1" style={{ borderLeft: '1px solid var(--border)' }}>
-                  {!typeFilter && addingReqTo === col.name && (
+                  {addingReqTo === col.name && (
                     <li className="py-1 pl-2">
                       <input
                         autoFocus
