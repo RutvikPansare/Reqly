@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Send as SendIcon, Loader2, Save, Bookmark, Copy, Check, Search, X,
 } from 'lucide-react';
@@ -66,7 +66,7 @@ function loadPersistedState() {
   try { return JSON.parse(localStorage.getItem(GRPC_STATE_KEY) ?? 'null'); } catch { return null; }
 }
 
-export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
+export function GrpcWorkspace({ initialRequest, onUpdate }: GrpcWorkspaceProps = {}) {
   // Seed: explicit initialRequest (sidebar click) wins; otherwise fall back to last-saved workspace state
   const seed = initialRequest ?? loadPersistedState();
 
@@ -109,7 +109,34 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
   const isMultiMessage = streamingType === 'client' || streamingType === 'bidirectional';
   const isStreaming    = streamingType !== 'unary';
 
-  // --- Persist workspace state to localStorage (debounced 600ms) ---
+  // Track the last initialRequest identity we applied so we can tell apart
+  // sidebar clicks (different identity) from onUpdate echoes (same identity).
+  const prevRequestIdRef = useRef<string | null>(
+    seed ? `${seed._collection}::${seed.name}` : null
+  );
+
+  // React to sidebar clicks: when initialRequest changes to a genuinely
+  // different request, update all state fields from the new request.
+  useEffect(() => {
+    if (!initialRequest) return;
+    const id = `${initialRequest._collection}::${initialRequest.name}`;
+    if (id === prevRequestIdRef.current) return; // echo from onUpdate, ignore
+    prevRequestIdRef.current = id;
+    setUrl(initialRequest.url ?? '');
+    setProtoFile(initialRequest.grpc?.protoFile ?? '');
+    setService(initialRequest.grpc?.service ?? '');
+    setMethod(initialRequest.grpc?.method ?? '');
+    setInsecure(initialRequest.grpc?.insecure ?? true);
+    setStreamTimeout(initialRequest.grpc?.streamTimeout ?? 10);
+    setStreamingType(initStreamingType(initialRequest));
+    setMessageJson(initMessageJson(initialRequest));
+    setMetadata(headersToKv(initialRequest.headers));
+    setActiveCollection(initialRequest._collection);
+    setActiveRequestName(initialRequest.name);
+    setResponse(null);
+  }, [initialRequest]);
+
+  // --- Persist workspace state to localStorage + propagate back to App (debounced 600ms) ---
   useEffect(() => {
     const t = setTimeout(() => {
       const state = {
@@ -119,9 +146,11 @@ export function GrpcWorkspace({ initialRequest }: GrpcWorkspaceProps = {}) {
         body: { type: 'raw', raw: messageJson },
       };
       localStorage.setItem(GRPC_STATE_KEY, JSON.stringify(state));
+      // Propagate back to App so reqly.grpcRequest stays current for refresh
+      onUpdate?.(state);
     }, 600);
     return () => clearTimeout(t);
-  }, [url, protoFile, service, method, insecure, streamTimeout, streamingType, messageJson, metadata, activeCollection, activeRequestName]);
+  }, [url, protoFile, service, method, insecure, streamTimeout, streamingType, messageJson, metadata, activeCollection, activeRequestName, onUpdate]);
 
   // --- Load collections + saved gRPC requests ---
   const reloadSaved = () => {

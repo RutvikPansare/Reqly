@@ -575,7 +575,7 @@ function App() {
           {activePanel === 'graphql' ? (
             <GraphQLWorkspace initialRequest={graphqlRequest} />
           ) : activePanel === 'grpc' ? (
-            <GrpcWorkspace initialRequest={grpcRequest} />
+            <GrpcWorkspace initialRequest={grpcRequest} onUpdate={setGrpcRequest} />
           ) : activePanel === 'flows' ? (
             selectedFlowName ? (
               <FlowWorkspace
