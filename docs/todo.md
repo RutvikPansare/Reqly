@@ -41,24 +41,6 @@
 
 
 
-- [ ] **T-192** UI: SocketIOPanel + MQTTPanel (browser-build packages in `src/ui/package.json`)
-  - **npm install in `src/ui/`** (before writing any component):
-    - `cd src/ui && npm install socket.io-client mqtt`
-    - These are browser-compatible builds. Confirm they appear in `src/ui/package.json` dependencies. Do NOT add to root `package.json`.
-  - **File: `src/ui/src/components/SocketIOPanel.tsx`** (NEW, <180 lines)
-  - Import: `import { io } from 'socket.io-client'` (browser build, no `.js` extension needed for npm packages)
-  - `const socketRef = useRef<ReturnType<typeof io> | null>(null)`
-  - Connect: `io(tab.url, { path: tab.realtime?.path ?? '/socket.io', ...(authType === 'bearer' ? { auth: { token } } : {}) })`
-  - Listen: `socket.onAny((eventName, data) => ...)` to capture all events
-  - Send: `socket.emit(eventName, messageText)`
-  - Layout: URL row + config row (path, version pills v4/v3/v2, auth picker) + event+message section + `<RealtimeMessageLog>`
-  - **File: `src/ui/src/components/MQTTPanel.tsx`** (NEW, <160 lines)
-  - Import: `import mqtt from 'mqtt'` (browser build uses WebSocket transport automatically when URL is `ws://` or `wss://`)
-  - `const clientRef = useRef<ReturnType<typeof mqtt.connect> | null>(null)`
-  - Connect: `mqtt.connect(tab.url, { clientId: tab.realtime?.mqttClientId ?? crypto.randomUUID().slice(0,8), username, password, keepalive, clean })`
-  - Events: `client.on('connect')`, `client.on('message', (topic, buf) => ...)`, `client.on('error')`, `client.on('close')`
-  - Layout: URL + Client ID row + collapsible config (username, password, keepalive, clean) + subscribe section (topic input, QoS 0/1/2 pills, Subscribe button, list of active subscriptions each with Unsubscribe) + publish section (topic input, retain checkbox, CodeMirror editor, Publish button) + `<RealtimeMessageLog>` fills rest
-  - Split subscribe + publish into inline sub-sections within the file (no separate files needed if total < 180 lines)
 
 - [ ] **T-193** UI: `RealtimeWorkspace` shell + save/load + state persistence
   - **File: `src/ui/src/components/RealtimeWorkspace.tsx`** (NEW, <160 lines)

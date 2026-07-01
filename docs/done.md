@@ -2,6 +2,12 @@
 
 ## 2026-07-01
 
+- [x] **T-192** UI: SocketIOPanel + MQTTPanel
+  - NEW `src/ui/src/components/SocketIOPanel.tsx`
+  - NEW `src/ui/src/components/MQTTPanel.tsx`
+  - Installed `socket.io-client` and `mqtt` in `src/ui/package.json`
+
+
 - [x] **T-191** UI: WebSocketPanel + SSEPanel
   - NEW `src/ui/src/components/WebSocketPanel.tsx`
   - NEW `src/ui/src/components/SSEPanel.tsx`
