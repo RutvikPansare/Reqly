@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader2, Copy, Check, Search, Braces, BookMarked, X, AlertTriangle } from 'lucide-react';
 import { statusColorClass } from '../lib/colors';
 import { TsInterfaceModal } from './TsInterfaceModal';
@@ -542,9 +543,9 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
       {showTsInterface && body != null && (
         <TsInterfaceModal body={body} onClose={() => setShowTsInterface(false)} />
       )}
-      {showSaveModal && (
+      {showSaveModal && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
           style={{ background: 'rgba(0,0,0,0.6)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowSaveModal(false); }}
         >
@@ -605,7 +606,8 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
