@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
-import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, moveRequest, exportCollection, deleteExample } from '../api';
-import { requestBadgeInfo } from '../lib/colors';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { SidebarEnvSection } from './SidebarEnvSection';
-import { SuccessToast } from './ui/SuccessToast';
-import { CollectionSettingsModal } from './CollectionSettingsModal';
-import { Modal, ModalFooter } from './ui/Modal';
-import { Button } from './ui/Button';
+import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, moveRequest, exportCollection, deleteExample } from '../api.js';
+import { requestBadgeInfo } from '../lib/colors.js';
+import { useLocalStorage } from '../hooks/useLocalStorage.js';
+import { SidebarEnvSection } from './SidebarEnvSection.js';
+import { SuccessToast } from './ui/SuccessToast.js';
+import { CollectionSettingsModal } from './CollectionSettingsModal.js';
+import { Modal, ModalFooter } from './ui/Modal.js';
+import { Button } from './ui/Button.js';
 
 interface CollectionsPanelProps {
   activeRequest: any;
   onSelectRequest: (req: any, collectionName: string) => void;
   onRunCollection: (name: string) => void;
+  typeFilter?: string[];
 }
 
 function formatProjectPath(p: string) {
@@ -236,7 +237,7 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
   );
 }
 
-export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection }: CollectionsPanelProps) {
+export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection, typeFilter = undefined }: CollectionsPanelProps) {
   const [collections, setCollections] = useState<any[]>([]);
   const [projectPath, setProjectPath] = useState<string>('');
   const [lastMcpActivityAt, setLastMcpActivityAt] = useState<number | null>(null);
@@ -276,6 +277,10 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     fetchCollections().then(setCollections).catch(console.error);
     fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); setLastMcpActivityAt(d.lastMcpActivityAt ?? null); }).catch(() => {});
   };
+
+  const visibleCollections = typeFilter
+    ? collections.filter(col => col.requests.some((r: any) => typeFilter.includes(r.type)))
+    : collections;
 
   useEffect(() => {
     loadData();
@@ -455,6 +460,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           const q = search.toLowerCase();
           const matches = collections.flatMap(col =>
             col.requests
+              .filter((r: any) => !typeFilter || typeFilter.includes(r.type))
               .filter((r: any) => r.name?.toLowerCase().includes(q) || r.url?.toLowerCase().includes(q))
               .map((r: any) => ({ req: r, col: col.name }))
           );
@@ -480,12 +486,15 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         })()}
 
         {/* Normal tree view (hidden when searching) */}
-        {!search.trim() && collections.length === 0 && !creatingCol && (
+        {!search.trim() && visibleCollections.length === 0 && !creatingCol && (
           <SidebarEmptyHint />
         )}
 
-        {!search.trim() && collections.map(col => {
+        {!search.trim() && visibleCollections.map(col => {
           const isExpanded = expandedCols[col.name] !== false;
+          const visibleRequests = typeFilter
+            ? col.requests.filter((r: any) => typeFilter.includes(r.type))
+            : col.requests;
           return (
             <div key={col.name} className="select-none">
               <div
@@ -540,26 +549,30 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                   )}
                 </div>
                 <div className="flex items-center gap-0.5">
-                  <button
-                    className="px-1.5 flex items-center transition-colors"
-                    style={{ color: 'var(--text-muted)' }}
-                    title="Add Request"
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                    onClick={(e) => { e.stopPropagation(); setAddingReqTo(col.name); setExpandedCols(p => ({ ...p, [col.name]: true })); }}
-                  >
-                    <Plus size={14} />
-                  </button>
-                  <button
-                    className="px-1.5 flex items-center transition-colors"
-                    style={{ color: 'var(--text-muted)' }}
-                    title="Run Collection"
-                    onMouseEnter={e => (e.currentTarget.style.color = '#60a5fa')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                    onClick={(e) => { e.stopPropagation(); onRunCollection(col.name); }}
-                  >
-                    <Play size={14} />
-                  </button>
+                  {!typeFilter && (
+                    <>
+                      <button
+                        className="px-1.5 flex items-center transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        title="Add Request"
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                        onClick={(e) => { e.stopPropagation(); setAddingReqTo(col.name); setExpandedCols(p => ({ ...p, [col.name]: true })); }}
+                      >
+                        <Plus size={14} />
+                      </button>
+                      <button
+                        className="px-1.5 flex items-center transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        title="Run Collection"
+                        onMouseEnter={e => (e.currentTarget.style.color = '#60a5fa')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                        onClick={(e) => { e.stopPropagation(); onRunCollection(col.name); }}
+                      >
+                        <Play size={14} />
+                      </button>
+                    </>
+                  )}
                   <button
                     className="px-1.5 flex items-center transition-colors"
                     style={{ color: 'var(--text-muted)' }}
@@ -585,7 +598,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
               {isExpanded && (
                 <ul className="pl-4 ml-1.5 space-y-0.5 mt-0.5 mb-1" style={{ borderLeft: '1px solid var(--border)' }}>
-                  {addingReqTo === col.name && (
+                  {!typeFilter && addingReqTo === col.name && (
                     <li className="py-1 pl-2">
                       <input
                         autoFocus
@@ -602,7 +615,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     </li>
                   )}
 
-                  {col.requests.map((req: any) => {
+                  {visibleRequests.map((req: any) => {
                     const isActive = activeRequest?.name === req.name && activeRequest?._collection === col.name && !activeRequest?._isExample;
                     const isRenaming = renaming?.col === col.name && renaming?.req === req.name;
                     const reqKey = `${col.name}/${req.name}`;
@@ -701,7 +714,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                       </li>
                     );
                   })}
-                  {col.requests.length === 0 && !addingReqTo && <li className="text-xs text-gray-600 italic py-1 pl-2">No requests</li>}
+                  {visibleRequests.length === 0 && !addingReqTo && <li className="text-xs text-gray-600 italic py-1 pl-2">No requests</li>}
                 </ul>
               )}
             </div>

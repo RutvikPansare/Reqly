@@ -152,6 +152,13 @@
   }
   .btn-secondary:hover:not(:disabled) { background: #323239; }
 
+  .btn-danger {
+    background: #ef4444;
+    color: #fff;
+    border-color: #ef4444;
+  }
+  .btn-danger:hover:not(:disabled) { background: #dc2626; border-color: #dc2626; }
+
   .btn-ghost {
     background: transparent;
     color: var(--text-secondary);

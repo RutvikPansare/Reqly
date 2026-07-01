@@ -2,6 +2,13 @@
 
 ## 2026-07-01
 
+- [x] **T-198** Realtime workspace UI polish + collections sidebar unification
+  - Replaced `RealtimeCollectionsPanel` with filtered `CollectionsPanel` so realtime tabs inherit project switching, search, drag-drop, context menus, rename, and delete
+  - Added `typeFilter` support to `CollectionsPanel` and hid REST-only sidebar actions in realtime mode
+  - Restyled WebSocket, SSE, Socket.IO, and MQTT panels to match the gRPC/REST URL bar and toolbar pattern
+  - Tightened the realtime tab bar add button and added shared `btn-danger` styling for disconnect actions
+  - Built `src/ui`, copied `dist/*` to `dist/ui/`, and verified all 822 tests pass
+
 - [x] **T-197** End-to-end realtime feature verification + 3 bug fixes
   - Fixed `eventsource` ESM import: `* as EventSourceLib` → named import `{ EventSource }` 
   - Fixed SSE `EsLike` interface to use W3C API (`addEventListener`/`onopen`/`onerror`) instead of `.on()`
@@ -581,4 +588,3 @@
   - Updated `packages/desktop/src/main.ts` with `titleBarStyle: hiddenInset`
   - Made `App.tsx` header draggable in Electron and added padding for traffic lights
   - Removed `font-bold` from `ResponseViewer` and `GraphQLResponseViewer` to match latency styling
-

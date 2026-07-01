@@ -18,6 +18,10 @@ Two fundamentally different use cases require two different architectures.
 
 **Rule for future protocol additions:** If the protocol is stateless/request-response, add it to the engine and expose via MCP first, UI second (same as REST and gRPC unary). If the protocol requires a persistent connection: buffered executor for MCP, direct browser connection for UI.
 
+## 2026-07-01 - Realtime workspace reuses the main CollectionsPanel with a type filter
+
+The custom `RealtimeCollectionsPanel` was replaced with the existing `CollectionsPanel` plus a `typeFilter` prop limited to realtime request types. Reasoning: the REST sidebar already had project switching, search, drag-drop move, rename, delete, export, context menus, and better empty states. Keeping a second sidebar in sync would create feature drift and extra UI maintenance for no product value. Filtering the shared panel keeps realtime saved requests in the same collection model while preserving a focused realtime-only view.
+
 ## 2026-07-01 - gRPC streaming split into separate grpc-streaming.ts, not merged into grpc-runner.ts
 
 Streaming modes (server/client/bidirectional) live in `src/engine/grpc-streaming.ts` rather than being overloaded into `grpc-runner.ts`. Reasoning: unary and streaming RPCs have fundamentally different callback shapes (callback vs EventEmitter). Keeping them separate keeps each file focused and testable in isolation without fake streaming infrastructure contaminating unary tests.
