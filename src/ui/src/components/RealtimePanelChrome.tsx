@@ -13,7 +13,7 @@ export function statusColor(status: ConnectionStatus) {
   return statusColors[status];
 }
 
-export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave, flashSaved }: {
+export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave, flashSaved, isDirty }: {
   badge: string;
   url: string;
   placeholder: string;
@@ -24,6 +24,7 @@ export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, st
   onAction: () => void;
   onSave: () => void;
   flashSaved?: boolean;
+  isDirty?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -36,10 +37,10 @@ export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, st
       <button onClick={onAction} className={`btn ${status === 'connected' ? 'btn-danger' : 'btn-primary'} h-8 min-w-[96px] justify-center rounded px-3`}>{action}</button>
       <button
         onClick={onSave}
-        className="btn h-8 rounded gap-1.5 px-3 transition-colors"
+        className={`btn h-8 rounded gap-1.5 px-3 transition-colors ${isDirty && !flashSaved ? 'btn-primary' : ''}`}
         style={flashSaved
           ? { background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#10b981' }
-          : { background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+          : isDirty ? {} : { background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
         title="Save request"
       >
         {flashSaved ? <Check size={13} /> : <Save size={13} />}

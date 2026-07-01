@@ -74,7 +74,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
     }, 100);
   };
 
-  const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave, flashSaved: savedFlash };
+  const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave, flashSaved: savedFlash, isDirty: isDirty() };
 
   return (
     <div className="flex h-full w-full overflow-hidden">

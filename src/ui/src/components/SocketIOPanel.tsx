@@ -9,9 +9,9 @@ import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 
-interface SocketIOPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; }
+interface SocketIOPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; }
 
-export function SocketIOPanel({ tab, onTabUpdate, onSave, flashSaved }: SocketIOPanelProps) {
+export function SocketIOPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }: SocketIOPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [messages, setMessages] = useState<UIRealtimeMessage[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -67,7 +67,7 @@ export function SocketIOPanel({ tab, onTabUpdate, onSave, flashSaved }: SocketIO
 
   return (
     <div className="flex h-full flex-col bg-[var(--surface-1)]">
-      <ProtocolUrlBar badge="SIO" url={tab.url} placeholder="http://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} />
+      <ProtocolUrlBar badge="SIO" url={tab.url} placeholder="http://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} isDirty={isDirty} />
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-1.5 text-sm" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}><label className="flex items-center gap-2"><span style={{ color: 'var(--text-secondary)' }}>Path:</span><input className="input h-7 w-40" value={tab.realtime?.path || ''} onChange={e => onTabUpdate({ realtime: { ...tab.realtime, path: e.target.value } })} placeholder="/socket.io" /></label><label className="flex items-center gap-2"><span style={{ color: 'var(--text-secondary)' }}>Auth:</span><select className="input h-7 w-32 py-0" value={tab.realtime?.authType || 'none'} onChange={e => onTabUpdate({ realtime: { ...tab.realtime, authType: e.target.value } })}><option value="none">None</option><option value="bearer">Bearer</option></select></label>{tab.realtime?.authType === 'bearer' && <input className="input h-7 max-w-xs" value={tab.realtime?.token || ''} onChange={e => onTabUpdate({ realtime: { ...tab.realtime, token: e.target.value } })} placeholder="Token" />}</div>
       <div className="flex-1 min-h-0">
         <SplitPane defaultSplit={42} minTop={15} minBottom={20} top={editorPane} bottom={<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />} />

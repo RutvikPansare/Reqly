@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { isDeepEqual } from '../lib/utils';
 
 import {
   Send as SendIcon, Loader2, Save, Copy, Check, Search, X
@@ -213,6 +214,50 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
     catch { return { ok: false, error: 'Message JSON is invalid - fix before invoking' }; }
   };
 
+  const isDirty = useMemo(() => {
+    if (!initialRequest) return true;
+    try {
+      const parsed = parseMessageJson();
+      if (!parsed.ok) return false;
+      
+      const enabledMeta: Record<string, string> = {};
+      for (const m of metadata) {
+        if (m.enabled && m.key.trim()) enabledMeta[m.key.trim()] = m.value;
+      }
+      
+      const cfg: any = {
+        protoFile: protoFile.trim(),
+        service: service.trim(),
+        method: method.trim(),
+        insecure,
+      };
+      if (streamingType !== 'unary') cfg.streaming = streamingType;
+      if (isStreaming) cfg.streamTimeout = streamTimeout;
+      if (isMultiMessage && Array.isArray(parsed.value)) cfg.messages = parsed.value;
+      else cfg.message = parsed.value ?? {};
+
+      const current = {
+        id: initialRequest.id || '',
+        name: activeRequestName || '',
+        method: 'POST',
+        url: url.trim(),
+        type: 'grpc',
+        ...(Object.keys(enabledMeta).length > 0 ? { headers: enabledMeta } : {}),
+        grpc: cfg,
+      };
+
+      const normalize = (r: any) => {
+        if (!r) return {};
+        const { _collection, _multipartFiles, ...rest } = r;
+        return rest;
+      };
+      
+      return !isDeepEqual(normalize(current), normalize(initialRequest));
+    } catch {
+      return false;
+    }
+  }, [initialRequest, activeRequestName, url, metadata, protoFile, service, method, insecure, streamTimeout, streamingType, messageJson, isStreaming, isMultiMessage]);
+
   // --- Handlers ---
   const handleSend = async () => {
     if (!url.trim())       { setSendError('Enter the gRPC server URL (host:port)'); return; }
@@ -358,6 +403,7 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
             isStreaming={isStreaming}
             onSend={handleSend}
             onSave={handleSaveClick}
+            isDirty={isDirty}
           />}
           bottom={<ResponsePanel
             response={response}
@@ -400,6 +446,7 @@ interface RequestPanelProps {
   isStreaming: boolean;
   onSend: () => void;
   onSave: () => void;
+  isDirty?: boolean;
 }
 
 function RequestPanel(p: RequestPanelProps) {
@@ -444,7 +491,7 @@ function RequestPanel(p: RequestPanelProps) {
         </button>
 
         <button
-          className="btn btn-secondary rounded gap-1.5 shrink-0"
+          className={`btn ${p.isDirty && !p.saveSuccess ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5 shrink-0 transition-colors`}
           style={
             p.saveSuccess
               ? { height: '32px', background: '#16a34a', borderColor: '#16a34a', color: '#fff', fontSize: '0.8125rem' }
@@ -569,20 +616,20 @@ function RequestPanel(p: RequestPanelProps) {
       {/* ── Proto / Service / Method ──────────────────────────────────────── */}
       <div
         className="grid grid-cols-3 gap-2 shrink-0"
-        style={{ padding: '6px 16px', borderBottom: '1px solid var(--border)' }}
+        style={{ padding: '4px 16px', borderBottom: '1px solid var(--border)' }}
       >
         {[
           { label: 'Proto File', value: p.protoFile, setter: p.setProtoFile, placeholder: 'grpcbin.proto' },
           { label: 'Service',    value: p.service,   setter: p.setService,   placeholder: 'hello.HelloService' },
           { label: 'Method',     value: p.method,    setter: p.setMethod,    placeholder: 'SayHello' },
         ].map(({ label, value, setter, placeholder }) => (
-          <div key={label} className="flex flex-col gap-1">
+          <div key={label} className="flex flex-col gap-0.5">
             <label className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               {label}
             </label>
             <input
-              className="rounded px-2.5 text-xs font-mono focus:outline-none"
-              style={{ height: '26px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
+              className="rounded px-2 text-[11px] font-mono focus:outline-none"
+              style={{ height: '22px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
               value={value}
               onChange={e => setter(e.target.value)}
               placeholder={placeholder}
@@ -792,11 +839,11 @@ function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelPro
       {/* ── Body content ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-2 gap-1.5">
         {activeTab === 'raw' ? (
-          <pre className="flex-1 overflow-auto text-xs font-mono whitespace-pre-wrap break-all p-2 rounded m-0" style={{ color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <pre className="flex-1 h-full overflow-auto text-xs font-mono whitespace-pre-wrap break-all p-2 rounded m-0" style={{ color: 'var(--text-secondary)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             {JSON.stringify(response, null, 2)}
           </pre>
         ) : isStreamResponse ? (
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 h-full overflow-auto">
             <StreamMessageList messages={response.messages} />
           </div>
         ) : response.isError ? (
@@ -807,9 +854,9 @@ function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelPro
             {response.errorMessage || 'RPC error'}
           </div>
         ) : response.body != null ? (
-          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} className="flex-1" />
+          <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} className="flex-1 h-full" />
         ) : response.response != null ? (
-          <CollapsibleJson label="response" data={response.response} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} className="flex-1" />
+          <CollapsibleJson label="response" data={response.response} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} className="flex-1 h-full" />
         ) : (
           <div className="text-xs italic p-2" style={{ color: 'var(--text-muted)' }}>Empty response body</div>
         )}

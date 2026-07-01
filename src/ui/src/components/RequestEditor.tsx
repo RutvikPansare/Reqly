@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, ExternalLink } from 'lucide-react';
+import { isDeepEqual } from '../lib/utils';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
 import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
@@ -307,11 +308,23 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       return () => window.removeEventListener('keydown', onKey);
     }, [isActive]);
 
+    const isDirty = useMemo(() => {
+      if (!request) return true;
+      try {
+        const req = buildRequest();
+        const { _collection, _multipartFiles, ...restCurrent } = req;
+        const { _collection: _c, _multipartFiles: _m, ...restOriginal } = request;
+        return !isDeepEqual(restCurrent, restOriginal);
+      } catch {
+        return false;
+      }
+    }, [method, url, assertions, headersList, bodyText, bodyType, multipartParts, authType, authProfileId, authCreds, preScript, postScript, request]);
+
     // Report live edits so the parent can track dirty state.
     useEffect(() => {
       if (!onChange) return;
       onChange(buildRequest());
-    }, [method, url, assertions, headersList, bodyText, bodyType, multipartParts, authType, authProfileId, authCreds, preScript, postScript]);
+    }, [isDirty]);
 
   const availableVariables: VariableItem[] = [
     ...Object.entries(collectionVars).map(([k, v]) => ({
@@ -406,7 +419,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
           <SendIcon size={13} />Send
           <span className="text-[10px] opacity-50 ml-0.5">⌘↵</span>
         </button>
-        <button className="btn btn-secondary rounded gap-1.5" onClick={handleSaveWithAuth} title="Save request (⌘S)">
+        <button className={`btn ${isDirty ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5`} onClick={handleSaveWithAuth} title="Save request (⌘S)">
           <SaveIcon size={13} />Save
           <span className="text-[10px] opacity-50 ml-0.5">⌘S</span>
         </button>

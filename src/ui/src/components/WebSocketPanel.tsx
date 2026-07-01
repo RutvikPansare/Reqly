@@ -8,9 +8,9 @@ import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 
-interface WebSocketPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; }
+interface WebSocketPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; }
 
-export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved }: WebSocketPanelProps) {
+export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }: WebSocketPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [messages, setMessages] = useState<UIRealtimeMessage[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -65,7 +65,7 @@ export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved }: WebSock
 
   return (
     <div className="flex h-full flex-col bg-[var(--surface-1)]">
-      <ProtocolUrlBar badge="WS" url={tab.url} placeholder="wss://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} />
+      <ProtocolUrlBar badge="WS" url={tab.url} placeholder="wss://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} isDirty={isDirty} />
       <div className="flex items-center gap-2 border-b px-4" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}>{(['communication', 'protocols'] as const).map(name => <button key={name} className={`tab-btn ${subTab === name ? 'active' : ''}`} onClick={() => setSubTab(name)}>{name === 'communication' ? 'Communication' : 'Protocols'}</button>)}</div>
       <div className="flex-1 min-h-0">
         <SplitPane defaultSplit={38} minTop={15} minBottom={20} top={editorPane} bottom={<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />} />

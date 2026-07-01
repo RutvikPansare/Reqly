@@ -1,0 +1,5 @@
+id: '999'
+name: test-grpc
+type: grpc
+url: localhost
+grpc: {}

@@ -502,7 +502,7 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
             )}
 
             <button
-              className={`btn ${saveSuccess ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5 h-8`}
+              className={`btn ${saveSuccess || isDirty ? 'btn-primary' : 'btn-secondary'} rounded gap-1.5 h-8 transition-colors`}
               style={saveSuccess ? { background: '#16a34a', borderColor: '#16a34a' } : undefined}
               onClick={handleSaveClick}
               title="Save to collection"

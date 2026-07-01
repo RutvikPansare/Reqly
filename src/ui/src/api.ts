@@ -214,7 +214,10 @@ export async function addRequest(collectionName: string, request: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)
   });
-  if (!res.ok) throw new Error('Failed to add request');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to add request');
+  }
   return res.json();
 }
 
@@ -224,7 +227,10 @@ export async function updateRequest(collectionName: string, oldRequestName: stri
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)
   });
-  if (!res.ok) throw new Error('Failed to update request');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to update request');
+  }
   return res.json();
 }
 

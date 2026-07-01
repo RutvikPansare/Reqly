@@ -507,7 +507,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
               key={col.name} 
               className="select-none"
               onDragOver={e => {
-                if (!draggedReq || draggedReq.col === col.name) return;
+                if (draggedReq?.col === col.name) return;
                 e.preventDefault();
                 setDragOverCol(col.name);
               }}

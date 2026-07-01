@@ -399,6 +399,10 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
   app.post('/api/collections/:name/requests', async (req, res) => {
     try {
+      const exists = fsSync.existsSync(path.join(context.collectionManager.getBaseDir(), req.params.name, `${req.body.name}.yaml`));
+      if (exists) {
+        return res.status(409).json({ error: `A request named "${req.body.name}" already exists. Please choose a different name.` });
+      }
       await context.collectionManager.addRequest(req.params.name, req.body);
       res.json({ success: true });
     } catch (e: any) {
@@ -410,6 +414,10 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     try {
       if (req.params.requestName !== req.body.name) {
         // Handle rename: delete old, add new
+        const exists = fsSync.existsSync(path.join(context.collectionManager.getBaseDir(), req.params.name, `${req.body.name}.yaml`));
+        if (exists) {
+           return res.status(409).json({ error: `A request named "${req.body.name}" already exists. Please choose a different name.` });
+        }
         await context.collectionManager.deleteRequest(req.params.name, req.params.requestName);
       }
       await context.collectionManager.addRequest(req.params.name, req.body);

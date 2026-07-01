@@ -1,0 +1,5 @@
+type: sse
+url: v
+realtime: {}
+name: New SSE
+id: '1782944279086'

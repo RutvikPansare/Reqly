@@ -1,0 +1,7 @@
+id: graphql-1782944182572
+name: t1
+method: POST
+url: ''
+type: graphql
+graphql:
+  query: ''
