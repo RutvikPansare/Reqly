@@ -886,6 +886,8 @@ function ResponsePanel({ response, isSending, copied, onCopy }: ResponsePanelPro
           </div>
         ) : response.body != null ? (
           <CollapsibleJson label="response" data={response.body} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} />
+        ) : response.response != null ? (
+          <CollapsibleJson label="response" data={response.response} defaultOpen={true} accent="#06b6d4" filter={bodyFilter} />
         ) : (
           <div className="text-xs italic p-2" style={{ color: 'var(--text-muted)' }}>Empty response body</div>
         )}
