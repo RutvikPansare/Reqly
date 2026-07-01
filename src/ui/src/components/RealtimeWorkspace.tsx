@@ -17,8 +17,11 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
   const onUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!initialRequest) return;
-    const identity = `${initialRequest._collection ?? ''}::${initialRequest.name ?? ''}::${initialRequest.id ?? ''}`;
+    // Only react to sidebar-selected requests (must have _collection + name).
+    // Ignoring onUpdate feedback (which lacks _collection or has a generated id but same name)
+    // prevents the cycle: onUpdate → setRealtimeRequest → initialRequest change → loadTab → setActiveTabId switches tab.
+    if (!initialRequest?._collection || !initialRequest?.name) return;
+    const identity = `${initialRequest._collection}::${initialRequest.name}`;
     if (identity === prevRequestIdRef.current) return;
     prevRequestIdRef.current = identity;
     loadTab(initialRequest);
