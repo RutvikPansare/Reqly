@@ -2,6 +2,12 @@
 
 ## 2026-07-01
 
+- [x] **T-189** UI: shared display component + tab system
+  - NEW `src/ui/src/components/RealtimeMessageLog.tsx`
+  - NEW `src/ui/src/hooks/useRealtimeTabs.ts`
+  - NEW `src/ui/src/components/RealtimeTabBar.tsx`
+
+
 - [x] **T-188** UI: `api.ts` additions + NavRail + App.tsx routing
   - Added `runRealtimeCapture` to `api.ts`
   - Added realtime panel to `NavRail`

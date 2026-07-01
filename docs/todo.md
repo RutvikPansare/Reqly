@@ -38,30 +38,6 @@
 > - Badge system: `requestBadgeInfo()` in `src/ui/src/lib/colors.ts`
 
 
-- [ ] **T-189** UI: shared display component + tab system
-  - **File: `src/ui/src/components/RealtimeMessageLog.tsx`** (NEW, <150 lines)
-    - Pure display component. Receives an array of messages from the parent panel, renders them. Zero connection logic.
-    - Props: `{ messages: UIRealtimeMessage[]; title?: string; onClear: () => void }`
-    - Define at top: `export interface UIRealtimeMessage { id: string; ts: number; source: 'client'|'server'|'info'|'error'; payload: string; topic?: string; event?: string }`
-    - Header: `panel-header` CSS class (matches REST `ResponseViewer`), title left, right side: Trash icon (onClear), scroll-top icon, scroll-bottom icon, auto-scroll toggle (green = active)
-    - Body: `flex-1 min-h-0 overflow-y-auto` with `ref={logRef}`. Auto-scroll: `useEffect` on `messages.length`, calls `logRef.current?.scrollTo({ top: logRef.current.scrollHeight })` if auto-scroll on. User scrolling up (detected via `onScroll` comparing `scrollTop + clientHeight < scrollHeight - 10`) turns auto-scroll off.
-    - Each row (inline - keeps file count down): icon + prefix + payload (truncated, click to expand) + timestamp `HH:MM:SS` + copy-on-hover button
-      - Icon: `ArrowUpRight` `#f59e0b` (client), `ArrowDownLeft` `#14b8a6` (server), `Info` muted (info), `AlertCircle` `#f87171` (error)
-      - `[topic]` or `[event]` prefix in muted text before payload
-    - Empty state: italic muted "Connect to see messages"
-  - **File: `src/ui/src/hooks/useRealtimeTabs.ts`** (NEW, <120 lines)
-    - `RealtimeTab`: `{ id: string; tabName?: string; protocol: 'websocket'|'sse'|'socketio'|'mqtt'; url: string; realtime?: any; name?: string; _collection?: string }`
-    - `useRealtimeTabs()` returns: `{ tabs, activeTabId, activeTab, addTab, closeTab, updateTab, setActiveTabId }`
-    - Persists to `reqly.realtimeTabs` (300ms debounce), reads from localStorage on init
-    - Default: `[{ id: 'rt-default', protocol: 'websocket', url: '', tabName: 'New WebSocket' }]`
-    - `addTab(protocol)`: `id: 'rt-' + Date.now()`, sensible `tabName` per protocol
-    - `closeTab(id)`: never closes last tab, activates neighbour
-  - **File: `src/ui/src/components/RealtimeTabBar.tsx`** (NEW, <100 lines)
-    - Props: `{ tabs: RealtimeTab[]; activeTabId: string; onSelect: (id) => void; onClose: (id) => void; onNew: (protocol) => void }`
-    - 40px height, `surface-1` bg, `var(--border)` bottom - identical to REST tab bar in App.tsx
-    - Each tab: `requestBadgeInfo(tab.protocol, undefined)` badge + name + X button
-    - `+` dropdown: WebSocket / SSE / Socket.IO / MQTT options
-    - Active: `h-0.5 bg-blue-500` absolute bottom
 
 - [ ] **T-190** UI: `RealtimeCollectionsPanel`
   - **File: `src/ui/src/components/RealtimeCollectionsPanel.tsx`** (NEW, <150 lines)
