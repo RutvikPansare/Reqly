@@ -80,7 +80,26 @@ This means:
 
 If you find yourself writing LLM logic into the server, a cron job, or a route handler - stop. The server is dumb by design. Keep it that way.
 
+## Protocol Architecture Rule: Request/Response vs. Long-Lived Connections
+
+This distinction is **mandatory reading before implementing any new protocol**.
+
+### Request/Response protocols (REST, GraphQL, gRPC)
+The server owns the full lifecycle. Engine class executes the request, returns a result. MCP tool and Express route both call the same engine. UI calls the Express route and renders the result. Standard Reqly pattern.
+
+### Realtime protocols (WebSocket, SSE, Socket.IO, MQTT)
+Connections are long-lived. A server-side proxy creates fatal problems: double-hop latency, sessions lost on server restart, doubled file descriptors. The correct split:
+
+**For agents (MCP):** Buffered executor - connect → capture `captureTimeout` seconds → disconnect → return `{ messages, truncated }`. Lives in `src/engine/realtime-executor.ts`, exposed via MCP `run_realtime`. Stateless.
+
+**For humans (UI):** Direct browser connections. No proxy through Reqly server.
+- WebSocket + SSE: native browser APIs (`new WebSocket()`, `new EventSource()`), zero packages
+- Socket.IO + MQTT: browser builds in `src/ui/package.json` only, never root `package.json`
+
+Realtime requests ARE saved to collections as YAML (`type: websocket`, etc.) so agents can reference them via `run_realtime`.
+
 ## 1. Tech stack
+
 
 - **Runtime:** Node.js + TypeScript
 - **Local server:** Express or Fastify serving the MCP stdio interface and the localhost web UI

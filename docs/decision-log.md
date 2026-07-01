@@ -6,6 +6,18 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-01 - Realtime protocols use split architecture: buffered executor for MCP, direct browser connections for UI
+
+Two fundamentally different use cases require two different architectures.
+
+**Agent/MCP use (ephemeral, bounded):** AI agents need to verify that a realtime endpoint works - "connect, grab a few messages, confirm the protocol handshake, disconnect." This maps naturally to the same buffered executor pattern as gRPC streaming: `realtime-executor.ts` opens a connection, buffers messages for `captureTimeout` seconds, closes, returns `{ messages, truncated }`. Stateless, no server-side sessions, no cleanup required. One MCP tool: `run_realtime`.
+
+**UI interactive use (long-lived, persistent):** Human developers need to stay connected for minutes or hours, send and receive messages interactively. Proxying through the Reqly Node.js server creates double-hop latency (client → Reqly → target), doubles file descriptors, and loses sessions on server restart. The correct architecture is direct browser connections: `new WebSocket()` and `new EventSource()` are native browser APIs (zero packages). `socket.io-client` and `mqtt` browser builds go in `src/ui/package.json` only. The browser holds the session; the Reqly server is not in the data path.
+
+**Why this is the only case where UI has capabilities MCP doesn't replicate 1:1:** Interactive long-lived sessions are inherently a human concern. An agent that needs to monitor a stream for 10 minutes would hold up the entire agentic workflow. The buffered-capture pattern (ephemeral connect+capture) covers every real agent use case (verify endpoint, capture message sample, test pub/sub round-trip). Long-lived monitoring is a human task; direct browser connections are the right tool for it.
+
+**Rule for future protocol additions:** If the protocol is stateless/request-response, add it to the engine and expose via MCP first, UI second (same as REST and gRPC unary). If the protocol requires a persistent connection: buffered executor for MCP, direct browser connection for UI.
+
 ## 2026-07-01 - gRPC streaming split into separate grpc-streaming.ts, not merged into grpc-runner.ts
 
 Streaming modes (server/client/bidirectional) live in `src/engine/grpc-streaming.ts` rather than being overloaded into `grpc-runner.ts`. Reasoning: unary and streaming RPCs have fundamentally different callback shapes (callback vs EventEmitter). Keeping them separate keeps each file focused and testable in isolation without fake streaming infrastructure contaminating unary tests.

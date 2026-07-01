@@ -9,298 +9,245 @@
 ### GraphQL Polish
 
 
-### Realtime Workspace Epic (T-185 through T-195)
+### Realtime Workspace Epic (T-185 through T-194)
 
-> **Architecture mandate (read before writing a single line of code):**
-> Reqly is headless and MCP-first. The browser UI is a visual wrapper - it never opens a raw WebSocket, EventSource, or MQTT connection itself. Instead:
-> 1. Engine classes in `src/engine/` manage the actual protocol connections on the Node.js server.
-> 2. MCP tools in `src/mcp/tools/` expose those engine classes to agents.
-> 3. Express routes in `src/server/express.ts` expose the same engine classes to the browser UI via REST + SSE push.
-> 4. The browser UI calls the Express routes and renders whatever the server returns - zero protocol-specific npm packages in `src/ui/`.
+> **Architecture mandate - read knowledge.md "Protocol Architecture Rule" section before starting.**
 >
-> This is identical to how gRPC works: `grpc-streaming.ts` (engine) → `run_request.ts` (MCP) → `express.ts /api/run/adhoc` (REST) → `GrpcWorkspace.tsx` (UI calls `/api/run/adhoc`).
+> TL;DR: Two use cases, two patterns. Do NOT mix them.
 >
-> For realtime, connections are long-lived (not request/response), so the server holds a `RealtimeSessionStore` in memory. The browser polls or receives SSE pushes of new messages. Agents call MCP tools to connect, send, receive, and disconnect.
+> **Agent/MCP use (ephemeral, bounded):**
+> Engine `realtime-executor.ts` connects → buffers for `captureTimeout` seconds → disconnects → returns `{ messages, truncated }`. Same pattern as `grpc-streaming.ts`. One MCP tool: `run_realtime`. Stateless, no sessions, no server memory.
 >
-> **Correct data flow**:
-> ```
-> Agent / UI
->   → POST /api/realtime/connect   (or MCP connect_realtime)
->   → engine: RealtimeSessionManager.connect(type, url, config) → sessionId
->   → GET  /api/realtime/:id/messages  (poll or SSE stream of new messages)
->   → POST /api/realtime/:id/send      (or MCP send_realtime_message)
->   → POST /api/realtime/:id/disconnect (or MCP disconnect_realtime)
-> ```
+> **UI interactive use (long-lived, browser-native):**
+> Browser connects DIRECTLY to the target server using native browser APIs and browser-compatible npm packages in `src/ui/package.json`. No proxy through the Reqly server. Sessions live in the browser tab. `new WebSocket(url)` and `new EventSource(url)` are native - zero packages. `socket.io-client` and `mqtt` (browser builds) go in `src/ui/package.json` only. Nothing new in root `package.json`.
 >
-> **Key paths**:
+> **Key paths:**
 > - Types: `src/types/request.ts`
-> - Engine: `src/engine/` - new files per protocol
-> - MCP tools: `src/mcp/tools/`
-> - Server: `src/server/express.ts`
+> - Engine (MCP path): `src/engine/realtime-executor.ts` (NEW)
+> - MCP tool: `src/mcp/tools/run-realtime.ts` (NEW)
+> - UI packages: `src/ui/package.json` only
 > - UI components: `src/ui/src/components/`
 > - UI hooks: `src/ui/src/hooks/`
-> - UI API client: `src/ui/src/api.ts`
 > - Colors/badges: `src/ui/src/lib/colors.ts`
 >
-> **Existing patterns to follow**:
-> - TDD for all engine + MCP code (`src/engine/*.test.ts`, `src/mcp/tools/*.test.ts`)
-> - All local imports end in `.js` even when the source is `.ts`
-> - Tab persistence: debounced `localStorage.setItem` + `useState(() => rehydrate())` pattern from `App.tsx`
+> **Existing patterns to follow:**
+> - All local imports end in `.js` even when source is `.ts`
+> - TDD mandatory for `src/engine/` and `src/mcp/` code
+> - Tab persistence: debounced `localStorage.setItem` + `useState(() => rehydrate())` from `App.tsx`
 > - `onUpdate` propagation: see `GrpcWorkspace` → `setGrpcRequest` in `App.tsx`
 > - Badge system: `requestBadgeInfo()` in `src/ui/src/lib/colors.ts`
 
-- [ ] **T-185** Realtime request types and config interface (types-only, no logic)
+- [ ] **T-185** Types + badge colors
   - **File: `src/types/request.ts`**
-    - Extend `RequestConfig.type` union: `'rest' | 'graphql' | 'graphql-subscription' | 'grpc' | 'websocket' | 'sse' | 'socketio' | 'mqtt'`
+    - Extend `RequestConfig.type` union: add `'websocket' | 'sse' | 'socketio' | 'mqtt'`
     - Add `RealtimeConfig` interface next to `GrpcConfig`:
       ```ts
       export interface RealtimeConfig {
-        /** WebSocket subprotocols */
-        protocols?: string[];
-        /** SSE event type to listen on (default: 'message') */
-        eventType?: string;
-        /** Socket.IO path (default: '/socket.io') */
-        path?: string;
-        /** Socket.IO client version */
-        clientVersion?: 'v2' | 'v3' | 'v4';
-        /** Socket.IO / MQTT auth */
+        protocols?: string[];             // WebSocket subprotocols
+        eventType?: string;               // SSE event name (default: 'message')
+        path?: string;                    // Socket.IO path (default: '/socket.io')
+        clientVersion?: 'v2' | 'v3' | 'v4';  // Socket.IO version
         authType?: 'none' | 'bearer';
         authToken?: string;
-        /** MQTT client ID (default: random) */
         mqttClientId?: string;
         mqttUsername?: string;
         mqttPassword?: string;
         mqttKeepalive?: number;
         mqttCleanSession?: boolean;
-        /** MQTT last-will */
         mqttWillTopic?: string;
         mqttWillMessage?: string;
         mqttWillQos?: 0 | 1 | 2;
         mqttWillRetain?: boolean;
-        /** MQTT subscribed topics (persisted per collection) */
-        mqttTopics?: { name: string; qos: 0 | 1 | 2 }[];
-        /** Seconds to buffer messages before returning (for MCP agent use, default: 5) */
-        captureTimeout?: number;
+        mqttTopics?: { name: string; qos: 0 | 1 | 2 }[];  // persisted subscriptions
+        captureTimeout?: number;  // seconds for MCP buffered capture (default: 5)
       }
       ```
     - Add `realtime?: RealtimeConfig` to `RequestConfig` (next to `grpc?: GrpcConfig`)
   - **File: `src/ui/src/lib/colors.ts`**
-    - Add four new cases to `requestBadgeInfo()`:
+    - Add four new cases to `requestBadgeInfo()` before the `default`:
       - `'websocket'`: label `'WS'`, style `{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }`
       - `'sse'`: label `'SSE'`, style `{ background: 'rgba(20,184,166,0.15)', color: '#14b8a6', border: '1px solid rgba(20,184,166,0.3)' }`
       - `'socketio'`: label `'SIO'`, style `{ background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)' }`
       - `'mqtt'`: label `'MQTT'`, style `{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }`
-  - **TDD**: Unit test `requestBadgeInfo` for all four new types. Run `npm test`.
+  - **TDD**: Unit test `requestBadgeInfo` returns correct label + style for all four. Run `npm test`.
 
-- [ ] **T-186** Engine: RealtimeSessionManager - server-side connection lifecycle
-  - **File: `src/engine/realtime-session-manager.ts`** (NEW, <180 lines)
-  - This is the heart of the feature. Runs in Node.js. Manages live connections to WebSocket, SSE, Socket.IO, and MQTT servers on behalf of the user. Never imported by `src/ui/`.
-  - npm packages for the SERVER (add to root `package.json`, not `src/ui/package.json`):
-    - `ws` (WebSocket client for Node.js)
-    - `eventsource` (SSE client for Node.js)
-    - `socket.io-client` (Socket.IO)
-    - `mqtt` (MQTT over WebSocket)
-  - **`RealtimeMessage` type** (export from this file):
+- [ ] **T-186** Engine: `realtime-executor.ts` - buffered capture for MCP/agent use
+  - **File: `src/engine/realtime-executor.ts`** (NEW, <180 lines)
+  - Runs in Node.js. Used ONLY by the MCP tool and the `/api/run/realtime` Express route. NOT used by UI panels. Same pattern as `grpc-streaming.ts` - stateless, returns a result, caller gets the result when done.
+  - npm packages (add to ROOT `package.json` only, NOT `src/ui/package.json`):
+    - `ws` - WebSocket client for Node.js
+    - `eventsource` - SSE client for Node.js
+    - `socket.io-client` - Socket.IO (Node.js version, different from browser build)
+    - `mqtt` - MQTT client
+  - **`RealtimeMessage` type** (export):
     ```ts
     export interface RealtimeMessage {
-      id: string;        // crypto.randomUUID()
-      ts: number;        // Date.now()
+      id: string;       // crypto.randomUUID()
+      ts: number;       // Date.now()
       source: 'client' | 'server' | 'info' | 'error';
-      payload: string;   // always stringified
-      topic?: string;    // MQTT topic
-      event?: string;    // Socket.IO event name
+      payload: string;  // always a string
+      topic?: string;   // MQTT only
+      event?: string;   // Socket.IO only
     }
     ```
-  - **`RealtimeSession` type** (export):
+  - **`RealtimeCaptureResult` type** (export):
     ```ts
-    export interface RealtimeSession {
-      id: string;
-      type: 'websocket' | 'sse' | 'socketio' | 'mqtt';
-      url: string;
-      status: 'connecting' | 'connected' | 'disconnected' | 'error';
-      messages: RealtimeMessage[];   // append-only ring buffer (max 1000)
+    export interface RealtimeCaptureResult {
+      messages: RealtimeMessage[];
       truncated: boolean;
-      createdAt: number;
-      onMessage?: (msg: RealtimeMessage) => void;  // set by SSE broadcaster
+      isError?: boolean;
+      errorMessage?: string;
     }
     ```
-  - **`RealtimeSessionManager` class**:
-    - `private sessions = new Map<string, RealtimeSession>()`
-    - `connect(type, url, config: RealtimeConfig): Promise<string>` - creates session, opens connection, returns `sessionId`. Resolves after first status event (connected or error). Rejects on connection failure.
-      - WebSocket: `new WebSocket(url, config.protocols)` using `ws` package
-      - SSE: `new EventSource(url)` using `eventsource` package; listens on `config.eventType ?? 'message'`
-      - Socket.IO: `io(url, { path: config.path, auth: ... })` using `socket.io-client`
-      - MQTT: `mqtt.connect(url, { clientId, username, password, keepalive, clean })` using `mqtt` package
-    - `send(sessionId, message, options?: { eventName?: string; topic?: string; retain?: boolean }): void` - sends a message on the live connection. Throws if session not found or not connected.
-    - `subscribe(sessionId, topic, qos): void` - MQTT-only. Throws for other types.
-    - `unsubscribe(sessionId, topic): void` - MQTT-only.
-    - `getMessages(sessionId, since?: number): RealtimeMessage[]` - returns messages after `since` timestamp (for polling). Returns all if `since` not provided.
-    - `disconnect(sessionId): void` - closes connection, sets status `'disconnected'`, keeps session in map for 60s then removes.
-    - `getSession(sessionId): RealtimeSession | undefined`
-    - `listSessions(): RealtimeSession[]`
-    - On each inbound message: push to `session.messages` (if length > 1000, shift oldest, set `session.truncated = true`), call `session.onMessage?.(msg)`.
-  - **File: `src/engine/realtime-session-manager.test.ts`** (NEW, <150 lines)
-    - Mock `ws`, `eventsource`, `socket.io-client`, `mqtt` with vi.mock - simulate connect/message/error events
-    - Test: `connect('websocket', ...)` resolves with sessionId; messages appear via `getMessages()`
-    - Test: `send()` writes to mock socket; message logged as `source: 'client'`
-    - Test: `disconnect()` closes mock socket, status becomes `'disconnected'`
-    - Test: ring buffer truncates at 1000 messages, sets `truncated: true`
-    - Test: `connect()` with bad URL rejects with error
+  - **`runRealtimeCapture(req: RealtimeCaptureRequest, opts: { captureTimeout: number }): Promise<RealtimeCaptureResult>`** (export):
+    - `RealtimeCaptureRequest`: `{ type, url, config: RealtimeConfig, sendMessages?: { message: string; eventName?: string; topic?: string; retain?: boolean }[] }`
+    - Opens the appropriate connection (ws / EventSource / io / mqtt), buffers received messages into an array (ring buffer max 500 - agents don't need 1000), sends `sendMessages` in order after connect, waits for `captureTimeout` seconds, disconnects, returns result.
+    - On connection error: returns `{ messages: [info entry], truncated: false, isError: true, errorMessage }` (never rejects - always returns a result the MCP tool can return to the agent).
+    - WebSocket: `new WebSocket(url, protocols)` from `ws` package
+    - SSE: `new EventSource(url)` from `eventsource` package; listens on `eventType ?? 'message'`
+    - Socket.IO: `io(url, { path, auth })` - use `socket.onAny((eventName, data) => ...)` to capture all events
+    - MQTT: `mqtt.connect(url, opts)` - subscribe to `mqttTopics` after connect, publish `sendMessages` as publish calls
+  - **File: `src/engine/realtime-executor.test.ts`** (NEW, <120 lines)
+    - Mock `ws`, `eventsource`, `socket.io-client`, `mqtt` with `vi.mock()`
+    - Simulate: connect event, N messages received, disconnect after captureTimeout
+    - Test: returned `messages` array contains info + server messages
+    - Test: `sendMessages` triggers send calls on the mock socket
+    - Test: connection error returns `{ isError: true, errorMessage }` (no throw)
+    - Test: ring buffer caps at 500, sets `truncated: true`
     - Run `npm test` - all existing + new tests pass.
 
-- [ ] **T-187** Engine: context wiring + Express REST routes for realtime sessions
-  - **File: `src/mcp/tools/types.ts`** (EDIT)
-    - Import `RealtimeSessionManager` from `'../../engine/realtime-session-manager.js'`
-    - Add `realtimeSessionManager: RealtimeSessionManager` to `EngineContext` interface
-  - **File: `src/server/index.ts`** (EDIT)
-    - Instantiate `new RealtimeSessionManager()` and inject into `EngineContext`
-  - **File: `src/server/express.ts`** (EDIT - add routes only, <80 new lines)
-    - All routes under `/api/realtime/`:
-    - `POST /api/realtime/connect` body: `{ type, url, config }` → calls `context.realtimeSessionManager.connect(...)` → `res.json({ sessionId, status })`
-    - `GET  /api/realtime/:sessionId` → `res.json(context.realtimeSessionManager.getSession(id))` (status, type, url, message count)
-    - `GET  /api/realtime/:sessionId/messages?since=<ts>` → `res.json({ messages: [...], truncated })`
-    - `GET  /api/realtime/:sessionId/stream` → SSE endpoint. Sets headers for SSE (`text/event-stream`). Sets `session.onMessage = msg => res.write('data: ...\n\n')`. Cleans up `session.onMessage` on `req.on('close')`. This is how the UI gets live push instead of polling.
-    - `POST /api/realtime/:sessionId/send` body: `{ message, eventName?, topic?, retain? }` → calls `context.realtimeSessionManager.send(...)` → `res.json({ ok: true })`
-    - `POST /api/realtime/:sessionId/subscribe` body: `{ topic, qos }` → MQTT subscribe → `res.json({ ok: true })`
-    - `POST /api/realtime/:sessionId/disconnect` → `context.realtimeSessionManager.disconnect(id)` → `res.json({ ok: true })`
-    - `GET  /api/realtime` → `res.json(context.realtimeSessionManager.listSessions())`
-    - All routes return `{ error: string }` with status 400/404 on failure.
-  - **TDD**: Integration tests for the Express routes using supertest (follow pattern in existing express tests). Test connect→send→messages→disconnect lifecycle. Run `npm test`.
+- [ ] **T-187** MCP tool: `run_realtime` + Express route
+  - **File: `src/mcp/tools/run-realtime.ts`** (NEW, <80 lines)
+    - Tool name: `run_realtime`
+    - Description: "Connects to a realtime endpoint (WebSocket, SSE, Socket.IO, or MQTT), captures messages for captureTimeout seconds, then disconnects and returns all received messages. Use this to verify a realtime endpoint works, test pub/sub flows, or capture a message sample. Returns { messages: [{ id, ts, source, payload, topic?, event? }], truncated, isError?, errorMessage? }. source values: 'server' = received from target, 'client' = sent by you, 'info' = connection events, 'error' = errors. Provide sendMessages to send messages after connecting (useful for WebSocket echo tests or MQTT publish). For types: 'websocket' expects ws:// or wss:// URLs; 'sse' expects http:// or https://; 'socketio' expects http:// or https://; 'mqtt' expects mqtt:// or ws:// URLs."
+    - Input schema:
+      ```json
+      {
+        "type": { "enum": ["websocket","sse","socketio","mqtt"] },
+        "url": { "type": "string" },
+        "captureTimeout": { "type": "number", "default": 5 },
+        "sendMessages": { "type": "array", "items": { "type": "object", "properties": { "message": { "type": "string" }, "eventName": { "type": "string" }, "topic": { "type": "string" }, "retain": { "type": "boolean" } }, "required": ["message"] } },
+        "config": { "type": "object" }
+      }
+      ```
+    - Handler: calls `runRealtimeCapture({ type, url, config: args.config ?? {}, sendMessages: args.sendMessages ?? [] }, { captureTimeout: args.captureTimeout ?? 5 })`, returns JSON result.
+  - Register in `src/mcp/server.ts`.
+  - **File: `src/server/express.ts`** (EDIT - add ONE route only, ~15 lines)
+    - `POST /api/run/realtime` - mirrors `/api/run/adhoc` for gRPC. Body: `{ type, url, captureTimeout?, sendMessages?, config? }`. Calls `runRealtimeCapture(...)`. Returns `res.json({ response: result })`. This lets the UI trigger a bounded capture from a saved collection request.
+  - **TDD**: Test `definition` shape and `handler` with mocked `runRealtimeCapture`. Test Express route via supertest. Run `npm test`.
 
-- [ ] **T-188** MCP tools: connect_realtime, send_realtime_message, read_realtime_messages, disconnect_realtime
-  - Four new files in `src/mcp/tools/`. Follow the exact pattern of `run-request.ts` and `src/mcp/tools/types.ts`.
-  - **File: `src/mcp/tools/realtime-connect.ts`** (NEW, <80 lines)
-    - Tool name: `connect_realtime`
-    - Description (agents read this): "Opens a persistent connection to a WebSocket, SSE, Socket.IO, or MQTT server and returns a sessionId. Use this when you need to test a realtime endpoint, subscribe to a message stream, or verify protocol handshake. Supported types: 'websocket' (ws:// or wss://), 'sse' (http:// or https://), 'socketio' (http:// or https://), 'mqtt' (mqtt:// or ws://). Returns { sessionId, status, type, url }. After connecting, use read_realtime_messages to fetch messages and send_realtime_message to send. Always call disconnect_realtime when done."
-    - Input schema: `{ type: enum['websocket','sse','socketio','mqtt'], url: string, config?: { protocols?, eventType?, path?, clientVersion?, authType?, authToken?, mqttClientId?, mqttUsername?, mqttPassword?, captureTimeout? } }`
-    - Handler: calls `context.realtimeSessionManager.connect(args.type, args.url, args.config ?? {})`, returns `{ content: [{ type: 'text', text: JSON.stringify({ sessionId, status, type: args.type, url: args.url }) }] }`
-  - **File: `src/mcp/tools/realtime-send.ts`** (NEW, <70 lines)
-    - Tool name: `send_realtime_message`
-    - Description: "Sends a message on an active realtime session opened by connect_realtime. For WebSocket and SSE: provide message as a string. For Socket.IO: provide message and eventName. For MQTT: provide message and topic (required). Returns { ok: true } on success."
-    - Input schema: `{ sessionId: string, message: string, eventName?: string, topic?: string, retain?: boolean }`
-    - Handler: `context.realtimeSessionManager.send(sessionId, message, { eventName, topic, retain })`
-  - **File: `src/mcp/tools/realtime-messages.ts`** (NEW, <70 lines)
-    - Tool name: `read_realtime_messages`
-    - Description: "Returns messages buffered from a realtime session. Provide since (Unix ms timestamp) to fetch only new messages since last read. Returns { messages: [{ id, ts, source, payload, topic?, event? }], truncated, status }. source is 'client' (messages you sent), 'server' (messages received), 'info' (connection events), or 'error'. Poll this repeatedly to stream messages, or use it once after a captureTimeout to get a batch."
-    - Input schema: `{ sessionId: string, since?: number }`
-    - Handler: `context.realtimeSessionManager.getMessages(sessionId, args.since)` + getSession status
-  - **File: `src/mcp/tools/realtime-disconnect.ts`** (NEW, <50 lines)
-    - Tool name: `disconnect_realtime`
-    - Description: "Closes a realtime session and cleans up the connection. Always call this when done. Returns { ok: true, messageCount: number }."
-    - Input schema: `{ sessionId: string }`
-    - Handler: gets message count, calls `context.realtimeSessionManager.disconnect(sessionId)`, returns summary
-  - **Register all four** in `src/mcp/server.ts` (add to tools array)
-  - **TDD**: Test each tool's `definition` (name, description non-empty, required schema fields) and `handler` (mock context.realtimeSessionManager, test success and error paths). Run `npm test`.
-
-- [ ] **T-189** UI: api.ts client functions for realtime routes
-  - **File: `src/ui/src/api.ts`** (EDIT - add functions only)
-  - Add to the existing API client (follow the pattern of existing functions like `fetchCollections`, `addRequest`):
-    ```ts
-    export async function realtimeConnect(type: string, url: string, config?: Record<string, unknown>): Promise<{ sessionId: string; status: string }> { ... }
-    export async function realtimeSend(sessionId: string, message: string, opts?: { eventName?: string; topic?: string; retain?: boolean }): Promise<void> { ... }
-    export async function realtimeGetMessages(sessionId: string, since?: number): Promise<{ messages: any[]; truncated: boolean; status: string }> { ... }
-    export async function realtimeDisconnect(sessionId: string): Promise<void> { ... }
-    export async function realtimeSubscribe(sessionId: string, topic: string, qos: number): Promise<void> { ... }
-    export async function realtimeUnsubscribe(sessionId: string, topic: string): Promise<void> { ... }
-    ```
-  - Each function: `fetch('/api/realtime/...')`, throw on non-OK, return parsed JSON.
-  - For SSE streaming, export a helper: `openRealtimeStream(sessionId: string, onMessage: (msg: any) => void): () => void` - opens `new EventSource('/api/realtime/:id/stream')`, attaches `onmessage`, returns a cleanup function that calls `evs.close()`. This is a plain browser EventSource pointing at the Reqly local server (port 4242), NOT at the user's external target.
-  - No TDD needed for pure HTTP wrapper functions, but run `npm test` to confirm no regressions.
-
-- [ ] **T-190** UI: Nav rail, App.tsx routing, shared log components
+- [ ] **T-188** UI: `api.ts` additions + NavRail + App.tsx routing
+  - **File: `src/ui/src/api.ts`** (EDIT - small addition)
+    - Add one function: `runRealtimeCapture(req: { type: string; url: string; captureTimeout?: number; sendMessages?: any[]; config?: any }): Promise<{ messages: any[]; truncated: boolean; isError?: boolean; errorMessage?: string }>` - calls `POST /api/run/realtime`, returns parsed JSON `.response`. This is used to run saved collection requests from the UI.
   - **File: `src/ui/src/components/NavRail.tsx`** (EDIT)
-    - Add `'realtime'` to `NavPanel` type
+    - Add `'realtime'` to `NavPanel` type export
     - Import `Wifi` from `lucide-react`
     - Add `{ id: 'realtime', label: 'Realtime', icon: <Wifi size={18} /> }` between `grpc` and `capture`
   - **File: `src/ui/src/App.tsx`** (EDIT)
     - `const [realtimeRequest, setRealtimeRequest] = useLocalStorage<any>('reqly.realtimeRequest', null)`
     - In `handleSelectRequestFromSidebar`: if `req.type` in `['websocket','sse','socketio','mqtt']` → `setRealtimeRequest({ ...req, _collection: col }); setActivePanel('realtime')`
-    - Sidebar visibility: add `activePanel !== 'realtime'` to the hide condition
-    - Panel routing: add `activePanel === 'realtime' ? <RealtimeWorkspace initialRequest={realtimeRequest} onUpdate={setRealtimeRequest} />` in the chain
-  - **File: `src/ui/src/components/RealtimeMessageLog.tsx`** (NEW, <130 lines)
-    - Pure display component - receives messages from parent, renders them. No connection logic.
-    - Props: `{ messages: RealtimeMessage[]; onClear: () => void }` (import `RealtimeMessage` from `'../../../src/engine/realtime-session-manager'` - no, wrong: define a mirror type in `../types.ts` or inline it)
-    - Actually: define `export interface UIRealtimeMessage { id: string; ts: number; source: 'client'|'server'|'info'|'error'; payload: string; topic?: string; event?: string }` at the top of this file (mirrors server type but lives in UI layer)
-    - Header: `panel-header` class, title "Messages", right side: Trash (clear) icon, scroll-top icon, scroll-bottom icon, auto-scroll toggle (green = on)
-    - Body: `flex-1 min-h-0 overflow-y-auto` with auto-scroll via `useRef` + `useEffect` on `messages.length`
-    - Each row (inline, no separate file needed if under 200 total):
-      - Icon: `ArrowUpRight` amber for client, `ArrowDownLeft` teal for server, `Info` muted for info, `AlertCircle` red for error
-      - Prefix: `[topic]` or `[event]` in muted text if present
-      - Payload: truncated by default, click to expand
-      - Timestamp: `HH:MM:SS` right-aligned
-      - Copy on hover
-    - Empty state: "Connect to see messages" italic muted centered
+    - Sidebar hide condition: add `activePanel !== 'realtime'`
+    - Panel routing: `activePanel === 'realtime' ? <RealtimeWorkspace initialRequest={realtimeRequest} onUpdate={setRealtimeRequest} /> : ...`
   - Run `npm test`.
 
-- [ ] **T-191** UI: RealtimeCollectionsPanel + RealtimeTabBar + useRealtimeTabs
-  - **File: `src/ui/src/components/RealtimeCollectionsPanel.tsx`** (NEW, <150 lines)
-    - Props: `{ onSelectRequest: (req: any, col: string) => void }`
-    - Fetches collections on mount (via `fetchCollections()` from `../api`), re-fetches on `reqly-reload` window event
-    - Filters: only shows requests where `req.type` in `['websocket','sse','socketio','mqtt']`
-    - Groups by collection, collapsible headers (same styling as `CollectionsPanel` - `surface-2` bg, `var(--border)` divider)
-    - Each row: `requestBadgeInfo(req.type, undefined)` badge + name, onClick → `onSelectRequest`
-    - `useLocalStorage('reqly.realtimeExpanded', {})` for expand state
-    - Search bar top: filters names
-    - Empty state: "No realtime requests yet" muted
-  - **File: `src/ui/src/hooks/useRealtimeTabs.ts`** (NEW, <150 lines)
-    - `RealtimeTab` type: `{ id, tabName?, protocol, url, realtime?, name?, _collection?, sessionId? }`
-    - `sessionId` is the live session ID returned by `realtimeConnect()` - stored per tab so UI can reconnect to a still-live session on remount
-    - Persists to `reqly.realtimeTabs` (debounced 300ms). Does NOT persist `sessionId` (sessions are in-memory server-side; on reload, starts disconnected).
-    - `addTab(protocol)`, `closeTab(id)`, `updateTab(id, updates)`, `activeTab`
-    - Default tab: `{ id: 'rt-default', protocol: 'websocket', url: '', tabName: 'New WebSocket' }`
+- [ ] **T-189** UI: shared display component + tab system
+  - **File: `src/ui/src/components/RealtimeMessageLog.tsx`** (NEW, <150 lines)
+    - Pure display component. Receives an array of messages from the parent panel, renders them. Zero connection logic.
+    - Props: `{ messages: UIRealtimeMessage[]; title?: string; onClear: () => void }`
+    - Define at top: `export interface UIRealtimeMessage { id: string; ts: number; source: 'client'|'server'|'info'|'error'; payload: string; topic?: string; event?: string }`
+    - Header: `panel-header` CSS class (matches REST `ResponseViewer`), title left, right side: Trash icon (onClear), scroll-top icon, scroll-bottom icon, auto-scroll toggle (green = active)
+    - Body: `flex-1 min-h-0 overflow-y-auto` with `ref={logRef}`. Auto-scroll: `useEffect` on `messages.length`, calls `logRef.current?.scrollTo({ top: logRef.current.scrollHeight })` if auto-scroll on. User scrolling up (detected via `onScroll` comparing `scrollTop + clientHeight < scrollHeight - 10`) turns auto-scroll off.
+    - Each row (inline - keeps file count down): icon + prefix + payload (truncated, click to expand) + timestamp `HH:MM:SS` + copy-on-hover button
+      - Icon: `ArrowUpRight` `#f59e0b` (client), `ArrowDownLeft` `#14b8a6` (server), `Info` muted (info), `AlertCircle` `#f87171` (error)
+      - `[topic]` or `[event]` prefix in muted text before payload
+    - Empty state: italic muted "Connect to see messages"
+  - **File: `src/ui/src/hooks/useRealtimeTabs.ts`** (NEW, <120 lines)
+    - `RealtimeTab`: `{ id: string; tabName?: string; protocol: 'websocket'|'sse'|'socketio'|'mqtt'; url: string; realtime?: any; name?: string; _collection?: string }`
+    - `useRealtimeTabs()` returns: `{ tabs, activeTabId, activeTab, addTab, closeTab, updateTab, setActiveTabId }`
+    - Persists to `reqly.realtimeTabs` (300ms debounce), reads from localStorage on init
+    - Default: `[{ id: 'rt-default', protocol: 'websocket', url: '', tabName: 'New WebSocket' }]`
+    - `addTab(protocol)`: `id: 'rt-' + Date.now()`, sensible `tabName` per protocol
+    - `closeTab(id)`: never closes last tab, activates neighbour
   - **File: `src/ui/src/components/RealtimeTabBar.tsx`** (NEW, <100 lines)
-    - Props: `{ tabs, activeTabId, onSelect, onClose, onNew }`
-    - 40px height, `surface-1` bg, `var(--border)` bottom border - identical to REST tab bar
-    - Each tab: `requestBadgeInfo(tab.protocol, undefined)` badge + `tab.tabName` + X button
-    - `+` button opens protocol picker popover: WebSocket, SSE, Socket.IO, MQTT options
-    - Active tab: `h-0.5 bg-blue-500` bottom underline bar
+    - Props: `{ tabs: RealtimeTab[]; activeTabId: string; onSelect: (id) => void; onClose: (id) => void; onNew: (protocol) => void }`
+    - 40px height, `surface-1` bg, `var(--border)` bottom - identical to REST tab bar in App.tsx
+    - Each tab: `requestBadgeInfo(tab.protocol, undefined)` badge + name + X button
+    - `+` dropdown: WebSocket / SSE / Socket.IO / MQTT options
+    - Active: `h-0.5 bg-blue-500` absolute bottom
 
-- [ ] **T-192** UI: WebSocketPanel + SSEPanel (call server-side sessions via api.ts)
-  - **File: `src/ui/src/components/WebSocketPanel.tsx`** (NEW, <190 lines)
-  - Props: `{ tab: RealtimeTab; onTabUpdate: (updates) => void }`
+- [ ] **T-190** UI: `RealtimeCollectionsPanel`
+  - **File: `src/ui/src/components/RealtimeCollectionsPanel.tsx`** (NEW, <150 lines)
+  - Props: `{ activeProtocol: string; onSelectRequest: (req: any, col: string) => void; onNewTab: (protocol: string) => void }`
+  - Fetches collections on mount via `fetchCollections()`, re-fetches on `reqly-reload` window event
+  - Filters per collection: only show requests where `req.type` in `['websocket','sse','socketio','mqtt']`
+  - Groups by collection, collapsible (same styling as `CollectionsPanel` - `surface-2` header, `var(--border)` dividers, chevron toggle)
+  - `useLocalStorage('reqly.realtimeExpanded', {})` for expand/collapse state per collection
+  - Each row: `requestBadgeInfo(req.type, undefined)` badge + name, click → `onSelectRequest`
+  - Top: search input + "New" dropdown button (opens protocol picker: WS / SSE / SIO / MQTT)
+  - Empty state: "No realtime requests saved yet" + hint to click "New" above
+
+- [ ] **T-191** UI: WebSocketPanel + SSEPanel (browser-native APIs, no server proxy)
+  - **File: `src/ui/src/components/WebSocketPanel.tsx`** (NEW, <180 lines)
+  - Props: `{ tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void }`
   - State: `status: 'disconnected'|'connecting'|'connected'`, `messages: UIRealtimeMessage[]`, `messageText: string`, `subTab: 'communication'|'protocols'`
-  - **Connect**: calls `realtimeConnect('websocket', tab.url, { protocols: tab.realtime?.protocols })` from `../api` → gets `sessionId` → `onTabUpdate({ sessionId })` → opens SSE stream via `openRealtimeStream(sessionId, msg => setMessages(prev => [...prev, msg]))` (the SSE stream from the Reqly server at port 4242, NOT the user's WebSocket server). Store cleanup fn in `useRef`.
-  - **Send**: calls `realtimeSend(tab.sessionId!, messageText)` → new message appears via SSE push
-  - **Disconnect**: calls `realtimeDisconnect(tab.sessionId!)`, calls SSE cleanup fn, clears `sessionId`
-  - Layout (flex column, fills parent height):
-    - URL bar row (8px padding, `surface-2` bg, `var(--border)` bottom): URL input (disabled when connected), Connect/Disconnect button (neon blue border when disconnected, red when connected)
-    - Sub-tab bar: Communication / Protocols pills
-    - Communication: CodeMirror `minHeight: 80px`, JSON/Raw picker, Send button
-    - Protocols tab: list of text inputs for WS subprotocols (add/remove), changes → `onTabUpdate`
-    - `<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />` (flex-1)
-  - Cleanup on unmount: disconnect if connected, close SSE stream
-  - **File: `src/ui/src/components/SSEPanel.tsx`** (NEW, <120 lines)
-  - Same pattern but: `realtimeConnect('sse', url, { eventType })`, no send UI, only Start/Stop button. Messages arrive via `openRealtimeStream`.
+  - Connection: `const wsRef = useRef<WebSocket | null>(null)` - uses **native browser `WebSocket`** API directly (zero packages)
+    - `connect()`: `wsRef.current = new WebSocket(tab.url, tab.realtime?.protocols ?? [])`. Status to `'connecting'`, info log "Connecting...". `ws.onopen` → connected. `ws.onmessage` → server message. `ws.onerror` → error log. `ws.onclose` → disconnected.
+    - `send()`: `wsRef.current?.send(messageText)`, add client message to log
+    - `disconnect()`: `wsRef.current?.close()`
+  - Cleanup on unmount: `wsRef.current?.close()`
+  - Layout (flex column, fills height):
+    - URL bar row (8px padding, `surface-2` bg, `var(--border)` bottom): URL input (disabled connected), Bookmark icon (onSave), Connect/Disconnect button
+    - Sub-tab pills: Communication / Protocols
+    - Communication: CodeMirror `minHeight: 80px`, JSON/Raw type picker, Send button (disabled disconnected/empty)
+    - Protocols sub-tab: list of protocol string inputs (add/remove rows) → `onTabUpdate({ realtime: { ...tab.realtime, protocols: [...] } })`
+    - `<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />` (flex-1 min-h-0)
+  - **File: `src/ui/src/components/SSEPanel.tsx`** (NEW, <110 lines)
+  - Props: same shape as WebSocketPanel
+  - Connection: `const evsRef = useRef<EventSource | null>(null)` - uses **native browser `EventSource`** (zero packages)
+    - `start()`: `new EventSource(tab.url)`. `evs.onopen` → started. `evs.addEventListener(eventType, handler)` → server messages. `evs.onerror` → error, auto-stop.
+    - `stop()`: `evsRef.current?.close()`
+  - Layout: URL + Event Type input row + Start/Stop button, then `<RealtimeMessageLog>` fills rest
 
-- [ ] **T-193** UI: SocketIOPanel + MQTTPanel (call server-side sessions via api.ts)
-  - **File: `src/ui/src/components/SocketIOPanel.tsx`** (NEW, <190 lines)
-  - Same connect/send/disconnect pattern via `api.ts`. Config: path, clientVersion (v4/v3/v2 pills), auth (None/Bearer). Event name input + CodeMirror editor for message body. `<RealtimeMessageLog>` for messages.
-  - **File: `src/ui/src/components/MQTTPanel.tsx`** (NEW, <170 lines)
-  - Connect config: URL, client ID, collapsible section (username, password, keepalive, clean session).
-  - **File: `src/ui/src/components/MQTTSubscribePanel.tsx`** (NEW, <90 lines)
-  - Topic input, QoS picker, Subscribe button, list of active subscriptions each with Unsubscribe. Calls `realtimeSubscribe` / `realtimeUnsubscribe` from `../api`.
-  - **File: `src/ui/src/components/MQTTPublishPanel.tsx`** (NEW, <90 lines)
-  - Topic input, Retain checkbox, CodeMirror editor, Publish button. Calls `realtimeSend(sessionId, message, { topic, retain })`.
+- [ ] **T-192** UI: SocketIOPanel + MQTTPanel (browser-build packages in `src/ui/package.json`)
+  - **npm install in `src/ui/`** (before writing any component):
+    - `cd src/ui && npm install socket.io-client mqtt`
+    - These are browser-compatible builds. Confirm they appear in `src/ui/package.json` dependencies. Do NOT add to root `package.json`.
+  - **File: `src/ui/src/components/SocketIOPanel.tsx`** (NEW, <180 lines)
+  - Import: `import { io } from 'socket.io-client'` (browser build, no `.js` extension needed for npm packages)
+  - `const socketRef = useRef<ReturnType<typeof io> | null>(null)`
+  - Connect: `io(tab.url, { path: tab.realtime?.path ?? '/socket.io', ...(authType === 'bearer' ? { auth: { token } } : {}) })`
+  - Listen: `socket.onAny((eventName, data) => ...)` to capture all events
+  - Send: `socket.emit(eventName, messageText)`
+  - Layout: URL row + config row (path, version pills v4/v3/v2, auth picker) + event+message section + `<RealtimeMessageLog>`
+  - **File: `src/ui/src/components/MQTTPanel.tsx`** (NEW, <160 lines)
+  - Import: `import mqtt from 'mqtt'` (browser build uses WebSocket transport automatically when URL is `ws://` or `wss://`)
+  - `const clientRef = useRef<ReturnType<typeof mqtt.connect> | null>(null)`
+  - Connect: `mqtt.connect(tab.url, { clientId: tab.realtime?.mqttClientId ?? crypto.randomUUID().slice(0,8), username, password, keepalive, clean })`
+  - Events: `client.on('connect')`, `client.on('message', (topic, buf) => ...)`, `client.on('error')`, `client.on('close')`
+  - Layout: URL + Client ID row + collapsible config (username, password, keepalive, clean) + subscribe section (topic input, QoS 0/1/2 pills, Subscribe button, list of active subscriptions each with Unsubscribe) + publish section (topic input, retain checkbox, CodeMirror editor, Publish button) + `<RealtimeMessageLog>` fills rest
+  - Split subscribe + publish into inline sub-sections within the file (no separate files needed if total < 180 lines)
 
-- [ ] **T-194** UI: RealtimeWorkspace shell + save/load + state persistence
+- [ ] **T-193** UI: `RealtimeWorkspace` shell + save/load + state persistence
   - **File: `src/ui/src/components/RealtimeWorkspace.tsx`** (NEW, <160 lines)
   - Props: `{ initialRequest?: any; onUpdate?: (state: any) => void }`
-  - Uses `useRealtimeTabs()` from T-191
-  - Reacts to `initialRequest` prop changes (sidebar click) via `useRef` identity check (`collection::name`)
-  - Debounced `onUpdate?.(activeTab)` for App.tsx refresh persistence
-  - Layout: `flex h-full`
-    - Left aside: `w-64` `<RealtimeCollectionsPanel>`
+  - Uses `useRealtimeTabs()` from T-189
+  - Sidebar-click handling: `useRef` identity check (`_collection::name`) → `updateTab(activeTabId, { url, protocol, realtime, name, _collection })` if same tab or `addTab` if new
+  - Debounced `onUpdate?.(activeTab)` (600ms) for refresh persistence
+  - Layout: `flex` `h-full`
+    - Left aside `w-64`: `<RealtimeCollectionsPanel onSelectRequest={handleSidebarSelect} onNewTab={protocol => addTab(protocol)} activeProtocol={activeTab.protocol} />`
     - Right `flex-1 flex flex-col`:
-      - `<RealtimeTabBar>`
-      - Protocol panel (`flex-1 min-h-0`): switch on `activeTab.protocol` → one of the four panel components
-  - **Save flow**: Bookmark button in each panel's URL bar row calls `onSave?.()` on parent. RealtimeWorkspace handles:
-    - Already saved (`tab._collection && tab.name`): calls `updateRequest(col, name, { type: protocol, url, realtime: config })` from `../api`, shows inline "Saved" flash. Pattern matches `GrpcWorkspace.handleSave`.
-    - Not saved: shows save modal (collection picker + name input), calls `addRequest(col, { type: protocol, url, name, realtime: config })`, dispatches `reqly-reload`.
-  - **Collection YAML**: Verify `CollectionManager` does not filter out non-HTTP methods. If it does, fix the guard so `type: 'websocket'` round-trips through `getCollection()` and `addRequest()`.
-  - **After all sub-tasks**: `npm test` (all tests pass), `npm run build` in `src/ui/`, copy to `dist/ui/`, restart server. Manual test: open Realtime workspace → connect to `wss://echo.websocket.org` (or a local echo server) → send "hello" → see "hello" echoed back in the message log. Save to a collection. Open MCP client and call `connect_realtime` + `read_realtime_messages` + `disconnect_realtime`. Verify agent and UI both see messages from the same session.
-
+      - `<RealtimeTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} />`
+      - Protocol panel `flex-1 min-h-0`: switch on `activeTab.protocol` → `<WebSocketPanel>` / `<SSEPanel>` / `<SocketIOPanel>` / `<MQTTPanel>`. Pass `tab={activeTab}`, `onTabUpdate={u => updateTab(activeTabId, u)}`, `onSave={handleSave}`.
+  - **Save flow**: `handleSave()`:
+    - Already saved (`activeTab._collection && activeTab.name`): calls `updateRequest(col, name, { type: activeTab.protocol, url: activeTab.url, name: activeTab.name, realtime: activeTab.realtime })` from `../api`, flashes inline "Saved" for 2s.
+    - Not saved: shows modal (collection select + name input). On submit: `addRequest(col, { type: activeTab.protocol, url, name, realtime: config })`. On success: `updateTab(activeTabId, { name, _collection: col })`, dispatch `reqly-reload`, close modal.
+  - **Collection YAML guard**: Check `src/engine/collection-manager.ts` - if `addRequest` validates/filters `method` and rejects non-HTTP-method values, fix the guard to allow realtime types. The `type` field should be preserved as-is in YAML.
+  - **After all sub-tasks**: `npm test` (all pass), `npm run build` in `src/ui/`, copy `dist/ui/` → `dist/ui`, restart. Manual tests:
+    1. Open Realtime workspace → WebSocket tab → connect `wss://echo.websocket.org` → send "hello" → see echo in log
+    2. SSE tab → connect `https://sse.dev/test` → see streaming events
+    3. Save a WebSocket request to a collection → refresh page → same tab visible → click in Collections panel → routes to Realtime workspace
+    4. MCP: call `run_realtime` with `type: websocket`, `url: wss://echo.websocket.org`, `sendMessages: [{message: "ping"}]`, `captureTimeout: 3` → returns `{ messages: [{source: 'server', payload: 'ping'}], truncated: false }`
 
 ### Protocol Expansion (Later)
 
-- [ ] **T-151** ~~WebSocket / SSE support ("Realtime" workspace)~~ - superseded by T-185 through T-194 above
-
+- [ ] **T-151** ~~WebSocket / SSE support~~ - superseded by T-185 to T-193 above
