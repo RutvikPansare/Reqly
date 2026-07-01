@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Save } from 'lucide-react';
+import { Save, Check } from 'lucide-react';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -13,7 +13,7 @@ export function statusColor(status: ConnectionStatus) {
   return statusColors[status];
 }
 
-export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave }: {
+export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave, flashSaved }: {
   badge: string;
   url: string;
   placeholder: string;
@@ -22,8 +22,8 @@ export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, st
   status: ConnectionStatus;
   action: ReactNode;
   onAction: () => void;
-  saved?: boolean;
   onSave: () => void;
+  flashSaved?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -34,7 +34,17 @@ export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, st
       </div>
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusColor(status) }} title={status} aria-label={status} />
       <button onClick={onAction} className={`btn ${status === 'connected' ? 'btn-danger' : 'btn-primary'} h-8 min-w-[96px] justify-center rounded px-3`}>{action}</button>
-      <button onClick={onSave} className="btn btn-secondary h-8 rounded gap-1.5 px-3" title="Save request (⌘S)"><Save size={13} />Save</button>
+      <button
+        onClick={onSave}
+        className="btn h-8 rounded gap-1.5 px-3 transition-colors"
+        style={flashSaved
+          ? { background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#10b981' }
+          : { background: 'var(--surface-3)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+        title="Save request"
+      >
+        {flashSaved ? <Check size={13} /> : <Save size={13} />}
+        {flashSaved ? 'Saved' : 'Save'}
+      </button>
     </div>
   );
 }

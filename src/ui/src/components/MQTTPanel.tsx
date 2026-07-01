@@ -9,9 +9,9 @@ import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import type { RealtimeTab } from '../hooks/useRealtimeTabs.js';
 
-interface MQTTPanelProps { tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void; }
+interface MQTTPanelProps { tab: RealtimeTab; onTabUpdate: (updates: Partial<RealtimeTab>) => void; onSave: () => void; flashSaved?: boolean; }
 
-export function MQTTPanel({ tab, onTabUpdate, onSave }: MQTTPanelProps) {
+export function MQTTPanel({ tab, onTabUpdate, onSave, flashSaved }: MQTTPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [messages, setMessages] = useState<UIRealtimeMessage[]>([]);
   const [publishTopic, setPublishTopic] = useState('');
@@ -73,7 +73,7 @@ export function MQTTPanel({ tab, onTabUpdate, onSave }: MQTTPanelProps) {
 
   return (
     <div className="flex h-full flex-col bg-[var(--surface-1)]">
-      <ProtocolUrlBar badge="MQTT" url={tab.url} placeholder="ws:// or wss://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} />
+      <ProtocolUrlBar badge="MQTT" url={tab.url} placeholder="ws:// or wss://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} />
       <div className="flex-1 min-h-0">
         <SplitPane defaultSplit={50} minTop={20} minBottom={20} top={configPane} bottom={<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />} />
       </div>

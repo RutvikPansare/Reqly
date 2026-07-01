@@ -1,4 +1,5 @@
-import { X, Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, Plus, ChevronDown } from 'lucide-react';
 import type { RealtimeTab } from '../hooks/useRealtimeTabs.js';
 import { requestBadgeInfo } from '../lib/colors.js';
 
@@ -10,7 +11,26 @@ interface RealtimeTabBarProps {
   onNew: (protocol: string) => void;
 }
 
+const PROTOCOLS = [
+  { id: 'websocket', label: 'WebSocket' },
+  { id: 'sse', label: 'Server-Sent Events' },
+  { id: 'socketio', label: 'Socket.IO' },
+  { id: 'mqtt', label: 'MQTT' },
+];
+
 export function RealtimeTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: RealtimeTabBarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
   return (
     <div className="flex h-10 w-full shrink-0 items-center border-b" style={{ background: 'var(--surface-1)', borderColor: 'var(--border)' }}>
       <div className="flex h-full flex-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
@@ -28,8 +48,18 @@ export function RealtimeTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: 
           );
         })}
       </div>
-      <div className="flex h-full shrink-0 items-center border-l px-1.5" style={{ borderColor: 'var(--border)' }}>
-        <button onClick={() => onNew('websocket')} className="btn btn-secondary h-7 rounded px-2" style={{ minWidth: 'unset' }} title="New WebSocket tab"><Plus size={13} /></button>
+      {/* + button is outside overflow-x-auto so the dropdown is not clipped */}
+      <div ref={menuRef} className="relative flex h-full shrink-0 items-center border-l px-1.5" style={{ borderColor: 'var(--border)' }}>
+        <button onClick={() => setMenuOpen(v => !v)} className="btn btn-secondary h-7 rounded px-2" style={{ gap: '4px', minWidth: 'unset' }} title="New tab">
+          <Plus size={13} /><ChevronDown size={11} />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded py-1" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}>
+            {PROTOCOLS.map(proto => (
+              <button key={proto.id} className="w-full px-4 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-3)]" style={{ color: 'var(--text-primary)' }} onClick={() => { onNew(proto.id); setMenuOpen(false); }}>{proto.label}</button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

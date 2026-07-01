@@ -71,7 +71,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
     flashSaved();
   };
 
-  const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave };
+  const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave, flashSaved: savedFlash };
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -81,7 +81,6 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <RealtimeTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} />
         <div className="relative min-h-0 flex-1">
-          {savedFlash && <div className="absolute top-2 right-3 z-50 rounded px-2 py-1 text-xs" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#4ade80' }}>Saved</div>}
           {activeTab?.protocol === 'websocket' && props && <WebSocketPanel {...props} />}
           {activeTab?.protocol === 'sse' && props && <SSEPanel {...props} />}
           {activeTab?.protocol === 'socketio' && props && <SocketIOPanel {...props} />}
