@@ -558,21 +558,21 @@ function RequestPanel(p: RequestPanelProps) {
 
       {/* ── Proto / Service / Method ──────────────────────────────────────── */}
       <div
-        className="grid grid-cols-3 gap-3 shrink-0"
-        style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}
+        className="grid grid-cols-3 gap-2 shrink-0"
+        style={{ padding: '6px 16px', borderBottom: '1px solid var(--border)' }}
       >
         {[
           { label: 'Proto File', value: p.protoFile, setter: p.setProtoFile, placeholder: 'grpcbin.proto' },
           { label: 'Service',    value: p.service,   setter: p.setService,   placeholder: 'hello.HelloService' },
           { label: 'Method',     value: p.method,    setter: p.setMethod,    placeholder: 'SayHello' },
         ].map(({ label, value, setter, placeholder }) => (
-          <div key={label} className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+          <div key={label} className="flex flex-col gap-1">
+            <label className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               {label}
             </label>
             <input
-              className="rounded px-3 text-sm font-mono focus:outline-none"
-              style={{ height: '30px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
+              className="rounded px-2.5 text-xs font-mono focus:outline-none"
+              style={{ height: '26px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
               value={value}
               onChange={e => setter(e.target.value)}
               placeholder={placeholder}
