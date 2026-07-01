@@ -38,6 +38,30 @@ export function requestBadgeInfo(
   method: string | undefined,
 ): { label: string; className: string; style?: React.CSSProperties } {
   switch (type) {
+    case 'websocket':
+      return {
+        label: 'WS',
+        className: METHOD_BADGE_BASE + ' shrink-0',
+        style: { background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' },
+      };
+    case 'sse':
+      return {
+        label: 'SSE',
+        className: METHOD_BADGE_BASE + ' shrink-0',
+        style: { background: 'rgba(20,184,166,0.15)', color: '#14b8a6', border: '1px solid rgba(20,184,166,0.3)' },
+      };
+    case 'socketio':
+      return {
+        label: 'SIO',
+        className: METHOD_BADGE_BASE + ' shrink-0',
+        style: { background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)' },
+      };
+    case 'mqtt':
+      return {
+        label: 'MQTT',
+        className: METHOD_BADGE_BASE + ' shrink-0',
+        style: { background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' },
+      };
     case 'grpc':
       return {
         label: 'gRPC',

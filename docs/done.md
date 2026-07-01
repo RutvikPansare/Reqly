@@ -2,6 +2,15 @@
 
 ## 2026-07-01
 
+- [x] **T-185** Types + badge colors
+  - **File: `src/types/request.ts`**
+    - Extended `RequestConfig.type` union: added `'websocket' | 'sse' | 'socketio' | 'mqtt'`
+    - Added `RealtimeConfig` interface next to `GrpcConfig`
+    - Added `realtime?: RealtimeConfig` to `RequestConfig`
+  - **File: `src/ui/src/lib/colors.ts`**
+    - Added four new cases to `requestBadgeInfo()`
+  - **TDD**: Unit test `requestBadgeInfo` returns correct label + style for all four in `colors.test.ts`.
+
 - [x] **T-196** Scoped Realtime workspace epic (T-185 through T-195) in `docs/todo.md`
   - Researched Hoppscotch `example/hoppscotch/src/components/realtime/` and `src/helpers/realtime/` for WebSocket, SSE, Socket.IO, and MQTT patterns
   - Superseded T-151 with 11 detailed, dependency-ordered tasks (T-185 to T-195)

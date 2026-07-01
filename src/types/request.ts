@@ -37,6 +37,26 @@ export interface GrpcConfig {
   messages?: Record<string, unknown>[];
 }
 
+export interface RealtimeConfig {
+  protocols?: string[];             // WebSocket subprotocols
+  eventType?: string;               // SSE event name (default: 'message')
+  path?: string;                    // Socket.IO path (default: '/socket.io')
+  clientVersion?: 'v2' | 'v3' | 'v4';  // Socket.IO version
+  authType?: 'none' | 'bearer';
+  authToken?: string;
+  mqttClientId?: string;
+  mqttUsername?: string;
+  mqttPassword?: string;
+  mqttKeepalive?: number;
+  mqttCleanSession?: boolean;
+  mqttWillTopic?: string;
+  mqttWillMessage?: string;
+  mqttWillQos?: 0 | 1 | 2;
+  mqttWillRetain?: boolean;
+  mqttTopics?: { name: string; qos: 0 | 1 | 2 }[];  // persisted subscriptions
+  captureTimeout?: number;  // seconds for MCP buffered capture (default: 5)
+}
+
 // Inline auth carried directly on a request or a collection (no separate
 // AuthProfile record). `type: 'none'` on a request explicitly opts out of any
 // inherited (collection-level) auth.
@@ -76,9 +96,10 @@ export interface RequestConfig {
   auth?: InlineAuth;
   environmentId?: string;
   assertions?: Assertion[];
-  type?: 'rest' | 'graphql' | 'graphql-subscription' | 'grpc';
+  type?: 'rest' | 'graphql' | 'graphql-subscription' | 'grpc' | 'websocket' | 'sse' | 'socketio' | 'mqtt';
   graphql?: GraphQLConfig;
   grpc?: GrpcConfig;
+  realtime?: RealtimeConfig;
   preScript?: string;
   postScript?: string;
   preScriptFile?: string;
