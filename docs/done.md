@@ -2,6 +2,16 @@
 
 ## 2026-07-01
 
+- [x] **T-186** Engine: `realtime-executor.ts` - buffered capture for MCP/agent use
+  - NEW `src/engine/realtime-executor.ts`: `runRealtimeCapture()` supports websocket, sse, socketio, mqtt
+  - Uses injectable adapters pattern (`RealtimeAdapters`) for clean TDD without constructor mocking issues
+  - Exported types: `RealtimeMessage`, `RealtimeCaptureResult`, `RealtimeCaptureRequest`
+  - Ring buffer capped at 500 messages; sets `truncated: true` when hit
+  - Always returns a result (never throws) - safe for MCP tool handlers
+  - Installed npm packages: `eventsource`, `socket.io-client`, `mqtt` (root `package.json` only)
+  - `ws` was already present; `socket.io-client` browser build excluded from UI package.json
+  - NEW `src/engine/realtime-executor.test.ts`: 16 tests, all pass
+
 - [x] **T-185** Types + badge colors
   - **File: `src/types/request.ts`**
     - Extended `RequestConfig.type` union: added `'websocket' | 'sse' | 'socketio' | 'mqtt'`
