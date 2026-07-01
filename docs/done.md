@@ -2,6 +2,13 @@
 
 ## 2026-07-01
 
+- [x] **T-196** Scoped Realtime workspace epic (T-185 through T-195) in `docs/todo.md`
+  - Researched Hoppscotch `example/hoppscotch/src/components/realtime/` and `src/helpers/realtime/` for WebSocket, SSE, Socket.IO, and MQTT patterns
+  - Superseded T-151 with 11 detailed, dependency-ordered tasks (T-185 to T-195)
+  - Each task specifies: exact file paths, TypeScript interfaces, CSS conventions, state persistence approach, npm packages needed, and manual test instructions
+  - Component size limit (200 lines) enforced by splitting MQTT into 3 files
+  - Covered: types/config, badge colors, nav rail, app routing, filtered collections sidebar, tab system with localStorage persistence, shared MessageLog + LogEntry, WebSocket panel, SSE panel, Socket.IO panel, MQTT panel, save/load integration
+
 - [x] **T-184** gRPC UI workspace
   - New `GrpcWorkspace.tsx` component with full gRPC panel: streaming type selector (Unary/Server/Client/Bidi), proto/service/method inputs, TLS toggle, CodeMirror JSON message editor, metadata key-value editor, saved requests sidebar
   - Response panel: gRPC status badge with colour coding (green OK / red error), latency, stream message timeline with RECV/SENT direction indicators and timestamps, copy to clipboard
