@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Bookmark } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -13,7 +13,7 @@ export function statusColor(status: ConnectionStatus) {
   return statusColors[status];
 }
 
-export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, saved, onSave }: {
+export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave }: {
   badge: string;
   url: string;
   placeholder: string;
@@ -22,7 +22,7 @@ export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, st
   status: ConnectionStatus;
   action: ReactNode;
   onAction: () => void;
-  saved: boolean;
+  saved?: boolean;
   onSave: () => void;
 }) {
   return (
@@ -33,8 +33,8 @@ export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, st
         <input value={url} onChange={e => onChange(e.target.value)} disabled={disabled} placeholder={placeholder} className="h-full flex-1 bg-transparent px-3 font-mono text-sm focus:outline-none disabled:opacity-50" style={{ color: 'var(--text-primary)' }} />
       </div>
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusColor(status) }} title={status} aria-label={status} />
-      <button onClick={onAction} className={`btn ${status === 'connected' ? 'btn-danger' : 'btn-primary'} h-8 min-w-[92px] justify-center rounded px-3`}>{action}</button>
-      <button onClick={onSave} className="flex h-7 w-7 shrink-0 items-center justify-center" style={{ color: saved ? 'var(--accent)' : 'var(--text-muted)' }} title="Save request"><Bookmark size={16} /></button>
+      <button onClick={onAction} className={`btn ${status === 'connected' ? 'btn-danger' : 'btn-primary'} h-8 min-w-[96px] justify-center rounded px-3`}>{action}</button>
+      <button onClick={onSave} className="btn btn-secondary h-8 rounded gap-1.5 px-3" title="Save request (⌘S)"><Save size={13} />Save</button>
     </div>
   );
 }

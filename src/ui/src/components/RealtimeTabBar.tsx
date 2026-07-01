@@ -44,10 +44,10 @@ export function RealtimeTabBar({ tabs, activeTabId, onSelect, onClose, onNew }: 
             </button>
           );
         })}
-        <div ref={menuRef} className="relative flex h-full items-center px-1.5">
-          <button onClick={() => setMenuOpen(v => !v)} className="btn btn-secondary h-7 rounded px-2 text-xs" style={{ gap: '4px', minWidth: 'unset' }} title="New realtime tab"><Plus size={13} /><ChevronDown size={11} /></button>
-          {menuOpen && <div className="absolute left-1.5 top-full z-50 mt-1 w-40 rounded py-1" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}>{PROTOCOLS.map(proto => <button key={proto.id} className="w-full px-4 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-3)]" style={{ color: 'var(--text-primary)' }} onClick={() => { onNew(proto.id); setMenuOpen(false); }}>{proto.label}</button>)}</div>}
-        </div>
+      </div>
+      <div ref={menuRef} className="relative flex h-full shrink-0 items-center border-l px-1.5" style={{ borderColor: 'var(--border)' }}>
+        <button onClick={() => setMenuOpen(v => !v)} className="btn btn-secondary h-7 rounded px-2 text-xs" style={{ gap: '4px', minWidth: 'unset' }} title="New realtime tab"><Plus size={13} /><ChevronDown size={11} /></button>
+        {menuOpen && <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded py-1" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-strong)' }}>{PROTOCOLS.map(proto => <button key={proto.id} className="w-full px-4 py-2 text-left text-xs transition-colors hover:bg-[var(--surface-3)]" style={{ color: 'var(--text-primary)' }} onClick={() => { onNew(proto.id); setMenuOpen(false); }}>{proto.label}</button>)}</div>}
       </div>
     </div>
   );
