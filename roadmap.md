@@ -154,12 +154,12 @@ All Windows Support items shipped (T-115 through T-119).
 **Why post-M7:** REST is table stakes and already solid. These protocols are used by a smaller audience and each needs its own UI paradigm. Ship them once the core product is proven.
 
 - [ ] **T-151 WebSocket / SSE** - Persistent connections with a live message stream panel. Send messages, see server pushes in real time. Stored in collections as `type: websocket` / `type: sse` requests.
-- [ ] **gRPC Epic (T-164 through T-168)** - Full BloomRPC-beating gRPC support. Sequenced as five tasks:
+- [x] **gRPC Epic (T-164 through T-168)** - Full BloomRPC-beating gRPC support. Shipped:
   - **T-164** Core engine: unary RPCs, multi-file proto support via `.reqly/protos/` with `includeDirs`, gRPC status codes distinct from HTTP, `run_request` MCP transparent routing
-  - **T-165** Metadata + auth: headers map to gRPC Metadata automatically; existing Bearer/API Key auth profiles inject into `authorization` metadata without manual config - the thing BloomRPC gets wrong
-  - **T-166** Message auto-generation: selecting a method pre-populates the JSON editor with a typed scaffold; `create_request` MCP returns the scaffold so agents don't guess the message shape
-  - **T-167** Server reflection: discover schema from a live server without any `.proto` file; queries `grpc.reflection.v1alpha.ServerReflection`, deserialises `FileDescriptorProto` blobs, populates method picker identically to file-based loading - **Sonnet only**
-  - **T-168** Full streaming: server streaming, client streaming, bidirectional; real-time append-only log UI; MCP buffers stream for configurable timeout and returns `{ messages, truncated }` for headless agent testing - **Sonnet only**
+  - **T-165** Metadata + auth: headers map to gRPC Metadata automatically; existing Bearer/API Key/Basic auth profiles inject into Metadata without manual config
+  - **T-166** Message auto-generation: `create_request` MCP returns typed JSON scaffold so agents don't guess the message shape; `scaffoldMessage()` in `src/engine/proto-scaffold.ts`
+  - **T-167** Server reflection: `list_grpc_services` MCP tool discovers schema from a live server via `grpc.reflection.v1alpha.ServerReflection` - no .proto file needed
+  - **T-168** Full streaming: `runGrpcServerStream`, `runGrpcClientStream`, `runGrpcBidiStream` in `src/engine/grpc-streaming.ts`; `run_request` routes streaming modes; MCP returns `{ messages, truncated }` for headless agent testing
 - [ ] **T-148 Client certificates / mTLS** - Per-collection or per-request client cert (PEM cert + key pair). Cert paths stored in collection YAML, files stored in `~/.reqly/certs/` (never committed). HTTP executor passes cert to `undici` dispatcher at request time. "Certificate" tab in collection settings and request Auth tab.
 - [ ] **MQTT / Socket.IO** - Additional realtime protocol support for IoT and event-driven apps.
 - [ ] **Multipart body editor** - File upload support with per-part content types, filename, and mime type. Essential for testing file upload endpoints.

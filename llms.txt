@@ -98,6 +98,50 @@ Reqly exposes the following MCP tools for AI agents:
 - `get_project`: Returns `{ projectDir, configSource, fallbackReason? }`. Call this on first connection to verify Reqly is pointed at the expected directory. `configSource` is `"flag" | "env" | "config" | "cwd"` - which priority level won. `fallbackReason` is present when a higher-priority source was detected but ignored (e.g. an unresolved `${workspaceFolder}` macro from a non-VS Code host).
 - `switch_project`: Switch Reqly to a different project directory at runtime.
 - `set_collection_auth`: Set collection-level auth inherited by all requests. Supported types: `bearer` (`credentials.token`), `basic` (`credentials.username` + `credentials.password`), `apiKey` (`credentials.key`), `oauth2`, `mtls` (`credentials.certPath` + `credentials.keyPath` - absolute paths to PEM files, store in `~/.reqly/certs/`), `none`. The executor attaches the right headers or TLS client certificate at request time.
+- `introspect_graphql`: Run full GraphQL schema introspection against a URL, cache the schema for autocomplete.
+- `list_grpc_services`: Discover gRPC services from a running server via server reflection (server must have `grpc.reflection.v1alpha.ServerReflection` enabled). Returns `{ services: [{ name }], fileDescriptorCount }`. Use this when no `.proto` file is available. Call with `{ serverUrl: "localhost:50051" }`.
+
+## gRPC Request Format
+
+gRPC requests in collection YAML use `type: grpc` and a `grpc` block:
+
+```yaml
+type: grpc
+url: localhost:50051       # server address
+grpc:
+  protoFile: helloworld.proto   # relative to .reqly/protos/
+  service: helloworld.Greeter   # fully-qualified service name
+  method: SayHello              # method name
+  message:                      # JSON message body
+    name: World
+  insecure: true                # plaintext channel (default: true)
+headers:                        # maps to gRPC Metadata
+  x-custom-header: value
+```
+
+- Proto files must be placed in `.reqly/protos/` (supports subdirectories + cross-file imports via `includeDirs`).
+- `headers` on a gRPC request map directly to gRPC Metadata entries.
+- Auth profiles (Bearer, API Key, Basic) auto-inject into Metadata - same precedence chain as REST.
+- Response shape: `{ grpcStatus, grpcStatusCode, body, latency, isError?, errorMessage? }`. `grpcStatus` is a distinct human-readable name (OK, NOT_FOUND, UNIMPLEMENTED, UNAVAILABLE, etc.) - never reuses HTTP status.
+- `create_request` returns `grpcMessageScaffold` when `type: grpc` with `service`/`method` so agents know the exact JSON message shape.
+
+### gRPC Streaming
+
+Add `grpc.streaming: 'server' | 'client' | 'bidirectional'` for streaming RPCs:
+
+```yaml
+grpc:
+  protoFile: stream.proto
+  service: myservice.StreamService
+  method: ServerStream
+  message: { n: 10 }
+  streaming: server
+  streamTimeout: 5        # max seconds to buffer (default: 5)
+```
+
+For client/bidirectional streaming, use `grpc.messages` (array) instead of `grpc.message`.
+Response shape for streaming: `{ messages: [{ data, timestamp, direction: 'sent'|'received' }], truncated: boolean }`.
+`truncated: true` means the stream was still active when the timeout expired.
 
 ## Reqly Features
 

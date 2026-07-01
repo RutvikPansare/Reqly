@@ -1,5 +1,30 @@
 # Reqly - Done
 
+## 2026-07-01
+
+- [x] **T-164** Core gRPC engine - unary RPCs + multi-file proto support
+  - `src/engine/grpc-runner.ts`: `runGrpcRequest()` loads `.proto` files from `.reqly/protos/` via `@grpc/proto-loader` with `includeDirs` so cross-file imports resolve; executes unary RPC; returns `{ grpcStatus, grpcStatusCode, body, latency }` - gRPC status is a distinct field (not HTTP status)
+  - `RequestConfig.type: 'grpc'` added; `GrpcConfig` interface in `src/types/request.ts`
+  - `run_request` MCP tool routes `type: grpc` requests to `grpc-runner` transparently; REST requests unaffected
+  - 10 TDD tests in `grpc-runner.test.ts`
+- [x] **T-165** gRPC metadata + auth integration
+  - `headers` on a gRPC request map directly to gRPC Metadata; no separate concept needed
+  - Bearer, API Key, and Basic auth profiles auto-inject into Metadata via `injectAuthToMetadata()` in `run-request.ts` - same precedence chain as REST (collection auth < request auth < explicit headers)
+  - 4 TDD tests in `grpc-runner.test.ts` (T-165 suite)
+- [x] **T-166** Proto message auto-generation + MCP scaffold
+  - `src/engine/proto-scaffold.ts`: `scaffoldMessage(fields)` generates a typed JSON default-value object from proto field descriptors; supports all scalar types, nested messages, repeated fields, oneof, enum, well-known types (Timestamp, Duration)
+  - `create_request` MCP tool: when `type: grpc` with `service`/`method` provided, best-effort proto load returns `grpcMessageScaffold` in the response
+  - 14 TDD tests in `proto-scaffold.test.ts`
+- [x] **T-167** gRPC server reflection - discover schema without a .proto file
+  - `src/engine/grpc-reflection.ts`: `discoverServicesViaReflection()` connects via `grpc.reflection.v1alpha.ServerReflection`, lists services, fetches `FileDescriptorProto` blobs; returns `{ services, rawFileDescriptors, isError?, errorMessage? }`
+  - `src/mcp/tools/list-grpc-services.ts`: new `list_grpc_services` MCP tool - call with `serverUrl` to get service list from any reflection-enabled gRPC server
+  - 5 TDD tests in `grpc-reflection.test.ts`
+- [x] **T-168** Full gRPC streaming support
+  - `src/engine/grpc-streaming.ts`: `runGrpcServerStream()`, `runGrpcClientStream()`, `runGrpcBidiStream()` - each returns a plain JSON-serialisable result with `{ messages, truncated }` for MCP agent use; timeout defaults to 5s
+  - `run_request` MCP tool routes `grpc.streaming: 'server' | 'client' | 'bidirectional'` to the correct streaming function
+  - All stream messages include `timestamp` and `direction` ('sent'/'received') for UI rendering
+  - 8 TDD tests in `grpc-streaming.test.ts`
+
 ## 2026-06-30
 
 - [x] **T-180** GraphQL workspace: saved request browser

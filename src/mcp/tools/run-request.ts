@@ -3,7 +3,7 @@ import { checkContract } from './contract-helper.js';
 
 export const definition: ToolDefinition = {
   name: 'run_request',
-  description: "Fires a saved request and returns the response. When to use: to verify a request actually works after creating it, or to debug a failing endpoint. Preferred pattern: call list_collections first if you don't know the exact request name. If the response is a 401, use set_variable to set the auth token then retry. GraphQL requests (type: graphql) include a graphql block with query, variables, and an optional operationName (required when the document contains multiple named operations). Return shape includes a testResults array: [{ name: string, passed: boolean, error?: string }] - one entry per test() call in the request's postScript; empty array if the request has no postScript or no test() calls. postScript supports two Chai plugins: expect(val).to.have.jsonSchema(schema) validates against a JSON Schema; expect(val).to.have.jsonBody(subset) does partial deep-match ignoring extra fields. Both produce entries in testResults.",
+  description: "Fires a saved request and returns the response. When to use: to verify a request actually works after creating it, or to debug a failing endpoint. Preferred pattern: call list_collections first if you don't know the exact request name. If the response is a 401, use set_variable to set the auth token then retry. GraphQL requests (type: graphql) include a graphql block with query, variables, and an optional operationName (required when the document contains multiple named operations). gRPC requests (type: grpc) return { grpcStatus, grpcStatusCode, body, latency, isError?, errorMessage? } - grpcStatus is the human-readable gRPC status name (OK, NOT_FOUND, UNIMPLEMENTED, UNAVAILABLE etc.); grpcStatusCode is the numeric code; body is the decoded response message. gRPC headers are passed as Metadata automatically. Auth profiles (bearer, API key) are injected into gRPC Metadata the same way as REST headers. Return shape includes a testResults array: [{ name: string, passed: boolean, error?: string }] - one entry per test() call in the request's postScript; empty array if the request has no postScript or no test() calls. postScript supports two Chai plugins: expect(val).to.have.jsonSchema(schema) validates against a JSON Schema; expect(val).to.have.jsonBody(subset) does partial deep-match ignoring extra fields. Both produce entries in testResults.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -18,6 +18,12 @@ export const definition: ToolDefinition = {
 export async function handler(args: any, context: EngineContext): Promise<ToolHandlerResult> {
   try {
     const req = await context.collectionManager.getRequest(args.collectionName, args.requestName);
+
+    // Route gRPC requests to the dedicated runner.
+    if (req.type === 'grpc') {
+      return handleGrpcRequest(req, args, context);
+    }
+
     const env = await context.environmentManager.getActiveEnvironment();
     
     let auth;
@@ -66,3 +72,130 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
     return { content: [{ type: 'text', text: e.message }], isError: true };
   }
 }
+
+async function handleGrpcRequest(req: any, args: any, context: EngineContext): Promise<ToolHandlerResult> {
+  try {
+    const grpcCfg = req.grpc;
+    if (!grpcCfg) {
+      return { content: [{ type: 'text', text: 'gRPC request is missing a grpc config block (protoFile, service, method)' }], isError: true };
+    }
+
+    // Resolve variables in the server URL.
+    const env = await context.environmentManager.getActiveEnvironment();
+    const collectionVars = await context.collectionManager.getCollectionVariables(args.collectionName);
+    const { resolveVariables } = await import('../../engine/variable-substitutor.js');
+    const envVars = env?.variables ?? {};
+    const resolvedUrl = resolveVariables(req.url, [collectionVars, envVars]);
+
+    // Build metadata from headers + auth profile (T-165).
+    const metadata: Record<string, string> = {};
+
+    // 1. Collection-level auth -> inject into metadata
+    const { resolveCollectionAuth } = await import('../../engine/collection-auth.js');
+    const collectionAuth = await resolveCollectionAuth(
+      await context.collectionManager.getCollectionAuth(args.collectionName),
+      context.authManager,
+    );
+    if (collectionAuth) {
+      injectAuthToMetadata(collectionAuth, metadata);
+    }
+
+    // 2. Request-level auth overrides collection auth
+    if (req.authProfileId) {
+      const reqAuth = await context.authManager.getProfile(req.authProfileId);
+      if (reqAuth) injectAuthToMetadata(reqAuth, metadata);
+    }
+
+    // 3. Explicit headers override everything (merged last)
+    if (req.headers) {
+      Object.assign(metadata, req.headers);
+    }
+
+    const { runGrpcRequest } = await import('../../engine/grpc-runner.js');
+    const protosDir = context.collectionManager.getBaseDir().replace(/\/[^/]+$/, '') + '/.reqly/protos';
+
+    // Route to streaming handlers (T-168)
+    if (grpcCfg.streaming) {
+      return handleGrpcStreaming(grpcCfg, resolvedUrl, protosDir, metadata);
+    }
+
+    const result = await runGrpcRequest(
+      {
+        serverUrl: resolvedUrl,
+        protoFile: grpcCfg.protoFile,
+        service: grpcCfg.service,
+        method: grpcCfg.method,
+        message: grpcCfg.message ?? {},
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        insecure: grpcCfg.insecure !== false,
+      },
+      protosDir,
+    );
+
+    return { content: [{ type: 'text', text: JSON.stringify({ response: result }) }] };
+  } catch (e: any) {
+    return { content: [{ type: 'text', text: e.message }], isError: true };
+  }
+}
+
+
+async function handleGrpcStreaming(
+  grpcCfg: any,
+  serverUrl: string,
+  protosDir: string,
+  metadata: Record<string, string>,
+): Promise<ToolHandlerResult> {
+  const streamReq = {
+    serverUrl,
+    protoFile: grpcCfg.protoFile,
+    service: grpcCfg.service,
+    method: grpcCfg.method,
+    message: grpcCfg.message ?? {},
+    messages: grpcCfg.messages ?? [],
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+    insecure: grpcCfg.insecure !== false,
+    streamTimeout: grpcCfg.streamTimeout,
+  };
+
+  try {
+    const streaming = grpcCfg.streaming as string;
+    if (streaming === 'server') {
+      const { runGrpcServerStream } = await import('../../engine/grpc-streaming.js');
+      const result = await runGrpcServerStream(streamReq, protosDir);
+      return { content: [{ type: 'text', text: JSON.stringify({ response: result }) }] };
+    } else if (streaming === 'client') {
+      const { runGrpcClientStream } = await import('../../engine/grpc-streaming.js');
+      const result = await runGrpcClientStream(streamReq, protosDir);
+      return { content: [{ type: 'text', text: JSON.stringify({ response: result }) }] };
+    } else if (streaming === 'bidirectional') {
+      const { runGrpcBidiStream } = await import('../../engine/grpc-streaming.js');
+      const result = await runGrpcBidiStream(streamReq, protosDir);
+      return { content: [{ type: 'text', text: JSON.stringify({ response: result }) }] };
+    }
+    return { content: [{ type: 'text', text: `Unknown streaming mode: ${streaming}` }], isError: true };
+  } catch (e: any) {
+    return { content: [{ type: 'text', text: e.message }], isError: true };
+  }
+}
+
+function injectAuthToMetadata(auth: any, metadata: Record<string, string>) {
+  const creds = auth.credentials ?? {};
+  switch (auth.type) {
+    case 'bearer':
+      if (creds.token) metadata['authorization'] = `Bearer ${creds.token}`;
+      break;
+    case 'apiKey':
+      if (creds.key && creds.value) {
+        // inject as lowercase header name
+        metadata[creds.key.toLowerCase()] = creds.value;
+      }
+      break;
+    case 'basic':
+      if (creds.username && creds.password) {
+        const encoded = Buffer.from(`${creds.username}:${creds.password}`).toString('base64');
+        metadata['authorization'] = `Basic ${encoded}`;
+      }
+      break;
+  }
+}
+

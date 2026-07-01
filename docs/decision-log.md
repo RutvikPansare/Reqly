@@ -6,6 +6,22 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-01 - gRPC streaming split into separate grpc-streaming.ts, not merged into grpc-runner.ts
+
+Streaming modes (server/client/bidirectional) live in `src/engine/grpc-streaming.ts` rather than being overloaded into `grpc-runner.ts`. Reasoning: unary and streaming RPCs have fundamentally different callback shapes (callback vs EventEmitter). Keeping them separate keeps each file focused and testable in isolation without fake streaming infrastructure contaminating unary tests.
+
+## 2026-07-01 - gRPC Metadata uses the same `headers` field as REST
+
+Rather than adding a separate `metadata` concept to the YAML schema, gRPC requests re-use the existing `headers` field and map it directly to gRPC Metadata entries. Reasoning: users already understand headers; grpc-js treats metadata as string key/value pairs just like HTTP headers; this avoids an unnecessary schema divergence between REST and gRPC request configs.
+
+## 2026-07-01 - Proto files stored in .reqly/protos/ with includeDirs for cross-file imports
+
+Proto files live at `.reqly/protos/` (project-level, not inside a collection folder). `@grpc/proto-loader` is configured with `includeDirs: [protosDir]` so `import "google/protobuf/timestamp.proto"` and cross-file service imports resolve correctly without requiring users to manage separate include paths. The location is outside collections so proto files are shared across all gRPC collections in the project.
+
+## 2026-07-01 - list_grpc_services returns service names only (no raw binary blobs to agents)
+
+`discoverServicesViaReflection()` fetches raw `FileDescriptorProto` binary blobs, but `list_grpc_services` MCP tool returns only `{ services: [{ name }], fileDescriptorCount }`. Binary protobuf blobs would be large, unreadable, and uselessly noisy in an agent's context window. The count tells agents how many files were fetched as a sanity check.
+
 ## 2026-06-30 - GraphQL subscription detection by query keyword, not by saved type
 
 `GraphQLWorkspace` detects subscription mode at runtime by scanning the query text for the `subscription` keyword rather than relying on a `type: graphql-subscription` flag on the saved request. Reasoning: users often paste or type a subscription query into the playground before saving. Requiring them to set a type field first would create friction. The subscription stream panel appears automatically when the query starts with `subscription`, and reverts to the normal response viewer when they switch to a `query` or `mutation`. Saved requests still carry `type: graphql-subscription` as a forward-compatible marker for the engine and MCP.

@@ -12,6 +12,31 @@ export interface GraphQLConfig {
   streamTimeout?: number;
 }
 
+/**
+ * gRPC-specific configuration block on a request.
+ * `method` on the outer RequestConfig is unused for gRPC requests.
+ * `url` on the outer RequestConfig holds the server address (e.g. "localhost:50051").
+ * `headers` on the outer RequestConfig map directly to gRPC Metadata entries.
+ */
+export interface GrpcConfig {
+  /** Path to the .proto file relative to .reqly/protos/ */
+  protoFile: string;
+  /** Fully-qualified service name, e.g. "helloworld.Greeter" */
+  service: string;
+  /** Method name on the service, e.g. "SayHello" */
+  method: string;
+  /** JSON message body to send */
+  message?: Record<string, unknown>;
+  /** Use insecure (plaintext) channel. Defaults to true. */
+  insecure?: boolean;
+  /** Streaming mode for T-168. Unset = unary. */
+  streaming?: 'server' | 'client' | 'bidirectional';
+  /** For streaming modes: max seconds to buffer (default 5) */
+  streamTimeout?: number;
+  /** For client/bidirectional streaming: array of messages to send */
+  messages?: Record<string, unknown>[];
+}
+
 // Inline auth carried directly on a request or a collection (no separate
 // AuthProfile record). `type: 'none'` on a request explicitly opts out of any
 // inherited (collection-level) auth.
@@ -51,8 +76,9 @@ export interface RequestConfig {
   auth?: InlineAuth;
   environmentId?: string;
   assertions?: Assertion[];
-  type?: 'rest' | 'graphql' | 'graphql-subscription';
+  type?: 'rest' | 'graphql' | 'graphql-subscription' | 'grpc';
   graphql?: GraphQLConfig;
+  grpc?: GrpcConfig;
   preScript?: string;
   postScript?: string;
   preScriptFile?: string;
