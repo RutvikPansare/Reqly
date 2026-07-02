@@ -1,8 +1,32 @@
-# Reqly - From route to CI test in one agent session.
+<div align="center"><pre>
+██████╗ ███████╗ ██████╗ ██╗  ██╗   ██╗
+██╔══██╗██╔════╝██╔═══██╗██║  ╚██╗ ██╔╝
+██████╔╝█████╗  ██║   ██║██║   ╚████╔╝ 
+██╔══██╗██╔══╝  ██║▄▄ ██║██║    ╚██╔╝  
+██║  ██║███████╗╚██████╔╝███████╗██║   
+╚═╝  ╚═╝╚══════╝ ╚══▀▀═╝ ╚══════╝╚═╝   
+</pre></div>
 
-[![npm version](https://img.shields.io/npm/v/getreqly.svg)](https://www.npmjs.com/package/getreqly)
-[![license](https://img.shields.io/npm/l/getreqly.svg)](https://github.com/RutvikPansare/Reqly/blob/main/LICENSE)
-[![CI](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg)](https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml)
+<p align="center">
+  API testing app built for AI agents<br>
+  From collections to CI test in one agent session.
+</p>
+
+<p align="center"><strong>plain YAML · local-first · MCP server · CLI & Web UI · auto-capture · flows · REST · GraphQL · gRPC</strong></p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/getreqly"><img src="https://img.shields.io/npm/v/getreqly.svg" alt="npm version"></a>
+  <a href="https://github.com/RutvikPansare/Reqly/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/getreqly.svg" alt="license"></a>
+  <a href="https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml"><img src="https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
+
+<p align="center">
+  <a href="#installation">Install</a> ·
+  <a href="#the-full-zero-human-pipeline">How it works</a> ·
+  <a href="#what-your-agent-can-do">MCP Tools</a> ·
+  <a href="#flows">Flows</a> ·
+  <a href="#faq">FAQ</a>
+</p>
 
 Your agent reads your codebase, builds the collection, writes the assertions, exports the GitHub Actions workflow, and ships it to CI. You never touch it.
 

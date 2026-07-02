@@ -2,6 +2,10 @@
 
 ## 2026-07-02
 
+- [x] **T-212** Add centered ASCII header and taglines to README
+  - Added a `div align="center"` header block with `REQLY` ASCII art.
+  - Added a feature tagline and quick navigation links.
+
 - [x] **T-211** Add variable detection and workspace filtering improvements
   - Added `{{` variable autocomplete trigger for gRPC proto inputs, GraphQL query variables, and Realtime URL bars.
   - Refined `CollectionsPanel` filtering logic to hide empty collections or collections without matching request types in GraphQL, gRPC, and Realtime workspaces.
