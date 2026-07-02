@@ -12,13 +12,16 @@ export function formatProjectPath(p: string) {
 
 interface ProjectPathWidgetProps {
   projectPath: string;
+  hasEverConnectedAgent?: boolean;
   onSwitch: (p: string) => void;
 }
 
-export function ProjectPathWidget({ projectPath, onSwitch }: ProjectPathWidgetProps) {
+export function ProjectPathWidget({ projectPath, hasEverConnectedAgent, onSwitch }: ProjectPathWidgetProps) {
   const [editing, setEditing] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [pendingDir, setPendingDir] = useState<string | null>(null);
+
+  const isAgentActive = hasEverConnectedAgent || window.location.port === '4242';
 
   const doSwitch = async (target: string, createIfMissing = false) => {
     setSwitching(true);
@@ -92,14 +95,16 @@ export function ProjectPathWidget({ projectPath, onSwitch }: ProjectPathWidgetPr
 
   return (
     <button
-      onClick={() => setEditing(true)}
-      className="shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group"
+      onClick={() => {
+        if (!isAgentActive) setEditing(true);
+      }}
+      className={`shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group ${isAgentActive ? 'cursor-not-allowed opacity-80' : ''}`}
       style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-      title={`${projectPath}\nClick to switch project`}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+      title={isAgentActive ? `This session is locked to the AI agent's active project.\nOpen the Reqly desktop app to browse other projects.` : `${projectPath}\nClick to switch project`}
+      onMouseEnter={e => { if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+      onMouseLeave={e => { if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
     >
-      <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
+      <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} className={isAgentActive ? 'opacity-50' : ''} />
       <div className="min-w-0 flex-1">
         <div className="font-mono font-medium truncate" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
         <div className="font-mono truncate" style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{display}</div>

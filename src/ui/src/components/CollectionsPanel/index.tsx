@@ -31,7 +31,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   return (
     <div className="p-3 flex flex-col gap-3 relative min-h-full">
-      {s.projectPath && <ProjectPathWidget projectPath={s.projectPath} onSwitch={s.setProjectPath} />}
+      {s.projectPath && <ProjectPathWidget projectPath={s.projectPath} hasEverConnectedAgent={s.hasEverConnectedAgent} onSwitch={s.setProjectPath} />}
 
       <div className="-mx-3 -mt-1" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <SidebarEnvSection />
@@ -138,7 +138,6 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
                     s.handleMoveReq(source.col, source.req, col.name);
                     s.setDraggedReq(null);
                   }}
-                  onAddReq={s.handleAddReq}
                   onNewReqNameChange={s.setNewReqName}
                   onNewReqKeyDown={(e, colName) => {
                     if (e.key === 'Enter') s.handleAddReq(colName);

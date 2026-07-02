@@ -24,7 +24,6 @@ interface CollectionRowProps {
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
-  onAddReq: (colName: string) => void;
   onNewReqNameChange: (v: string) => void;
   onNewReqKeyDown: (e: React.KeyboardEvent, colName: string) => void;
   onRunCollection: (name: string) => void;
@@ -48,7 +47,7 @@ export function CollectionRow({
   dragOverCol, renaming, renameValue, expandedReqs,
   onToggleExpand, onColRenameChange, onColRenameCommit, onColRenameCancel,
   onContextMenu, onDragOver, onDragLeave, onDrop,
-  onAddReq, onNewReqNameChange, onNewReqKeyDown, onRunCollection,
+  onNewReqNameChange, onNewReqKeyDown, onRunCollection,
   onSetSettingsFor, onSetAddingReqTo, onSelectRequest, onSelectExample,
   onSetContextMenu, onSetDraggedReq, onSetDragOverCol,
   onRenameChange, onRenameCommit, onRenameCancel,

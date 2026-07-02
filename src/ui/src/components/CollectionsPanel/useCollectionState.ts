@@ -27,10 +27,14 @@ export function useCollectionState(onSelectRequest: (req: any, col: string) => v
   const [draggedReq, setDraggedReq] = useState<{ col: string; req: string } | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
   const [moveModal, setMoveModal] = useState<MoveModalState | null>(null);
+  const [hasEverConnectedAgent, setHasEverConnectedAgent] = useState(false);
 
   const loadData = () => {
     fetchCollections().then(setCollections).catch(console.error);
-    fetch('/api/project').then(r => r.json()).then(d => setProjectPath(d.path)).catch(() => {});
+    fetch('/api/project').then(r => r.json()).then(d => {
+      setProjectPath(d.path);
+      setHasEverConnectedAgent(d.hasEverConnectedAgent);
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -135,11 +139,12 @@ export function useCollectionState(onSelectRequest: (req: any, col: string) => v
 
   return {
     collections, setCollections, projectPath, setProjectPath,
+    hasEverConnectedAgent, setHasEverConnectedAgent,
     expandedCols, setExpandedCols, expandedReqs, setExpandedReqs,
     creatingCol, setCreatingCol, newColName, setNewColName,
     addingReqTo, newReqName, setNewReqName,
-    renaming, renameValue, setRenameValue,
-    renamingCol, colRenameValue, setColRenameValue,
+    renaming, setRenaming, renameValue, setRenameValue,
+    renamingCol, setRenamingCol, colRenameValue, setColRenameValue,
     settingsFor, setSettingsFor, importSuccess, setImportSuccess,
     contextMenu, setContextMenu, draggedReq, setDraggedReq,
     dragOverCol, setDragOverCol, moveModal, setMoveModal,
