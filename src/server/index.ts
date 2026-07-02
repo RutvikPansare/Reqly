@@ -32,6 +32,7 @@ import { handleAppCommand } from './app-command.js';
 import { handleExecCommand } from './exec-command.js';
 import { handleImportCommand } from './import-command.js';
 import { handleInitCommand } from './init-command.js';
+import { handleWorkspaceCommand } from './workspace-command.js';
 import { writeLock, clearLock } from './lock.js';
 
 async function main() {
@@ -54,6 +55,16 @@ async function main() {
   if (parsed.command === 'status') {
     const exitCode = await handleStatusCommand(parsed, authManager);
     process.exit(exitCode);
+  }
+
+  if (parsed.command === 'workspace') {
+    const action = parsed.args[0] as 'add' | 'remove' | 'list';
+    if (!['add', 'remove', 'list'].includes(action)) {
+      console.error('Usage: reqly workspace <add|remove|list> [path]');
+      process.exit(1);
+    }
+    await handleWorkspaceCommand(action, parsed.args[1]);
+    process.exit(0);
   }
 
   if (parsed.command === 'stop') {

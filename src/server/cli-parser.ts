@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export interface ParsedArgs {
-  command: 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app';
+  command: 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app' | 'workspace';
   args: string[];
   collection?: string;
   flags: {
@@ -83,7 +83,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let i = 0;
 
   // check if first non-flag argument is a command
-  const validCommands = ['start', 'run', 'run-flow', 'mock', 'setup', 'use', 'status', 'stop', 'exec', 'import', 'export', 'export-flow', 'init', 'app'];
+  const validCommands = ['start', 'run', 'run-flow', 'mock', 'setup', 'use', 'status', 'stop', 'exec', 'import', 'export', 'export-flow', 'init', 'app', 'workspace'];
   let commandFound = false;
   // once `exec`'s child command starts, everything after it (including its own
   // dashed flags) is passed through verbatim rather than parsed as reqly flags
@@ -132,7 +132,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       if (!commandFound && validCommands.includes(arg)) {
-        result.command = arg as 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app';
+        result.command = arg as 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app' | 'workspace';
         commandFound = true;
       } else {
         result.args.push(arg);

@@ -55,6 +55,17 @@ export class HistoryStore {
       
       // Initialize counter so ids don't collide in the same millisecond
       this.counter = this.entries.length;
+
+      // Trim the file on disk if it has grown beyond MAX_ENTRIES to keep it bounded.
+      // Write the MAX_ENTRIES most recent lines back (oldest-first, as the file format requires).
+      if (lines.length > MAX_ENTRIES) {
+        const trimmed = lines.slice(lines.length - MAX_ENTRIES).join('\n') + '\n';
+        try {
+          fs.writeFileSync(this.filePath, trimmed, 'utf8');
+        } catch {
+          // ignore trim errors - non-critical
+        }
+      }
     } catch (e) {
       // ignore read errors
     }

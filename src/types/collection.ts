@@ -41,6 +41,7 @@ export interface ContractViolation {
 
 export interface Collection {
   name: string;
+  projectDir?: string;
   description?: string;
   variables?: Record<string, string>;
   auth?: CollectionAuth;

@@ -15,6 +15,7 @@ interface ConfigFile {
   authProfiles?: AuthProfile[];
   activeProject?: string;
   dotenvFiles?: string[];
+  workspaceProjects?: string[];
   [key: string]: any;
 }
 
@@ -169,5 +170,27 @@ export class AuthManager {
     };
 
     return this.updateProfile(profileId, { credentials: updatedCreds });
+  }
+
+  async getWorkspaceProjects(): Promise<string[]> {
+    const config = await this.loadConfig();
+    return config.workspaceProjects || [];
+  }
+
+  async addWorkspaceProject(projectPath: string): Promise<void> {
+    const config = await this.loadConfig();
+    const projects = config.workspaceProjects || [];
+    if (!projects.includes(projectPath)) {
+      projects.push(projectPath);
+      config.workspaceProjects = projects;
+      await this.saveConfig(config);
+    }
+  }
+
+  async removeWorkspaceProject(projectPath: string): Promise<void> {
+    const config = await this.loadConfig();
+    if (!config.workspaceProjects) return;
+    config.workspaceProjects = config.workspaceProjects.filter(p => p !== projectPath);
+    await this.saveConfig(config);
   }
 }

@@ -2,6 +2,15 @@
 
 ## 2026-07-02
 
+- [x] **T-225** Multi-project path list + grouped sidebar
+  - **Config/Engine:** Added `workspaceProjects: string[]` to `~/.reqly/config.json` via global `AuthManager`.
+  - **Engine:** `CollectionManager.loadAll()` loads from multiple project dirs.
+  - **CLI:** `reqly workspace add/remove/list`
+  - **MCP:** Added `add_workspace_project`, `remove_workspace_project`, and `list_workspace_projects`.
+  - **Server:** Added `/api/workspace` endpoints. Edit routes (POST/PUT/DELETE collections) now correctly resolve the collection manager dynamically from all workspace projects.
+  - **UI:** 
+    - Settings modal gains a Workspace tab to add/remove workspace projects.
+    - CollectionsPanel sidebar now visually groups collections by their project directory with a folder icon header.
 - [x] **T-224** Update `reqly init` to auto-gitignore runtime state files
   - **CLI:** `reqly init` (completed in T-220/T-221) appends `.reqly/history.ndjson` and `.reqly/responses.json` to `.gitignore`.
   - **UI:** Added an API endpoint `GET /api/project/gitignore` to check the current status of `.gitignore`.

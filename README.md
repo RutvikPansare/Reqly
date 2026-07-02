@@ -599,6 +599,16 @@ reqly mock <collection>           # default port 4243
 reqly mock <collection> --port 5000
 ```
 
+### Workspace Management
+
+You can configure Reqly to load collections from multiple project directories at once. This is perfect for microservices or monorepos where you have multiple related APIs open.
+
+```bash
+reqly workspace add <absolute_path>    # Adds a project to your workspace
+reqly workspace remove <absolute_path> # Removes it
+reqly workspace list                   # Lists all configured projects
+```
+
 On start, Reqly prints a table of all active routes (method, path, example count). Press Ctrl+C to stop.
 
 To select a specific example per request, set the `X-Reqly-Example: <name>` header. Without it, the first saved example is served.

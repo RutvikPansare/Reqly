@@ -59,11 +59,14 @@ export async function execute(
   const layers = [scriptVars, collectionVars, envVars, dotEnvVars];
   const consoleLogs: string[] = [];
 
+  // GraphQL requests are always POST - override if not explicitly set to something else
+  const effectiveMethod = (config.type === 'graphql' && !config.method) ? 'POST' : config.method as string;
+
   // Mutable req state that the preScript can mutate via req.setUrl() etc.
   // Mutations are applied to the local vars below before the request fires.
   const reqMut = {
     _url: config.url,
-    _method: config.method as string,
+    _method: effectiveMethod,
     _headers: { ...(config.headers ?? {}) },
     _body: config.body as unknown,
     _timeout: undefined as number | undefined,
@@ -213,7 +216,7 @@ export async function execute(
     const startTime = Date.now();
     let response;
     try {
-      response = await fetch(url, { method: config.method, headers, body: formData as any, ...(sharedDispatcher ? { dispatcher: sharedDispatcher } : {}) } as any);
+      response = await fetch(url, { method: reqMut._method, headers, body: formData as any, ...(sharedDispatcher ? { dispatcher: sharedDispatcher } : {}) } as any);
     } catch (err: any) {
       throw new RequestError(formatNetworkError(err));
     }
@@ -363,7 +366,7 @@ export async function execute(
         const parsed = new URL(url);
         const signingOpts: Record<string, any> = {
           host: parsed.host,
-          method: config.method,
+          method: reqMut._method,
           path: parsed.pathname + (parsed.search || ''),
           service: service || 'execute-api',
           region: region || 'us-east-1',
@@ -384,7 +387,7 @@ export async function execute(
   let response;
   try {
     response = await fetch(url, {
-      method: config.method,
+      method: reqMut._method,
       headers,
       body: body as string | undefined,
       ...(sharedDispatcher ? { dispatcher: sharedDispatcher } : {}),

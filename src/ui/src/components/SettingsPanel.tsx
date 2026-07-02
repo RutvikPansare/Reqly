@@ -3,7 +3,7 @@ import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
 import { Modal, ModalFooter } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { fetchDotenvFiles, updateDotenvFiles, fetchLoginItem, updateLoginItem } from '../api';
+import { updateDotenvFiles, updateLoginItem, fetchWorkspaceProjects, addWorkspaceProject, removeWorkspaceProject } from '../api';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -17,6 +17,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [loginItemSupported, setLoginItemSupported] = useState(false);
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
   const [missingGitignores, setMissingGitignores] = useState<string[]>([]);
+  const [tab, setTab] = useState<'general' | 'workspace'>('general');
+  const [workspaces, setWorkspaces] = useState<{name: string, path: string}[]>([]);
+  const [newWorkspace, setNewWorkspace] = useState('');
   const [fixingGitignore, setFixingGitignore] = useState(false);
 
   useEffect(() => {
@@ -29,6 +32,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       fetchGitignoreStatus().then(data => {
         setMissingGitignores(data.missing || []);
       }).catch(console.error);
+      fetchWorkspaceProjects().then(data => setWorkspaces(data.projects)).catch(console.error);
     });
   }, []);
 
@@ -75,6 +79,32 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     setNewFile('');
   };
 
+
+  const handleAddWorkspace = async () => {
+    const trimmed = newWorkspace.trim();
+    if (!trimmed) return;
+    try {
+      await addWorkspaceProject(trimmed);
+      const data = await fetchWorkspaceProjects();
+      setWorkspaces(data.projects);
+      setNewWorkspace('');
+      window.dispatchEvent(new Event('reqly-reload'));
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  const handleRemoveWorkspace = async (p: string) => {
+    try {
+      await removeWorkspaceProject(p);
+      const data = await fetchWorkspaceProjects();
+      setWorkspaces(data.projects);
+      window.dispatchEvent(new Event('reqly-reload'));
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
@@ -93,6 +123,26 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
   return (
     <Modal title="Settings" onClose={onClose}>
+
+      <div className="flex gap-4 border-b mb-4" style={{ borderColor: 'var(--border)' }}>
+        <button 
+          className={`pb-2 text-sm ${tab === 'general' ? 'border-b-2 font-medium' : ''}`}
+          style={{ borderColor: tab === 'general' ? 'var(--accent)' : 'transparent', color: tab === 'general' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+          onClick={() => setTab('general')}
+        >
+          General
+        </button>
+        <button 
+          className={`pb-2 text-sm ${tab === 'workspace' ? 'border-b-2 font-medium' : ''}`}
+          style={{ borderColor: tab === 'workspace' ? 'var(--accent)' : 'transparent', color: tab === 'workspace' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+          onClick={() => setTab('workspace')}
+        >
+          Workspace
+        </button>
+      </div>
+
+      {tab === 'general' && (
+        <>
       <div>
         <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
           Environment files
@@ -161,6 +211,46 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           </div>
         )}
       </div>
+
+        </>
+      )}
+
+      {tab === 'workspace' && (
+        <div className="flex flex-col gap-3 min-h-[250px]">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Configure additional project directories to include in your workspace. Reqly will load collections from these directories as well.
+          </p>
+          
+          <div className="flex flex-col gap-2 flex-1">
+            {workspaces.map((ws, i) => (
+              <div key={ws.path} className="flex items-center justify-between p-2 rounded" style={{ background: 'var(--surface-3)' }}>
+                <div className="flex flex-col min-w-0 flex-1 mr-2">
+                  <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ws.name}</span>
+                  <span className="text-xs font-mono truncate" style={{ color: 'var(--text-muted)' }}>{ws.path}</span>
+                </div>
+                {i > 0 && (
+                  <button onClick={() => handleRemoveWorkspace(ws.path)} style={{ color: 'var(--text-muted)' }} title="Remove from workspace">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+                {i === 0 && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Active</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 mt-auto pt-2">
+            <Input
+              value={newWorkspace}
+              onChange={e => setNewWorkspace(e.target.value)}
+              placeholder="/Users/name/projects/api"
+              onKeyDown={e => e.key === 'Enter' && handleAddWorkspace()}
+            />
+            <Button variant="secondary" onClick={handleAddWorkspace}><Plus size={13} /> Add</Button>
+          </div>
+        </div>
+      )}
 
       <ModalFooter>
         {saved && <span className="text-xs self-center mr-2" style={{ color: 'var(--accent)' }}>Saved</span>}

@@ -514,3 +514,29 @@ export async function runRealtimeCapture(req: { type: string; url: string; captu
   }
   return data.response;
 }
+
+export async function fetchWorkspaceProjects() {
+  const res = await fetch('/api/workspace');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function addWorkspaceProject(path: string) {
+  const res = await fetch('/api/workspace/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function removeWorkspaceProject(path: string) {
+  const res = await fetch('/api/workspace/projects', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

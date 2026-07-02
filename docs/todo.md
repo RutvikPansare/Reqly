@@ -21,23 +21,6 @@
 
 > Goal: let developers open multiple project directories simultaneously and see all their collections in one grouped sidebar. Same as Bruno's model. Zero new file formats - just a path list in existing config.
 
-- [ ] **T-225** Multi-project path list + grouped sidebar
-  - **Config/Engine:** Add `workspaceProjects: string[]` array to `~/.reqly/config.json`. Each entry is an absolute path to a project directory that has a `.reqly/` folder. The current active `projectDir` is always included implicitly.
-  - **Engine:** `CollectionManager` gains a `loadAll(projectDirs: string[])` mode that reads collections from multiple `.reqly/` directories. Each collection is tagged with its source `projectDir`.
-  - **CLI:**
-    - `reqly workspace add <path>` - validates path has `.reqly/`, appends to `workspaceProjects` in config
-    - `reqly workspace remove <path>` - removes from list
-    - `reqly workspace list` - prints all open project paths
-  - **MCP:** `add_workspace_project`, `remove_workspace_project`, `list_workspace_projects` tools. Agents can build a multi-repo workspace programmatically.
-  - **Server:** `GET /api/workspace/projects` returns the list. `POST /api/workspace/projects` adds a path. `DELETE /api/workspace/projects` removes a path. All three refresh the in-memory `CollectionManager` immediately.
-  - **UI:**
-    - Collections sidebar grouped by project name (uses the folder name, e.g. `auth-service`, `payments-service`) with a collapsible section per project
-    - Each section header shows the project name + folder icon. Clicking the `…` menu offers "Remove from workspace" and "Open in Finder/Explorer"
-    - "Add project" button at the bottom of the collections sidebar: opens a native folder picker in Electron, or a path input field in web mode
-    - Active project (the one requests fire against) is highlighted. Clicking a collection in a different project section automatically switches active project context.
-    - History panel entries are tagged with the project name they came from (prep for T-220 disk-persisted history)
-  - Update `llms.txt` and README with workspace CLI commands and MCP tools
-
 #### Phase 2: Workspace Model + Cross-repo Flows (Reqly differentiation)
 
 > Goal: go beyond Bruno. Introduce a named, shareable workspace definition and let flows reference requests from any repo in the workspace by alias. This is what makes Reqly uniquely agent-native for microservices teams.

@@ -123,8 +123,8 @@ export async function handleRunCommand(
   } else {
     // Run entire collection
     try {
-      const responseStore = new ResponseStore(projectDir);
-      const historyStore = new HistoryStore(projectDir);
+      const responseStore = new ResponseStore(path.dirname(collectionManager.getBaseDir()));
+      const historyStore = new HistoryStore(path.dirname(collectionManager.getBaseDir()));
       const proxyServer = new ProxyServer(collectionManager);
       const { TunnelManager } = await import('../engine/tunnel-manager.js');
       const tunnelManager = new TunnelManager();

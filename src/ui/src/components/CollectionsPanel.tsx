@@ -424,14 +424,31 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
           <SidebarEmptyHint />
         )}
 
-        {!search.trim() && visibleCollections.map(col => {
-          const isExpanded = expandedCols[col.name] !== false;
-          const visibleRequests = typeFilter
-            ? col.requests.filter((r: any) => typeFilter.includes(r.type))
-            : col.requests;
-          return (
-            <div 
-              key={col.name} 
+        {!search.trim() && (() => {
+          const grouped = visibleCollections.reduce((acc, col) => {
+            const p = col.projectDir || projectPath;
+            if (!acc[p]) acc[p] = [];
+            acc[p].push(col);
+            return acc;
+          }, {});
+
+          return Object.entries(grouped).map(([pPath, cols]) => {
+            const pInfo = formatProjectPath(pPath);
+            return (
+              <div key={pPath} className="mb-4 last:mb-0">
+                <div className="text-xs font-semibold px-2 py-1 mb-1 sticky top-0 bg-transparent" style={{ color: 'var(--text-primary)', zIndex: 10 }}>
+                  <span className="flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" title={pPath} onClick={() => setProjectPath(pPath)}>
+                    <FolderOpen size={12} /> {pInfo.name}
+                  </span>
+                </div>
+                {cols.map(col => {
+                  const isExpanded = expandedCols[col.name] !== false;
+                  const visibleRequests = typeFilter
+                    ? col.requests.filter(r => typeFilter.includes(r.type))
+                    : col.requests;
+                  return (
+                    <div 
+                      key={col.name} 
               className="select-none"
               onDragOver={e => {
                 if (draggedReq?.col === col.name) return;

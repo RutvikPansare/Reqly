@@ -159,13 +159,31 @@ export class CollectionManager {
     await this.ensureBaseDir();
     const cols: Collection[] = [];
     const entries = await fs.readdir(this.baseDir, { withFileTypes: true });
+    const projectDir = path.dirname(this.baseDir);
     for (const entry of entries) {
       if (entry.isDirectory() && !RESERVED_DIRS.has(entry.name)) {
         const col = await this.getCollection(entry.name);
+        col.projectDir = projectDir;
         cols.push(col);
       }
     }
     return cols;
+  }
+
+  async loadAll(projectDirs: string[]): Promise<Collection[]> {
+    const allCols: Collection[] = [];
+    for (const dir of projectDirs) {
+      const collectionsDir = path.join(dir, '.reqly');
+      if (!existsSync(collectionsDir)) continue;
+      const mgr = new CollectionManager(collectionsDir);
+      try {
+        const cols = await mgr.listCollections();
+        allCols.push(...cols);
+      } catch (e) {
+        console.error(`Failed to load collections from ${dir}:`, e);
+      }
+    }
+    return allCols;
   }
 
   async addRequest(collectionName: string, req: CollectionRequest): Promise<void> {

@@ -201,6 +201,20 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     res.json(context.tunnelManager.getStatus());
   });
 
+  async function resolveColMgr(colName: string): Promise<CollectionManager> {
+    const activeRoot = path.dirname(context.collectionManager.getBaseDir());
+    const configured = await context.authManager.getWorkspaceProjects();
+    const allRoots = Array.from(new Set([activeRoot, ...configured]));
+    for (const root of allRoots) {
+      const mgr = new CollectionManager(path.join(root, '.reqly'));
+      try {
+        await mgr.getCollection(colName);
+        return mgr;
+      } catch {}
+    }
+    return context.collectionManager;
+  }
+
   app.use('/webhooks', async (req, res) => {
     try {
       const collectionName = 'Webhooks';
@@ -257,6 +271,41 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       }
 
       res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get('/api/workspace', async (_req, res) => {
+    try {
+      const activeProjectRoot = path.dirname(context.collectionManager.getBaseDir());
+      const configuredProjects = await context.authManager.getWorkspaceProjects();
+      const projectsSet = new Set([activeProjectRoot, ...configuredProjects]);
+      const projects = Array.from(projectsSet).map(p => ({
+        path: p,
+        name: path.basename(p),
+      }));
+      res.json({ projects });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/workspace/projects', express.json(), async (req, res) => {
+    try {
+      if (!req.body.path) throw new Error('Path is required');
+      await context.authManager.addWorkspaceProject(req.body.path);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/workspace/projects', express.json(), async (req, res) => {
+    try {
+      if (!req.body.path) throw new Error('Path is required');
+      await context.authManager.removeWorkspaceProject(req.body.path);
+      res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -420,46 +469,53 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       const repoName = url.split('/').pop()?.replace('.git', '') || 'repo';
       const targetPath = path.join(destPath, repoName);
       
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-      
-      await fs.mkdir(destPath, { recursive: true });
-      
-      await execAsync(`git clone ${url} "${targetPath}"`);
-      
-      res.json({ path: targetPath });
-    } catch (e: any) {
-      let errorMessage = 'Failed to clone repository.';
-      
-      // child_process.exec attaches the raw command output to e.stderr
-      const stderr = e.stderr || e.message || '';
-      
-      if (stderr.includes('already exists and is not an empty directory')) {
-        errorMessage = `The folder "${repoName}" already exists in that destination. Please choose a different folder or delete the existing one.`;
-      } else if (stderr.includes('Repository not found') || stderr.includes('not found')) {
-        errorMessage = 'Repository not found. Please check the URL and ensure the repository is public or you have the correct access rights.';
-      } else if (stderr.includes('Permission denied') || stderr.includes('Authentication failed')) {
-        errorMessage = 'Authentication failed. Please ensure you have access to this repository.';
-      } else if (stderr.includes('could not resolve host') || stderr.includes('Could not resolve host')) {
-        errorMessage = 'Network error. Could not connect to the repository host.';
-      } else if (e.code === 'ENOENT') {
-        errorMessage = 'Git is not installed or not available in the system PATH.';
-      } else {
-        // Fallback: extract just the fatal git error line if possible, avoiding the ugly Node.js command stack trace
-        const fatalMatch = stderr.match(/fatal: (.*)/i);
-        if (fatalMatch) {
-          errorMessage = `Git error: ${fatalMatch[1]}`;
+      try {
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+        
+        await fs.mkdir(destPath, { recursive: true });
+        
+        await execAsync(`git clone ${url} "${targetPath}"`);
+        
+        res.json({ path: targetPath });
+      } catch (e: any) {
+        let errorMessage = 'Failed to clone repository.';
+        
+        // child_process.exec attaches the raw command output to e.stderr
+        const stderr = e.stderr || e.message || '';
+        
+        if (stderr.includes('already exists and is not an empty directory')) {
+          errorMessage = `The folder "${repoName}" already exists in that destination. Please choose a different folder or delete the existing one.`;
+        } else if (stderr.includes('Repository not found') || stderr.includes('not found')) {
+          errorMessage = 'Repository not found. Please check the URL and ensure the repository is public or you have the correct access rights.';
+        } else if (stderr.includes('Permission denied') || stderr.includes('Authentication failed')) {
+          errorMessage = 'Authentication failed. Please ensure you have access to this repository.';
+        } else if (stderr.includes('could not resolve host') || stderr.includes('Could not resolve host')) {
+          errorMessage = 'Network error. Could not connect to the repository host.';
+        } else if (e.code === 'ENOENT') {
+          errorMessage = 'Git is not installed or not available in the system PATH.';
+        } else {
+          // Fallback: extract just the fatal git error line if possible, avoiding the ugly Node.js command stack trace
+          const fatalMatch = stderr.match(/fatal: (.*)/i);
+          if (fatalMatch) {
+            errorMessage = `Git error: ${fatalMatch[1]}`;
+          }
         }
+        
+        res.status(500).json({ error: errorMessage });
       }
-      
-      res.status(500).json({ error: errorMessage });
+    } catch (e: any) {
+      res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' });
     }
   });
 
   app.get('/api/collections', async (req, res) => {
     try {
-      const cols = await context.collectionManager.listCollections();
+      const activeProjectRoot = path.dirname(context.collectionManager.getBaseDir());
+      const configuredProjects = await context.authManager.getWorkspaceProjects();
+      const projectsSet = new Set([activeProjectRoot, ...configuredProjects]);
+      const cols = await context.collectionManager.loadAll(Array.from(projectsSet));
       res.json(cols);
     } catch (e: any) {
       res.status(500).json({ error: e.message });

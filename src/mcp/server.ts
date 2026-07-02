@@ -64,6 +64,9 @@ import * as moveRequest from './tools/move-request.js';
 import * as introspectGraphql from './tools/introspect-graphql.js';
 import * as listGrpcServices from './tools/list-grpc-services.js';
 import * as runRealtime from './tools/run-realtime.js';
+import * as listWorkspaceProjects from './tools/list-workspace-projects.js';
+import * as addWorkspaceProject from './tools/add-workspace-project.js';
+import * as removeWorkspaceProject from './tools/remove-workspace-project.js';
 
 const tools = [
   runRequest,
@@ -124,6 +127,9 @@ const tools = [
   introspectGraphql,
   listGrpcServices,
   runRealtime,
+  listWorkspaceProjects,
+  addWorkspaceProject,
+  removeWorkspaceProject,
 ];
 
 import { z } from 'zod';
