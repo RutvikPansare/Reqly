@@ -18,6 +18,10 @@ interface VariableInputProps {
   multiline?: boolean;
   className?: string;
   placeholder?: string;
+  style?: React.CSSProperties;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  onFocus?: (e: any) => void;
+  onBlur?: (e: any) => void;
   disabled?: boolean;
   type?: string;
   spellCheck?: boolean;
@@ -163,6 +167,10 @@ export function VariableInput({
   multiline = false,
   className = '',
   placeholder = '',
+  style,
+  onKeyDown,
+  onFocus,
+  onBlur,
   disabled = false,
   type = 'text',
   spellCheck = false,
@@ -271,6 +279,7 @@ export function VariableInput({
         setShowMenu(false);
       }
     }
+    if (onKeyDown) onKeyDown(e);
   };
 
   const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -285,16 +294,21 @@ export function VariableInput({
     }
   };
 
-  const handleBlur = () => {
+  const handleBlurInternal = (e: any) => {
+    if (onBlur) onBlur(e);
     // Small delay so menu clicks register before hiding the input
     setTimeout(() => {
       if (!showMenu) setFocused(false);
     }, 150);
   };
 
+  const handleFocus = (e: any) => {
+    if (onFocus) onFocus(e);
+  };
+
   if (!focused && !disabled) {
     return (
-      <div className="relative flex-1 flex">
+      <div className="relative flex-1 flex" style={style}>
         <TokenDisplay
           value={value}
           placeholder={placeholder}
@@ -314,11 +328,13 @@ export function VariableInput({
     onChange: handleChange,
     onKeyDown: handleKeyDown,
     onKeyUp: handleKeyUp,
-    onBlur: handleBlur,
+    onBlur: handleBlurInternal,
+    onFocus: handleFocus,
     className,
     placeholder,
     disabled,
     spellCheck,
+    style,
   };
 
   const menu = showMenu && menuItems.length > 0 ? createPortal(

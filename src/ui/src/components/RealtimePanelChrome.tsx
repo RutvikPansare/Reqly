@@ -14,7 +14,7 @@ export function statusColor(status: ConnectionStatus) {
   return statusColors[status];
 }
 
-export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave, flashSaved, isDirty }: {
+export function ProtocolUrlBar({ badge, url, placeholder, disabled, onChange, status, action, onAction, onSave, flashSaved, isDirty, availableVariables }: {
   badge: string;
   url: string;
   placeholder: string;

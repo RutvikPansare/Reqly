@@ -279,7 +279,9 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); setLastMcpActivityAt(d.lastMcpActivityAt ?? null); }).catch(() => {});
   };
 
-  const visibleCollections = collections;
+  const visibleCollections = typeFilter
+    ? collections.filter(col => col.requests.some((r: any) => typeFilter.includes(r.type)))
+    : collections;
 
   useEffect(() => {
     loadData();
@@ -424,6 +426,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Collections</h2>
+        {!typeFilter && (
         <button
           onClick={() => setCreatingCol(true)}
           className="text-xs text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded transition-colors"
@@ -431,6 +434,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
         >
           + New
         </button>
+        )}
       </div>
 
       {/* Sidebar search */}

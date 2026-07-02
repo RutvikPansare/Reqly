@@ -1,5 +1,11 @@
 # Reqly - Done
 
+## 2026-07-02
+
+- [x] **T-211** Add variable detection and workspace filtering improvements
+  - Added `{{` variable autocomplete trigger for gRPC proto inputs, GraphQL query variables, and Realtime URL bars.
+  - Refined `CollectionsPanel` filtering logic to hide empty collections or collections without matching request types in GraphQL, gRPC, and Realtime workspaces.
+
 ## 2026-07-01
 
 - [x] **T-201** Fix tab jumping on save in workspace tabs
