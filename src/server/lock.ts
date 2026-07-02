@@ -7,16 +7,18 @@ export interface RunningLock {
   projectDir: string;
   port: number;
   startedAt: string;
+  type: 'electron' | 'agent';
 }
 
 export const LOCK_PATH = path.join(os.homedir(), '.reqly', 'running.json');
 
-export async function writeLock(projectDir: string, port: number): Promise<void> {
+export async function writeLock(projectDir: string, port: number, type: 'electron' | 'agent' = 'agent'): Promise<void> {
   const lock: RunningLock = {
     pid: process.pid,
     projectDir,
     port,
     startedAt: new Date().toISOString(),
+    type,
   };
   await fs.mkdir(path.dirname(LOCK_PATH), { recursive: true });
   await fs.writeFile(LOCK_PATH, JSON.stringify(lock, null, 2));

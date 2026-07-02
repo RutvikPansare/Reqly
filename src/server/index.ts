@@ -33,7 +33,7 @@ import { handleExecCommand } from './exec-command.js';
 import { handleImportCommand } from './import-command.js';
 import { handleInitCommand } from './init-command.js';
 import { handleWorkspaceCommand } from './workspace-command.js';
-import { writeLock, clearLock } from './lock.js';
+import { writeLock, readLock, clearLock, isProcessAlive } from './lock.js';
 
 async function main() {
   const parsed = parseArgs(process.argv);
@@ -179,25 +179,67 @@ async function main() {
     }
   };
 
-  const port = Number(process.env.REQLY_TEST_PORT) || 4242;
+  const isElectron = !!process.env.REQLY_ELECTRON;
+  const testPort = Number(process.env.REQLY_TEST_PORT) || 0;
 
-  // Each process always runs its own full engine + Express.
-  // Lock file is written for process registry (reqly stop/status/app) only,
-  // not for inter-process state coordination.
-  const expressServer = startExpressServer(context, port);
-  let expressAvailable = true;
-  expressServer.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`[reqly] Port ${port} already in use - MCP available, UI unavailable on this process.`);
-      expressAvailable = false;
-    } else {
-      throw err;
+  // Determine which port to use before starting the server.
+  // Electron: always use port 0 (OS-assigned ephemeral port, never 4242).
+  // Agent: try 4242. If an existing agent owns it, kill it and take over.
+  //        If an Electron process owns it, fall back to an OS-assigned port.
+  let targetPort: number;
+  let lockType: 'electron' | 'agent';
+
+  if (isElectron) {
+    targetPort = testPort || 0;
+    lockType = 'electron';
+  } else {
+    targetPort = testPort || 4242;
+    lockType = 'agent';
+
+    if (!testPort) {
+      const existing = await readLock().catch(() => null);
+      if (existing && isProcessAlive(existing.pid)) {
+        const existingType = (existing as any).type ?? 'agent';
+        if (existingType === 'agent') {
+          // Kill the old agent so we can take over port 4242.
+          try {
+            process.kill(existing.pid, 'SIGTERM');
+            await new Promise(r => setTimeout(r, 600));
+          } catch {
+            // Kill failed - fall through and let EADDRINUSE handle it.
+          }
+        } else if (existingType === 'electron') {
+          // Electron owns 4242. Don't kill it - use an OS-assigned port instead.
+          targetPort = 0;
+        }
+      }
     }
+  }
+
+  const expressServer = startExpressServer(context, targetPort);
+  let expressAvailable = false;
+  let actualPort = targetPort;
+
+  await new Promise<void>((resolve, reject) => {
+    expressServer.once('listening', () => {
+      const addr = expressServer.address();
+      actualPort = (typeof addr === 'object' && addr) ? addr.port : targetPort;
+      expressAvailable = true;
+      resolve();
+    });
+    expressServer.once('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[reqly] Port ${targetPort} already in use - MCP available, UI unavailable on this process.`);
+        expressAvailable = false;
+        resolve();
+      } else {
+        reject(err);
+      }
+    });
   });
-  // Wait one tick so the error event fires before we write the lock
-  await new Promise<void>((resolve) => setImmediate(resolve));
+
   if (expressAvailable) {
-    await writeLock(cwd, port);
+    await writeLock(cwd, actualPort, lockType);
   }
   await startServer(context);
 

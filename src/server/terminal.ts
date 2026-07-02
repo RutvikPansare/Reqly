@@ -78,6 +78,14 @@ export function attachTerminal(server: Server, getProjectRoot: () => string): We
   ensureSpawnHelperExecutable();
   const wss = new WebSocketServer({ server, path: '/terminal' });
 
+  // When the HTTP server fails to bind (EADDRINUSE), the ws library propagates
+  // the error to the WebSocketServer. Without this handler the process crashes
+  // with an unhandled 'error' event. The HTTP server's own error handler in
+  // index.ts already logs the warning and continues MCP-only.
+  wss.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code !== 'EADDRINUSE') throw err;
+  });
+
   wss.on('connection', (ws: WebSocket) => {
     let sessionId: string | null = null;
     let session: Session | null = null;

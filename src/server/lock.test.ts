@@ -53,4 +53,23 @@ describe('lock', () => {
     await writeLock('/Users/test/project', 4242);
     expect(fs.existsSync(LOCK_PATH)).toBe(true);
   });
+
+  it('writeLock defaults type to "agent"', async () => {
+    await writeLock('/Users/test/project', 4242);
+    const lock = await readLock();
+    expect(lock!.type).toBe('agent');
+  });
+
+  it('writeLock stores type "electron" when specified', async () => {
+    await writeLock('/Users/test/project', 51234, 'electron');
+    const lock = await readLock();
+    expect(lock!.type).toBe('electron');
+    expect(lock!.port).toBe(51234);
+  });
+
+  it('writeLock stores type "agent" when explicitly specified', async () => {
+    await writeLock('/Users/test/project', 4242, 'agent');
+    const lock = await readLock();
+    expect(lock!.type).toBe('agent');
+  });
 });

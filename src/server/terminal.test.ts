@@ -206,3 +206,31 @@ describe.skipIf(process.platform === 'win32' && !!process.env.CI)('/terminal Web
     ws.close();
   });
 });
+
+describe('attachTerminal - WebSocket error resilience', () => {
+  it('does not crash when the underlying http server emits EADDRINUSE', async () => {
+    // Simulate the ws server receiving an EADDRINUSE error (which happens when
+    // the http server fails to bind and the ws error propagates).
+    const http = await import('http');
+    const { attachTerminal } = await import('./terminal.js');
+
+    const fakeServer = http.createServer();
+    const wss = attachTerminal(fakeServer, () => '/tmp');
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timed out')), 1000);
+      // emitting EADDRINUSE on the wss should not throw - the handler should swallow it
+      try {
+        const err = Object.assign(new Error('listen EADDRINUSE'), { code: 'EADDRINUSE' });
+        wss.emit('error', err);
+        clearTimeout(timeout);
+        resolve();
+      } catch (e) {
+        clearTimeout(timeout);
+        reject(e);
+      }
+    });
+
+    fakeServer.close();
+  });
+});

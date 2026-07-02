@@ -2,6 +2,20 @@
 
 ## 2026-07-02
 
+- [x] **T-231** Fix WebSocket server crash on EADDRINUSE when port is taken
+  - Added `wss.on('error', ...)` handler in `attachTerminal` (terminal.ts) that swallows `EADDRINUSE` and re-throws everything else.
+  - Without this, the ws library propagates the http server bind failure to the WS server as a second unhandled `error` event, crashing the process.
+  - Test added to `terminal.test.ts` verifying `wss.emit('error', { code: 'EADDRINUSE' })` does not throw.
+
+- [x] **T-230** Agent-vs-Electron port strategy: Electron ephemeral, agents compete for 4242
+  - Added `type: 'electron' | 'agent'` field to `RunningLock` in `lock.ts`.
+  - `writeLock()` now takes an optional `type` parameter (default `'agent'`).
+  - `index.ts` startup now pre-checks the lock before starting Express:
+    - **Electron** (`REQLY_ELECTRON=1`): uses port 0 (OS-assigned), writes `type: 'electron'` to lock.
+    - **Agent** (default): tries port 4242. If a live agent owns it, sends SIGTERM, waits 600ms, then takes 4242. If a live Electron process owns it, uses port 0 instead. Never kills Electron.
+  - Replaced the `setImmediate` hack with proper `Promise` that resolves on `'listening'` or `'error'`, and reads `server.address().port` for the actual port after `listen(0)`.
+  - 3 new lock tests. All 840 tests pass.
+
 - [x] **T-228** Modularize CollectionsPanel - fix JSX brace error and split 885-line file
   - Root cause: Gemini's T-225 work introduced a broken IIFE closing sequence (missing `</div>` and `)` tokens), causing a Vite/rolldown build failure.
   - Resolution: replaced the monolithic `CollectionsPanel.tsx` with a `CollectionsPanel/` directory of 10 focused files, each under 200 lines:
