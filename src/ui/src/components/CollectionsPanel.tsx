@@ -308,9 +308,14 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   }, []);
 
   const handleCreateCol = async () => {
-    if (newColName.trim()) {
-      await createCollection(newColName.trim());
-      setExpandedCols(prev => ({ ...prev, [newColName.trim()]: true }));
+    const trimmed = newColName.trim();
+    if (trimmed) {
+      if (collections.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
+        alert(`Collection '${trimmed}' already exists. Please choose a different name.`);
+        return;
+      }
+      await createCollection(trimmed);
+      setExpandedCols(prev => ({ ...prev, [trimmed]: true }));
       loadData();
     }
     setCreatingCol(false);

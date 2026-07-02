@@ -42,6 +42,11 @@ export function SaveToCollectionModal({ request, defaultName, onClose, onSaved }
           setSaving(false);
           return;
         }
+        if (collections.some(c => c.toLowerCase() === collectionName.toLowerCase())) {
+          setError(`Collection '${collectionName}' already exists. Please choose a different name.`);
+          setSaving(false);
+          return;
+        }
         await createCollection(collectionName);
       }
       const requestToSave = { ...request, name };
