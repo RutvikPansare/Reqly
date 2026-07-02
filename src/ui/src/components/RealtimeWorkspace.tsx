@@ -8,11 +8,15 @@ import { MQTTPanel } from './MQTTPanel.js';
 import { useWorkspaceTabs } from '../hooks/useWorkspaceTabs.js';
 import { SaveToCollectionModal } from './SaveToCollectionModal.js';
 import { updateRequest } from '../api.js';
+import { useAvailableVariables } from '../hooks/useAvailableVariables.js';
+import { useVarCompletion } from '../hooks/useVarCompletion.js';
 
 export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest?: any; onUpdate?: (state: any) => void }) {
   const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useWorkspaceTabs('realtime', 'websocket', 'New WebSocket');
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
+  const availableVariables = useAvailableVariables(activeTab?._collection);
+  const varCompletionExtension = useVarCompletion(availableVariables);
   const prevRequestIdRef = useRef<string | null>(null);
   const onUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Snapshot of the last-persisted url+realtime for the active saved request.
@@ -74,7 +78,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
     }, 100);
   };
 
-  const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave, flashSaved: savedFlash, isDirty: isDirty() };
+  const props = activeTab && { tab: activeTab, onTabUpdate: (updates: any) => updateTab(activeTabId, updates), onSave: handleSave, flashSaved: savedFlash, isDirty: isDirty(), varCompletionExtension, availableVariables };
 
   return (
     <div className="flex h-full w-full overflow-hidden">

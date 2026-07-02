@@ -14,6 +14,7 @@ import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
+import { useVarCompletion } from '../hooks/useVarCompletion';
 import { CollapsibleJson } from './InteractiveJsonTree';
 import { fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
 import { SaveToCollectionModal } from './SaveToCollectionModal.js';
@@ -361,6 +362,8 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
 
   const metadataCount = metadata.filter(m => m.enabled && m.key.trim()).length;
 
+  const varCompletionExtension = useVarCompletion(availableVariables);
+
   // --- Render ---
   return (
     <div className="absolute inset-0 flex overflow-hidden" style={{ background: 'var(--surface-1)' }}>
@@ -391,6 +394,7 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
             onSend={handleSend}
             onSave={handleSaveClick}
             isDirty={isDirty}
+            varCompletionExtension={varCompletionExtension}
           />}
           bottom={<ResponsePanel
             response={response}
@@ -437,6 +441,7 @@ interface RequestPanelProps {
   onSend: () => void;
   onSave: () => void;
   isDirty?: boolean;
+  varCompletionExtension: any;
 }
 
 function RequestPanel(p: RequestPanelProps) {
@@ -569,25 +574,26 @@ function RequestPanel(p: RequestPanelProps) {
       {/* ── Proto / Service / Method ──────────────────────────────────────── */}
       <div
         className="grid grid-cols-3 gap-2 shrink-0"
-        style={{ padding: '4px 16px', borderBottom: '1px solid var(--border)' }}
+        style={{ padding: '2px 16px 4px 16px', borderBottom: '1px solid var(--border)' }}
       >
         {[
           { label: 'Proto File', value: p.protoFile, setter: p.setProtoFile, placeholder: 'grpcbin.proto' },
           { label: 'Service',    value: p.service,   setter: p.setService,   placeholder: 'hello.HelloService' },
           { label: 'Method',     value: p.method,    setter: p.setMethod,    placeholder: 'SayHello' },
         ].map(({ label, value, setter, placeholder }) => (
-          <div key={label} className="flex flex-col gap-0.5">
-            <label className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <div key={label} className="flex flex-col">
+            <label className="text-[9px] font-semibold uppercase tracking-wider mb-[1px]" style={{ color: 'var(--text-muted)' }}>
               {label}
             </label>
-            <input
-              className="rounded px-2 text-[11px] font-mono focus:outline-none"
-              style={{ height: '22px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
+            <VariableInput
+              variables={p.availableVariables}
+              className="rounded px-1.5 text-[10px] font-mono focus:outline-none w-full"
+              style={{ height: '20px', background: 'var(--surface-2)', color: 'var(--text-primary)', border: '1px solid var(--border-strong)' }}
               value={value}
-              onChange={e => setter(e.target.value)}
+              onChange={setter}
               placeholder={placeholder}
-              onFocus={e => (e.currentTarget.style.borderColor = '#06b6d4')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
+              onFocus={(e: any) => (e.currentTarget.style.borderColor = '#06b6d4')}
+              onBlur={(e: any) => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
             />
           </div>
         ))}
@@ -633,7 +639,7 @@ function RequestPanel(p: RequestPanelProps) {
                 height="100%"
                 minHeight="120px"
                 theme="dark"
-                extensions={[json()]}
+                extensions={[json(), p.varCompletionExtension]}
                 onChange={p.setMessageJson}
                 className="h-full text-sm font-mono [&_.cm-scroller]:overflow-auto [&_.cm-editor]:!bg-black [&_.cm-gutters]:!bg-black [&_.cm-gutters]:!border-[var(--border)]"
               />

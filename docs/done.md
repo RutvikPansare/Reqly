@@ -606,3 +606,13 @@
   - Updated `packages/desktop/src/main.ts` with `titleBarStyle: hiddenInset`
   - Made `App.tsx` header draggable in Electron and added padding for traffic lights
   - Removed `font-bold` from `ResponseViewer` and `GraphQLResponseViewer` to match latency styling
+
+### 2026-07-02
+
+- [x] **T-204** Validate duplicate collection names across all workspaces when creating a new collection
+- [x] **T-205** Live sync collection deletions from filesystem to UI via `fs.watch` and SSE
+- [x] **T-206** UI tweaks: Flush black background for vent/messages bars, blue VS Code style drag handle for SplitPane
+- [x] **T-207** Draggable NavRail icons with state persistence in `localStorage`
+- [x] **T-208** Fix variable autocomplete dropdown clipping using React portal (`useVarCompletion`)
+- [x] **T-209** Expand global variable auto-detection (`{{`) to GraphQL CodeMirrors, gRPC inputs/CodeMirrors, and Realtime URL/Event/Topic inputs
+- [x] **T-210** Reduce padding and font size for gRPC Proto File section

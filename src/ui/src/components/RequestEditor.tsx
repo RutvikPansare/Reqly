@@ -3,7 +3,7 @@ import { Send as SendIcon, Save as SaveIcon, Terminal, Code2, RefreshCw, Externa
 import { isDeepEqual } from '../lib/utils';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
-import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
+import { useVarCompletion } from '../hooks/useVarCompletion';
 import { fetchAuthProfiles, createAuthProfile, fetchEnvironments, refreshOAuth2Token, startOAuth2Flow, getCollectionVariables, getCollectionAuth, fetchDotenvFiles } from '../api';
 import { KeyValueEditor } from './KeyValueEditor';
 import type { KeyValuePair } from './KeyValueEditor';
@@ -352,27 +352,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
   ];
 
   // CodeMirror completion extension for {{variable}} syntax in the body editor
-  const varCompletionExtension = useMemo(() => {
-    return autocompletion({
-      override: [
-        (context: CompletionContext) => {
-          const match = context.matchBefore(/\{\{[a-zA-Z0-9_-]*/);
-          if (!match || (match.from === match.to && !context.explicit)) return null;
-          const typed = match.text.slice(2); // strip {{
-          const options = availableVariables
-            .filter(v => v.name.toLowerCase().includes(typed.toLowerCase()))
-            .map(v => ({
-              label: `{{${v.name}}}`,
-              apply: `{{${v.name}}}`,
-              detail: `${v.sourceType}${v.value !== undefined ? ` = ${v.value}` : ''}`,
-              type: 'variable',
-            }));
-          if (options.length === 0) return null;
-          return { from: match.from, options };
-        },
-      ],
-    });
-  }, [availableVariables]);
+  const varCompletionExtension = useVarCompletion(availableVariables);
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>

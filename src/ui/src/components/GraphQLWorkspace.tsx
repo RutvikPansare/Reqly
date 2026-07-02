@@ -6,8 +6,7 @@ import { buildClientSchema, getIntrospectionQuery, parse as gqlParse, print as g
 import type { EditorView } from '@codemirror/view';
 import { EditorSelection } from '@codemirror/state';
 import { json } from '@codemirror/lang-json';
-import { autocompletion } from '@codemirror/autocomplete';
-import type { CompletionContext } from '@codemirror/autocomplete';
+import { useVarCompletion } from '../hooks/useVarCompletion';
 import { GraphQLResponseViewer } from './GraphQLResponseViewer';
 import { GraphQLSubscriptionStream } from './GraphQLSubscriptionStream';
 import { SplitPane } from './SplitPane';
@@ -180,28 +179,7 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
       })),
   ];
 
-  // CodeMirror completion extension for {{variable}} syntax in the Variables JSON editor
-  const varCompletionExtension = useMemo(() => {
-    return autocompletion({
-      override: [
-        (context: CompletionContext) => {
-          const match = context.matchBefore(/\{\{[a-zA-Z0-9_-]*/);
-          if (!match || (match.from === match.to && !context.explicit)) return null;
-          const typed = match.text.slice(2); // strip {{
-          const options = availableVariables
-            .filter(v => v.name.toLowerCase().includes(typed.toLowerCase()))
-            .map(v => ({
-              label: `{{${v.name}}}`,
-              apply: `{{${v.name}}}`,
-              detail: `${v.sourceType}${v.value !== undefined ? ` = ${v.value}` : ''}`,
-              type: 'variable',
-            }));
-          if (options.length === 0) return null;
-          return { from: match.from, options };
-        },
-      ],
-    });
-  }, [availableVariables]);
+  const varCompletionExtension = useVarCompletion(availableVariables);
   useEffect(() => {
     if (!url.trim()) return;
     const controller = new AbortController();

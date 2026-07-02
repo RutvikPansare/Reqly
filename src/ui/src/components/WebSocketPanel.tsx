@@ -8,9 +8,9 @@ import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
 
-interface WebSocketPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; }
+interface WebSocketPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; varCompletionExtension?: any; availableVariables?: any[]; }
 
-export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }: WebSocketPanelProps) {
+export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty, varCompletionExtension, availableVariables }: WebSocketPanelProps) {
   const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [messages, setMessages] = useState<UIRealtimeMessage[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -50,7 +50,7 @@ export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }
     <div className="h-full overflow-auto px-4 py-3">
       <div className="flex items-start gap-3">
         <div className="min-h-[120px] flex-1 overflow-hidden rounded" style={{ background: 'var(--surface-2)' }}>
-          <CodeMirror value={messageText} onChange={setMessageText} theme="dark" extensions={[json()]} height="120px" basicSetup={{ lineNumbers: false, foldGutter: false }} />
+          <CodeMirror value={messageText} onChange={setMessageText} theme="dark" extensions={[json(), varCompletionExtension]} height="120px" basicSetup={{ lineNumbers: false, foldGutter: false }} className="[&_.cm-scroller]:overflow-auto" />
         </div>
         <button onClick={handleSend} disabled={status !== 'connected' || !messageText} className="btn btn-primary h-8 rounded px-3"><Send size={13} />Send</button>
       </div>
@@ -65,7 +65,7 @@ export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }
 
   return (
     <div className="flex h-full flex-col bg-[var(--surface-1)]">
-      <ProtocolUrlBar badge="WS" url={tab.url} placeholder="wss://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} isDirty={isDirty} />
+      <ProtocolUrlBar badge="WS" url={tab.url} placeholder="wss://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? 'Disconnect' : status === 'connecting' ? 'Connecting...' : 'Connect'} onAction={handleConnect} onSave={onSave} flashSaved={flashSaved} isDirty={isDirty} availableVariables={availableVariables} />
       <div className="flex items-center gap-2 border-b px-4" style={{ borderColor: 'var(--border)' }}>{(['communication', 'protocols'] as const).map(name => <button key={name} className={`tab-btn ${subTab === name ? 'active' : ''}`} onClick={() => setSubTab(name)}>{name === 'communication' ? 'Communication' : 'Protocols'}</button>)}</div>
       <div className="flex-1 min-h-0">
         <SplitPane defaultSplit={38} minTop={15} minBottom={20} top={editorPane} bottom={<RealtimeMessageLog messages={messages} onClear={() => setMessages([])} />} />
