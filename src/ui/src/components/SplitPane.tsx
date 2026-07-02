@@ -56,15 +56,14 @@ export function SplitPane({ top, bottom, defaultSplit = 50, minTop = 15, minBott
         {top}
       </div>
 
-      {/* Drag handle - single full-width line, brightens on hover/drag */}
+      {/* Drag handle - thickens and turns blue on hover/drag like VS Code */}
       <div
         onMouseDown={handleMouseDown}
-        className="shrink-0 flex items-center justify-center cursor-row-resize group relative"
-        style={{ height: '5px' }}
+        className="shrink-0 flex items-center justify-center cursor-row-resize group relative z-10"
+        style={{ height: '6px', margin: '-2px 0' }}
       >
         <div
-          className="absolute inset-x-0 top-1/2 -translate-y-1/2 transition-colors group-hover:bg-blue-500"
-          style={{ height: '1px', background: 'var(--border)' }}
+          className={`absolute inset-x-0 top-1/2 -translate-y-1/2 transition-all duration-75 ${isDragging ? 'bg-blue-500 h-[2px]' : 'bg-[var(--border)] h-[1px] group-hover:bg-blue-500 group-hover:h-[2px]'}`}
         />
       </div>
 
