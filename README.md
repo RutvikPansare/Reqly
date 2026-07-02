@@ -201,15 +201,26 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 
 <br>
 
-**🗂️ Collections and Requests**
+**📂 Workspace and Projects**
 
+| Tool | What it does |
+|------|-------------|
+| `get_project` | Returns the current active project directory and how it was resolved |
+| `switch_project` | Switches the active project directory at runtime |
+| `list_workspace_projects` | Lists all project directories in the multi-project workspace |
+| `add_workspace_project` | Adds a project directory to the multi-project workspace |
+| `remove_workspace_project` | Removes a project directory from the workspace |
+
+**🗂️ Collections and Requests**
 | Tool | What it does |
 |------|-------------|
 | `list_collections` | Lists all collections and requests in the project |
 | `create_collection` | Scaffolds a new collection |
 | `create_request` | Adds a request. Supports `{{variables}}`, assertions, pre/post scripts, script files (`preScriptFile`/`postScriptFile`), auth, multipart bodies |
 | `run_request` | Fires a request - returns status, body, headers, latency, assertion results, diff, contract violations |
+| `move_request` | Moves a request from one collection to another |
 | `run_collection` | Fires all requests in a collection sequentially |
+| `duplicate_collection` | Duplicates an entire collection |
 | `get_response` | Retrieves the last stored response (truncated) |
 | `get_response_full` | Retrieves the last untruncated response |
 | `export_collection` | Exports as Postman v2.1, OpenAPI 3.0 JSON, or Markdown API Docs |
@@ -221,6 +232,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 |------|-------------|
 | `set_environment` | Changes the active environment |
 | `create_environment` | Creates a named environment with variables |
+| `duplicate_environment` | Duplicates an existing environment |
 | `set_variable` | Sets a variable on an environment |
 | `get_variables` | Lists variables for an environment (with source tags) |
 | `delete_variable` | Removes a variable |

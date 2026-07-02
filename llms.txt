@@ -100,6 +100,9 @@ Reqly exposes the following MCP tools for AI agents:
 - `list_workspace_projects`: List all project directories in the multi-project workspace.
 - `add_workspace_project`: Add a project directory to the workspace.
 - `remove_workspace_project`: Remove a project directory from the workspace.
+- `duplicate_collection`: Duplicate an existing collection.
+- `duplicate_environment`: Duplicate an existing environment.
+- `move_request`: Move a request from one collection to another.
 - `set_collection_auth`: Set collection-level auth inherited by all requests. Supported types: `bearer` (`credentials.token`), `basic` (`credentials.username` + `credentials.password`), `apiKey` (`credentials.key`), `oauth2`, `mtls` (`credentials.certPath` + `credentials.keyPath` - absolute paths to PEM files, store in `~/.reqly/certs/`), `awsv4` (`credentials.accessKey` + `credentials.secretKey` + `credentials.region` + `credentials.service`; optionally `credentials.sessionToken` for temporary STS credentials), `none`. The executor attaches the right headers or TLS client certificate at request time. For `awsv4`, it computes AWS Signature Version 4 and injects `Authorization`, `X-Amz-Date`, and (when `sessionToken` is set) `X-Amz-Security-Token` headers before every request.
 - `introspect_graphql`: Run full GraphQL schema introspection against a URL, cache the schema for autocomplete.
 - `list_grpc_services`: Discover gRPC services from a running server via server reflection (server must have `grpc.reflection.v1alpha.ServerReflection` enabled). Returns `{ services: [{ name }], fileDescriptorCount }`. Use this when no `.proto` file is available. Call with `{ serverUrl: "localhost:50051" }`.
