@@ -2,6 +2,11 @@
 
 ## 2026-07-02
 
+- [x] **T-215** Add Contributing section to README
+  - Outlined how users can contribute (Engine, MCP, UI).
+  - Explicitly stated the Core Architectural Principle (Tool-First).
+  - Added Local Setup instructions and Testing Standards.
+
 - [x] **T-213** Add gRPC unary support to flow runner
   - `flow-runner.ts` now detects `type: grpc` run steps and routes them through `runGrpcRequest` instead of the HTTP executor.
   - `GrpcResponse` is adapted to `HttpResponse` (status 200 = gRPC OK, status 500 = any non-zero gRPC code; body and grpc-status/grpc-message headers set accordingly).

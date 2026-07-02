@@ -82,6 +82,7 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 - [Proof](#proof-30-seconds)
 - [Why Reqly](#why-reqly-beats-postman-insomnia-and-bruno-for-ai-native-developers)
 - [Recently Shipped](#recently-shipped)
+- [Contributing](#contributing-60-seconds)
 - [FAQ](#faq)
 - [Star History](#star-history)
 
@@ -524,6 +525,29 @@ POST /api/mock/start   { collection, port? }
 POST /api/mock/stop
 GET  /api/mock/status
 ```
+
+## Contributing (60 seconds)
+
+Reqly is an open-source execution engine built for AI agents. We welcome contributions across the stack! 
+
+### How you can help
+- **Engine & Protocols:** Add support for new auth types (AWS Signature v4, Digest, NTLM) or enhance the JS script sandbox with more built-in helper libraries (e.g., mock data generation).
+- **MCP Toolkit:** Write new tools in `src/mcp/tools/` (e.g., importers for Swagger 2.0 or Insomnia) to give agents more capabilities.
+- **UI & Polish:** Enhance the React frontend (`src/ui/`) with themes, better syntax highlighting, or UI fixes.
+
+### Core Architectural Principle: Tool-First
+**Every capability must be a tool first.** If it can't be called via MCP, it doesn't exist as a feature. The UI is a visual wrapper around the same tools - it never has capabilities the MCP interface lacks. Keep AI logic *outside* the engine; Reqly is the dumb execution layer for smart agents.
+
+### Local Setup
+```bash
+git clone https://github.com/RutvikPansare/Reqly.git
+cd Reqly
+npm install
+npm run dev
+```
+
+### Testing Standards
+We use Vitest (`npm test`). **Engine logic (`src/engine/`) and MCP tool contracts (`src/mcp/`) require strict TDD** with 100% coverage. UI interactions are tested flexibly. Before submitting a PR, ensure all tests pass.
 
 ## FAQ
 
