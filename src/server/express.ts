@@ -348,6 +348,36 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  app.post('/api/clone-repo', async (req, res) => {
+    try {
+      const { url, destination } = req.body;
+      if (!url || !destination) {
+        res.status(400).json({ error: 'url and destination are required' });
+        return;
+      }
+      
+      let destPath = destination;
+      if (destPath.startsWith('~/')) {
+        destPath = path.join(os.homedir(), destPath.slice(2));
+      }
+      
+      const repoName = url.split('/').pop()?.replace('.git', '') || 'repo';
+      const targetPath = path.join(destPath, repoName);
+      
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      await fs.mkdir(destPath, { recursive: true });
+      
+      await execAsync(`git clone ${url} "${targetPath}"`);
+      
+      res.json({ path: targetPath });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/collections', async (req, res) => {
     try {
       const cols = await context.collectionManager.listCollections();

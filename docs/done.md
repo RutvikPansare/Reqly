@@ -17,6 +17,12 @@
   - 9 new TDD tests; 834/834 tests pass.
   - E2E validated via `scripts/e2e-sigv4-test.ts` (28/28 checks pass): GET header signing, POST body signing with custom region/service, session token injection (X-Amz-Security-Token echoed by httpbin.org), WebSocket URL presigning (key ID, region, service, signature all correct), WebSocket presigning with session token.
 
+- [x] **T-218** Build GitHub clone integration into Open Workspace modal
+  - Replaced the inline "Switch project" input with a new `OpenWorkspaceModal`.
+  - Added two paths: "Open Local Folder" and "Clone from GitHub".
+  - Created POST `/api/clone-repo` in express backend to handle `git clone` natively.
+  - Allowed user to customize the destination folder when cloning, using the native `/api/open-folder-picker`.
+
 - [x] **T-217** Add "Git is your RBAC" selling point to README
   - Added a bullet point highlighting that Reqly inherits Git security policies and CODEOWNERS for free.
 

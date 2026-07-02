@@ -8,6 +8,7 @@ import { SuccessToast } from './ui/SuccessToast.js';
 import { CollectionSettingsModal } from './CollectionSettingsModal.js';
 import { Modal, ModalFooter } from './ui/Modal.js';
 import { Button } from './ui/Button.js';
+import { OpenWorkspaceModal } from './OpenWorkspaceModal.js';
 
 interface CollectionsPanelProps {
   activeRequest: any;
@@ -161,61 +162,13 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
 
   if (editing) {
     return (
-      <div className="shrink-0 rounded-md" style={{ background: 'var(--surface-2)', border: '1px solid var(--accent)' }}>
-        <div className="flex items-center gap-2 px-3 py-2">
-          <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
-          <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>Switch project</span>
-        </div>
-        <div className="px-3 pb-2 flex flex-col gap-1.5">
-          <div className="flex gap-1.5">
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={e => { setInput(e.target.value); setError(''); }}
-              onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') cancel(); }}
-              className="input font-mono flex-1"
-              style={{ fontSize: '0.7rem', height: '28px' }}
-              placeholder="/path/to/project"
-              disabled={switching}
-              spellCheck={false}
-            />
-            <button
-              onClick={openPicker}
-              disabled={switching || pickerBusy}
-              title="Browse for folder"
-              className="rounded flex items-center justify-center shrink-0"
-              style={{ width: '28px', height: '28px', background: 'var(--surface-4)', color: 'var(--text-muted)', opacity: pickerBusy ? 0.6 : 1 }}
-            >
-              <Folder size={13} />
-            </button>
-          </div>
-          {hasRecentMcpActivity && (
-            <p className="text-xs flex items-start gap-1" style={{ color: '#fbbf24' }}>
-              <AlertTriangle size={11} className="shrink-0 mt-0.5" />
-              An AI agent may be using this project. Switching will change its context.
-            </p>
-          )}
-          {error && <p className="text-xs" style={{ color: '#f87171' }}>{error}</p>}
-          <div className="flex gap-1.5">
-            <button
-              onClick={submit}
-              disabled={switching}
-              className="flex-1 text-xs rounded px-2 py-1 transition-colors font-medium"
-              style={{ background: 'var(--accent)', color: '#000', opacity: switching ? 0.6 : 1 }}
-            >
-              {switching ? 'Switching…' : 'Switch'}
-            </button>
-            <button
-              onClick={cancel}
-              disabled={switching}
-              className="text-xs rounded px-2 py-1 transition-colors"
-              style={{ background: 'var(--surface-4)', color: 'var(--text-muted)' }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
+      <OpenWorkspaceModal 
+        onClose={() => setEditing(false)}
+        onSwitch={(path) => {
+          doSwitch(path);
+          setEditing(false);
+        }}
+      />
     );
   }
 
