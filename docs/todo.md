@@ -4,12 +4,23 @@
 
 ---
 
-### v2 Architecture: Disk-Persisted State + Independent Processes
+### Port Strategy + Process Model
 
-> Goal: remove the singleton lock as a state coordinator. Each process (Electron, reqly mcp, CLI) runs a full independent engine. State is shared through files in `.reqly/`, same way collections already work. Do this before the Multi-Project Workspace milestone - it is the prerequisite.
+- [ ] **T-230** Agent-vs-Electron port strategy: Electron ephemeral, agents compete for 4242
+  - **Electron**: call `listen(0)` so OS assigns a free ephemeral port (e.g. 51234). Never hardcode 4242. Write `{ type: 'electron', pid, port }` to lock file. Webview loads at the assigned port.
+  - **Agent MCP process**: always try port 4242. If free, take it. If taken: read lock file, check `type`. If `type === 'agent'`, kill the old process by PID and take over 4242. If `type === 'electron'`, do not kill - run Express on any free port instead (Electron has its own UI, so 4242 is just a bonus for the browser tab).
+  - Add `type: 'electron' | 'agent'` field to lock file schema in `src/server/lock.ts`.
+  - Update `writeLock()` to accept and store the type.
+  - Update startup logic in `src/server/index.ts` to implement the takeover logic described above.
+  - Result: browser tab at `localhost:4242` always shows the most recent agent session. Electron UI always available at its own stable port. No fallback complexity.
 
+- [ ] **T-231** Fix WebSocket server crash on EADDRINUSE when port is taken
+  - When Express fails to bind (EADDRINUSE), the WebSocket server attached to the same HTTP server also emits an unhandled `error` event, which crashes the Node process instead of gracefully continuing.
+  - The `expressServer.on('error', ...)` handler in `src/server/index.ts` only catches the HTTP server error - the WebSocket `error` event is separate and unhandled.
+  - Fix: attach an `error` handler to the WebSocket server instance directly in `src/server/express.ts` (wherever the WS server is created), swallowing EADDRINUSE specifically.
+  - Verify: starting a second reqly process when port is taken should log a warning and continue as MCP-only without crashing.
 
-
+---
 
 
 
