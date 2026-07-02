@@ -258,11 +258,11 @@ app.on('window-all-closed', () => {
   // Intentionally do nothing - closing the window hides it, it doesn't quit.
 });
 
-app.on('before-quit', async e => {
+app.on('before-quit', e => {
+  if (isQuitting) return;
   isQuitting = true;
 
-  // Only kill the server if THIS process spawned it. A user-started CLI server
-  // is left running so `reqly run`/MCP sessions survive the app quitting.
+  // Only kill the server if THIS process spawned it.
   if (!spawnedServer || spawnedServer.killed) return;
 
   e.preventDefault();
@@ -270,11 +270,16 @@ app.on('before-quit', async e => {
   spawnedServer = null;
 
   child.kill('SIGTERM');
-  const killed = await new Promise<boolean>(resolve => {
-    const timer = setTimeout(() => resolve(false), 3000);
-    child.on('exit', () => { clearTimeout(timer); resolve(true); });
-  });
-  if (!killed) child.kill('SIGKILL');
+  
+  // If the server exits quickly, exit the app. Otherwise force kill after 1s.
+  // Using app.exit(0) instead of app.quit() to avoid macOS async event loop drops.
+  const timer = setTimeout(() => {
+    child.kill('SIGKILL');
+    app.exit(0);
+  }, 1000);
 
-  app.quit();
+  child.on('exit', () => {
+    clearTimeout(timer);
+    app.exit(0);
+  });
 });
