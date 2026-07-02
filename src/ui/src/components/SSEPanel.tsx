@@ -34,7 +34,7 @@ export function SSEPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }: SSEP
   return (
     <div className="flex h-full flex-col bg-[var(--surface-1)]">
       <ProtocolUrlBar badge="SSE" url={tab.url} placeholder="https://..." disabled={status !== 'disconnected'} onChange={url => onTabUpdate({ url })} status={status} action={status === 'connected' ? <><Square size={13} />Stop</> : status === 'connecting' ? 'Connecting...' : <><Play size={13} />Start</>} onAction={handleStart} onSave={onSave} flashSaved={flashSaved} isDirty={isDirty} />
-      <div className="flex items-center gap-2 border-b px-4 py-1" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}><span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Event type:</span><input className="input h-7 max-w-xs text-sm" value={tab.realtime?.eventType || ''} onChange={e => onTabUpdate({ realtime: { ...tab.realtime, eventType: e.target.value } })} disabled={status !== 'disconnected'} placeholder="message" /></div>
+      <div className="flex items-center gap-2 border-b px-4 py-1" style={{ borderColor: 'var(--border)' }}><span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Event type:</span><input className="input h-7 max-w-xs text-sm" value={tab.realtime?.eventType || ''} onChange={e => onTabUpdate({ realtime: { ...tab.realtime, eventType: e.target.value } })} disabled={status !== 'disconnected'} placeholder="message" /></div>
       <div className="flex-1 min-h-0"><RealtimeMessageLog messages={messages} onClear={() => setMessages([])} /></div>
     </div>
   );

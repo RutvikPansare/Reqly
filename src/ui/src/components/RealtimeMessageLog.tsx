@@ -64,7 +64,7 @@ export function RealtimeMessageLog({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="panel-header flex items-center justify-between px-3 py-2 border-b border-gray-800" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
+      <div className="panel-header flex items-center justify-between px-3 py-2 border-b border-gray-800" style={{ borderBottom: '1px solid var(--border)' }}>
         <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{title}</span>
         <div className="flex items-center gap-2">
           <button onClick={onClear} title="Clear messages" className="text-gray-400 hover:text-white transition-colors">

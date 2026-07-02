@@ -48,7 +48,7 @@ export function MQTTPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty }: MQT
 
   const configPane = (
     <div className="h-full overflow-auto">
-      <div className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+      <div className="border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-1.5 text-sm">
           <label className="flex items-center gap-2"><span style={{ color: 'var(--text-secondary)' }}>Client ID:</span><input className="input h-7 w-48" value={tab.realtime?.mqttClientId || ''} onChange={e => updateRealtime({ mqttClientId: e.target.value })} placeholder="Auto-generated" disabled={status !== 'disconnected'} /></label>
           <button onClick={() => setConfigOpen(v => !v)} className="btn btn-secondary h-7 rounded px-2 text-xs">{configOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}Config</button>
