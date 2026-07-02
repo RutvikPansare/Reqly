@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import * as path from 'path';
-import { resolveMcpMode } from './startup-mode.js';
 import * as os from 'os';
 import { CollectionManager } from '../engine/collection-manager.js';
 import { EnvironmentManager } from '../engine/environment-manager.js';
@@ -33,7 +32,7 @@ import { handleAppCommand } from './app-command.js';
 import { handleExecCommand } from './exec-command.js';
 import { handleImportCommand } from './import-command.js';
 import { handleInitCommand } from './init-command.js';
-import { readLock, writeLock, clearLock, isProcessAlive } from './lock.js';
+import { writeLock, clearLock } from './lock.js';
 
 async function main() {
   const parsed = parseArgs(process.argv);
@@ -170,43 +169,23 @@ async function main() {
   };
 
   const port = Number(process.env.REQLY_TEST_PORT) || 4242;
-  let mcpOnly = false;
 
-  const lock = await readLock();
-  if (lock && isProcessAlive(lock.pid)) {
-    try {
-      const res = await fetch(`http://localhost:${lock.port}/api/switch-project`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectDir: cwd })
-      });
-      const mode = resolveMcpMode({ ok: res.ok, status: res.status });
-      if (mode === 'switched') {
-        console.error(`Switched active project to ${cwd}`);
-        mcpOnly = true;
-      } else {
-        // mcp-only: server running but rejected switch - do NOT bind port 4242
-        const body = await res.text().catch(() => '');
-        console.error(`[reqly] switch-project returned ${res.status} - running MCP-only against current project. ${body}`);
-        mcpOnly = true;
-      }
-    } catch (e: any) {
-      if (resolveMcpMode(e?.cause?.code === 'ECONNREFUSED' || e?.code === 'ECONNREFUSED' ? 'econnrefused' : 'error') === 'start-fresh') {
-        // Server not actually running despite lock - fall through to normal start
-        await clearLock();
-      } else {
-        // Network error or timeout - play it safe, do not bind port
-        console.error(`[reqly] Could not reach running server (${e?.message}) - running MCP-only.`);
-        mcpOnly = true;
-      }
+  // Each process always runs its own full engine + Express.
+  // Lock file is written for process registry (reqly stop/status/app) only,
+  // not for inter-process state coordination.
+  const expressServer = startExpressServer(context, port);
+  let expressAvailable = true;
+  expressServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[reqly] Port ${port} already in use - MCP available, UI unavailable on this process.`);
+      expressAvailable = false;
+    } else {
+      throw err;
     }
-  } else if (lock) {
-    // stale lock left behind by a dead process
-    await clearLock();
-  }
-
-  const expressServer = mcpOnly ? null : startExpressServer(context, port);
-  if (!mcpOnly) {
+  });
+  // Wait one tick so the error event fires before we write the lock
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  if (expressAvailable) {
     await writeLock(cwd, port);
   }
   await startServer(context);
@@ -221,7 +200,7 @@ async function main() {
       // ignore
     }
 
-    if (!mcpOnly) {
+    if (expressAvailable) {
       await clearLock();
     }
 

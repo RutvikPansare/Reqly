@@ -2,6 +2,13 @@
 
 ## 2026-07-02
 
+- [x] **T-222** Remove singleton lock as state coordinator - each process runs a full engine
+  - Removed MCP-only mode from `index.ts` startup. Every `reqly mcp` spawn now runs its own full `EngineContext` + Express regardless of whether another process holds the lock.
+  - Removed inter-process `fetch` to `/api/switch-project` and all `mcpOnly` branching.
+  - Retained lock file write for process registry only (`reqly stop`, `reqly status`, `reqly app`). Lock is written only when Express binds successfully; EADDRINUSE logs a warning and the process continues with MCP only (no deliberate MCP-only mode).
+  - Deleted `startup-mode.ts` and `startup-mode.test.ts` (dead code).
+  - `POST /api/switch-project` endpoint retained for UI project-switching. All 833 tests pass.
+
 - [x] **T-221** Persist `ResponseStore` to `.reqly/responses.json`
   - Updated `ResponseStore` to read/write `.reqly/responses.json` so that `{{requestName.response.field}}` chaining works across process restarts.
   - Initial load from disk happens synchronously on instantiation.

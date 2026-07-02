@@ -10,13 +10,6 @@
 
 
 
-- [ ] **T-222** Remove singleton lock as state coordinator - each process runs a full engine
-  - **Engine/Server:** After T-220 and T-221 land, remove the MCP-only mode from `index.ts` startup. Every `reqly mcp` spawn runs its own full `EngineContext` + Express regardless of whether another process holds the lock.
-  - **Server:** Retain the lock file write (`~/.reqly/running.json`) for process registry only (`reqly stop`, `reqly status`, `reqly app`) - not for state coordination
-  - **Server:** Remove `startupMode.ts` / `resolveMcpMode` logic (dead code after this)
-  - **Server:** Keep `POST /api/switch-project` endpoint - the UI still uses it to switch the current process's active project. Remove only the inter-process HTTP call to it from `index.ts` startup.
-  - All tests that exercise the MCP-only startup path must be updated or removed
-
 - [ ] **T-223** Update `switch_project` MCP tool to local context swap
   - **Engine/MCP:** Replace the HTTP call to `/api/switch-project` with direct re-instantiation of `CollectionManager` and `EnvironmentManager` on the current process's `EngineContext`. No inter-process communication.
   - **UI:** No change - UI's project switcher still calls `POST /api/switch-project` on its own process's Express, which remains and works as before
