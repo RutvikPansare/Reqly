@@ -217,16 +217,36 @@ All Windows Support items shipped (T-115 through T-119).
 
 **Why post-v2 architecture:** requires disk-persisted state. After v2, each process reads its own `.reqly/` independently - multi-project is just pointing at different directories simultaneously.
 
-**Design (revised):** workspace config lives in `~/.reqly/workspaces/<name>/` (not in any repo). Individual repo `.reqly/` folders hold that repo's collections (committed to git). Cross-repo flows live in the workspace folder. `reqly workspace link <alias> <path>` maps logical names to local paths - decouples the shared workspace definition from each developer's local folder layout.
+**How Bruno does it:** Bruno lets you open multiple collection folders and groups them in one sidebar. The "which folders are open" list lives in the app's local config - not in any repo. Collection files stay git-tracked in their respective repos. Simple, zero new file formats.
 
-**Competitive context:** Bruno partially solves this - multiple collection directories in one sidebar. Postman/Insomnia abandoned project-directory scoping for cloud workspaces. Reqly's target: Bruno parity as the floor, plus agent-native cross-repo flows on top. No other tool has local-first + git-native + multi-project + MCP server.
+**Competitive context:** Bruno partially solves this - multiple collection directories in one sidebar. Postman/Insomnia abandoned project-directory scoping for cloud workspaces. Reqly's target: Bruno parity as the floor (Phase 1), plus agent-native cross-repo flows on top (Phase 2). No other tool has local-first + git-native + multi-project + MCP server.
 
 **Current workaround for microservices developers:** use `reqly use <path>` for instant project switching, share secrets via `set_dotenv_files` pointing at a shared `.env`, and have agents coordinate across projects by holding extracted values in their context window.
 
-- [ ] **T-225** Workspace model: `~/.reqly/workspaces/<name>/workspace.yaml` with repo aliases and CLI/MCP tooling
-- [ ] **T-226** Cross-repo flows: `repo: <alias>` field on flow steps, flow runner resolves alias to `projectDir`
+### Phase 1: Bruno Parity (ship first)
 
+No new file formats. Path list in `~/.reqly/config.json`. Grouped sidebar. Full MCP parity.
 
+- [ ] **T-225** Multi-project path list + grouped sidebar
+  - `workspaceProjects: string[]` in config; `CollectionManager.loadAll()` for multiple dirs
+  - CLI: `reqly workspace add/remove/list`
+  - MCP: `add_workspace_project`, `remove_workspace_project`, `list_workspace_projects`
+  - UI: sidebar grouped by project folder name, collapsible sections, "Add project" button, active project highlighted, history entries tagged by project
+
+### Phase 2: Reqly Differentiation (beyond Bruno)
+
+Named workspaces with aliases, cross-repo flows. What makes Reqly uniquely agent-native for microservices teams.
+
+- [ ] **T-226** Formal workspace model: `~/.reqly/workspaces/<name>/workspace.yaml`
+  - Named workspace with `repos: [{ alias, path }]` and optional `sharedEnv`
+  - CLI: `reqly workspace create/link/use`; MCP: `create_workspace`, `link_workspace_repo`, `use_workspace`
+  - UI: workspace dropdown in nav rail, workspace settings panel
+
+- [ ] **T-227** Cross-repo flows with `repo: <alias>` step field
+  - Flow runner resolves alias to `projectDir` via active workspace config
+  - Cross-repo flow YAMLs live in `~/.reqly/workspaces/<name>/flows/`
+  - `run_flow` / `reqly run-flow` accept `--workspace <name>`
+  - UI: repo selector in flow builder step picker, breadcrumb shows `alias / collection / request`
 
 ---
 
