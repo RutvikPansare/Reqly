@@ -11,15 +11,7 @@
 
 
 
-- [ ] **T-224** Update `reqly init` to auto-gitignore runtime state files
-  - **CLI:** When `reqly init` creates `.reqly/` in a project, append to `.gitignore` (or create it):
-    ```
-    .reqly/history.ndjson
-    .reqly/responses.json
-    ```
-  - Skip silently if entries already exist
-  - **UI:** Settings panel or first-run banner confirms gitignore status (green tick / warning if `.gitignore` is missing the entries)
-  - Update README and `llms.txt`
+
 
 ---
 

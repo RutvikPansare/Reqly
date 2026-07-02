@@ -16,13 +16,20 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [saved, setSaved] = useState(false);
   const [loginItemSupported, setLoginItemSupported] = useState(false);
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
+  const [missingGitignores, setMissingGitignores] = useState<string[]>([]);
+  const [fixingGitignore, setFixingGitignore] = useState(false);
 
   useEffect(() => {
-    fetchDotenvFiles().then(data => setFiles(data.files)).catch(console.error);
-    fetchLoginItem().then(data => {
-      setLoginItemSupported(data.supported);
-      setLaunchAtLogin(data.enabled);
-    }).catch(console.error);
+    import('../api').then(({ fetchDotenvFiles, fetchLoginItem, fetchGitignoreStatus }) => {
+      fetchDotenvFiles().then(data => setFiles(data.files)).catch(console.error);
+      fetchLoginItem().then(data => {
+        setLoginItemSupported(data.supported);
+        setLaunchAtLogin(data.enabled);
+      }).catch(console.error);
+      fetchGitignoreStatus().then(data => {
+        setMissingGitignores(data.missing || []);
+      }).catch(console.error);
+    });
   }, []);
 
   const toggleLaunchAtLogin = async () => {
@@ -34,6 +41,20 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       console.error(e);
       setLaunchAtLogin(!next);
       alert('Failed to update launch at login setting');
+    }
+  };
+
+  const handleFixGitignore = async () => {
+    setFixingGitignore(true);
+    try {
+      const { fixGitignore } = await import('../api');
+      await fixGitignore();
+      setMissingGitignores([]);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to update .gitignore');
+    } finally {
+      setFixingGitignore(false);
     }
   };
 
@@ -119,6 +140,27 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           </label>
         </div>
       )}
+
+      <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+        <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+          Gitignore status
+        </label>
+        {missingGitignores.length === 0 ? (
+          <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--success)' }}>
+            <span className="flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-500">✓</span>
+            All runtime state files are gitignored.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs" style={{ color: 'var(--warning)' }}>
+              Missing entries in .gitignore: {missingGitignores.join(', ')}
+            </p>
+            <Button variant="secondary" onClick={handleFixGitignore} disabled={fixingGitignore}>
+              {fixingGitignore ? 'Fixing...' : 'Add to .gitignore'}
+            </Button>
+          </div>
+        )}
+      </div>
 
       <ModalFooter>
         {saved && <span className="text-xs self-center mr-2" style={{ color: 'var(--accent)' }}>Saved</span>}

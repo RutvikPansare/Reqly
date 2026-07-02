@@ -61,7 +61,7 @@ To run that flow on a recurring cadence instead of only on push, use `/schedule`
 /schedule every morning at 9am, run reqly run-flow "Login Flow" --reporter junit and tell me if anything broke
 ```
 
-To explore Reqly's patterns first, run `reqly init` to copy a working starter collection (JSONPlaceholder, no auth) into `.reqly/`.
+To explore Reqly's patterns first, run `reqly init` to copy a working starter collection (JSONPlaceholder, no auth) into `.reqly/` (and automatically gitignore runtime state files).
 
 ## MCP Resources
 

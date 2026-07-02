@@ -274,6 +274,61 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     });
   });
 
+  app.get('/api/project/gitignore', async (_req, res) => {
+    const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+    const gitignorePath = path.join(projectRoot, '.gitignore');
+    try {
+      const content = await fs.readFile(gitignorePath, 'utf8');
+      const lines = content.split('\n');
+      const hasHistory = lines.includes('.reqly/history.ndjson');
+      const hasResponses = lines.includes('.reqly/responses.json');
+      res.json({
+        ok: true,
+        missing: [
+          ...(hasHistory ? [] : ['.reqly/history.ndjson']),
+          ...(hasResponses ? [] : ['.reqly/responses.json'])
+        ]
+      });
+    } catch {
+      // .gitignore doesn't exist
+      res.json({
+        ok: true,
+        missing: ['.reqly/history.ndjson', '.reqly/responses.json']
+      });
+    }
+  });
+
+  app.post('/api/project/gitignore', async (_req, res) => {
+    const projectRoot = path.dirname(context.collectionManager.getBaseDir());
+    const gitignorePath = path.join(projectRoot, '.gitignore');
+    try {
+      let content = '';
+      try {
+        content = await fs.readFile(gitignorePath, 'utf8');
+      } catch {
+        // doesn't exist
+      }
+      const lines = content.split('\n');
+      let changed = false;
+      
+      if (!lines.includes('.reqly/history.ndjson')) {
+        content += (content.endsWith('\n') || content === '' ? '' : '\n') + '.reqly/history.ndjson\n';
+        changed = true;
+      }
+      if (!lines.includes('.reqly/responses.json')) {
+        content += (content.endsWith('\n') || content === '' ? '' : '\n') + '.reqly/responses.json\n';
+        changed = true;
+      }
+
+      if (changed) {
+        await fs.writeFile(gitignorePath, content, 'utf8');
+      }
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // Schema cache - persists GraphQL introspection results per URL in
   // .reqly/.schema-cache/<sha256-of-url>.json so the UI can restore the schema

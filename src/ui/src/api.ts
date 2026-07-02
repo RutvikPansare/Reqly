@@ -248,6 +248,18 @@ export async function fetchAuthProfiles() {
   return res.json();
 }
 
+export async function fetchGitignoreStatus() {
+  const res = await fetch(`/api/project/gitignore?t=${Date.now()}`);
+  if (!res.ok) throw new Error('Failed to fetch gitignore status');
+  return res.json();
+}
+
+export async function fixGitignore() {
+  const res = await fetch('/api/project/gitignore', { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to fix gitignore');
+  return res.json();
+}
+
 export async function createAuthProfile(profile: any) {
   const res = await fetch('/api/auth-profiles', {
     method: 'POST',

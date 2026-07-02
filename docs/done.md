@@ -2,6 +2,13 @@
 
 ## 2026-07-02
 
+- [x] **T-224** Update `reqly init` to auto-gitignore runtime state files
+  - **CLI:** `reqly init` (completed in T-220/T-221) appends `.reqly/history.ndjson` and `.reqly/responses.json` to `.gitignore`.
+  - **UI:** Added an API endpoint `GET /api/project/gitignore` to check the current status of `.gitignore`.
+  - **UI:** Added an API endpoint `POST /api/project/gitignore` to fix the `.gitignore` automatically.
+  - **UI:** Added a section in the Settings panel in the UI to display the gitignore status with a green tick if clean, or a warning and a fix button if missing.
+  - Updated `README.md` and `llms.txt` to note the automatic gitignoring behavior of `reqly init`.
+
 - [x] **T-223** Update `switch_project` MCP tool to local context swap
   - **Engine/MCP:** Ensured `switch_project` MCP tool operates purely locally on the current process's `EngineContext` (no inter-process `fetch` to `/api/switch-project`).
   - Added `HistoryStore` and `ResponseStore` to the context re-instantiation in `switch-project.ts`.

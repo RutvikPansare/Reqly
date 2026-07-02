@@ -170,6 +170,7 @@ reqly start
 ```
 
 Open `localhost:4242` - you'll have a working collection against [JSONPlaceholder](https://jsonplaceholder.typicode.com) with request chaining, variables, assertions, and a flow already set up. Then connect your agent and ask it to extend it.
+*(Note: `reqly init` automatically creates `.reqly/` and adds its runtime state files to your `.gitignore`.)*
 
 ## The fastest way to start with your own API (60 seconds)
 
