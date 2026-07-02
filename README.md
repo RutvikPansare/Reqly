@@ -110,6 +110,8 @@ Reqly shifts API testing from a tedious manual chore to a rapid, agent-driven wo
 
 **BYOK, no cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. The prompt bar in the UI uses your own API key. Nothing is sent to Reqly's servers - because there are no Reqly servers. No account required, no telemetry, no sync.
 
+**Democratizes testing for PMs & QA.** Postman's UI is intimidating for non-developers. With Reqly, non-technical team members can just ask their AI: *"Run the checkout flow and tell me if tax is calculated correctly."* The AI handles the auth, formatting, and JSON payloads, then explains the response in plain English. No developer hand-holding required.
+
 ## What an agent session looks like (15 seconds)
 
 ```

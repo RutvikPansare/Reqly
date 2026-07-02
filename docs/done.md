@@ -2,6 +2,9 @@
 
 ## 2026-07-02
 
+- [x] **T-216** Add PM/QA democratization point to README
+  - Added a new bullet point explaining how AI-driven API testing lowers the barrier for non-technical users.
+
 - [x] **T-215** Add Contributing section to README
   - Outlined how users can contribute (Engine, MCP, UI).
   - Explicitly stated the Core Architectural Principle (Tool-First).
