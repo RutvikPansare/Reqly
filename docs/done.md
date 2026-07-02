@@ -2,6 +2,11 @@
 
 ## 2026-07-02
 
+- [x] **T-232** Disable 'Switch Project' button when agent is connected
+  - Modified `useCollectionState.ts` to fetch `hasEverConnectedAgent` from `/api/project`.
+  - Added `isAgentActive` logic to `ProjectPathWidget.tsx` using `hasEverConnectedAgent || window.location.port === '4242'`.
+  - If agent is active, the project path widget is disabled with a helpful tooltip to prevent humans from pulling the rug out from under the agent's active session.
+
 - [x] **T-231** Fix WebSocket server crash on EADDRINUSE when port is taken
   - Added `wss.on('error', ...)` handler in `attachTerminal` (terminal.ts) that swallows `EADDRINUSE` and re-throws everything else.
   - Without this, the ws library propagates the http server bind failure to the WS server as a second unhandled `error` event, crashing the process.
