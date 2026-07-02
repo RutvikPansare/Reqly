@@ -70,6 +70,9 @@ export function useWorkspaceTabs(namespace: string, defaultProtocol: string, def
   };
 
   const updateTab = (id: string, updates: Partial<WorkspaceTab>) => {
+    if (updates.id && updates.id !== id && activeTabId === id) {
+      setActiveTabId(updates.id);
+    }
     setTabs(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
   };
 

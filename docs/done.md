@@ -2,6 +2,17 @@
 
 ## 2026-07-01
 
+- [x] **T-201** Fix tab jumping on save in workspace tabs
+  - Updated `useWorkspaceTabs` hook to correctly update `activeTabId` when a tab's ID changes upon first save, preventing the workspace from switching to the first tab.
+
+
+- [x] **T-200** Fix UI issues across Workspaces
+  - Fixed drag-and-drop bug for GQL/gRPC requests in CollectionsPanel
+  - Refined Proto File section UI in GrpcWorkspace (padding, font size)
+  - Ensured gRPC response area consumes full available height via h-full
+  - Integrated dirty state checking to trigger Save button styling in GraphQL and gRPC Workspaces
+  - Updated backend to emit 409 Conflict when saving requests with duplicate names, surfacing errors in UI
+
 - [x] **T-199** Refactor GraphQL and gRPC workspaces to use tab layout
   - Extracted `WorkspaceTabBar` and `useWorkspaceTabs` from Realtime components for generic tab management
   - Reused `CollectionsPanel` in GraphQL and gRPC workspaces with their respective `typeFilter`s
