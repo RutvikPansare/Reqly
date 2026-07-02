@@ -11,7 +11,7 @@
   - UI `RequestEditor.tsx`: added `awsv4` to auth type selector, AWS SigV4 credential form (Access Key, Secret Key masked, Region, Service, Session Token masked), Inherited tab shows computed header names.
   - UI `CollectionSettingsModal.tsx`: same credential form at collection level.
   - 9 new TDD tests; 834/834 tests pass.
-  - E2E validated via httpbin.org (header echo): correct `AWS4-HMAC-SHA256` format, correct credential scope, X-Amz-Security-Token propagated.
+  - E2E validated via `scripts/e2e-sigv4-test.ts` (28/28 checks pass): GET header signing, POST body signing with custom region/service, session token injection (X-Amz-Security-Token echoed by httpbin.org), WebSocket URL presigning (key ID, region, service, signature all correct), WebSocket presigning with session token.
 
 - [x] **T-217** Add "Git is your RBAC" selling point to README
   - Added a bullet point highlighting that Reqly inherits Git security policies and CODEOWNERS for free.
