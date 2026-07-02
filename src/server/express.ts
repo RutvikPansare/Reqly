@@ -12,6 +12,7 @@ import { CollectionManager, CollectionNotFoundError, RequestNotFoundError } from
 import { EnvironmentManager, EnvironmentNotFoundError } from '../engine/environment-manager.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import chokidar, { FSWatcher } from 'chokidar';
 import { writeLock, readLock } from './lock.js';
 import { fileURLToPath } from 'url';
 import { parseCurl } from '../engine/curl-parser.js';
@@ -64,6 +65,52 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       try { client.write(payload); } catch { sseClients.delete(client); }
     }
   };
+
+  let reqlyDirWatcher: FSWatcher | null = null;
+  let watcherPendingEvents = new Set<string>();
+  let watcherDebounceTimer: NodeJS.Timeout | null = null;
+
+  const triggerWatcherEmit = () => {
+    for (const e of watcherPendingEvents) {
+      emit(e);
+    }
+    watcherPendingEvents.clear();
+    watcherDebounceTimer = null;
+  };
+
+  const startReqlyWatcher = (projectDir: string) => {
+    if (reqlyDirWatcher) {
+      reqlyDirWatcher.close();
+    }
+    const reqlyDir = path.join(projectDir, '.reqly');
+    reqlyDirWatcher = chokidar.watch(reqlyDir, {
+      persistent: true,
+      ignoreInitial: true,
+      depth: 3
+    });
+
+    reqlyDirWatcher.on('all', (event, filePath) => {
+      const p = filePath.replace(/\\/g, '/');
+      if (p.includes('.schema-cache')) return;
+
+      if (p.includes('/collections/') || p.endsWith('/collections')) {
+        watcherPendingEvents.add('collections');
+      } else if (p.endsWith('environments.yaml')) {
+        watcherPendingEvents.add('environments');
+      } else if (p.includes('/flows/') || p.endsWith('/flows')) {
+        watcherPendingEvents.add('flows');
+      } else if (p.endsWith('history.json')) {
+        watcherPendingEvents.add('history');
+      } else if (p.endsWith('.reqly')) {
+        watcherPendingEvents.add('collections');
+      }
+
+      if (watcherDebounceTimer) clearTimeout(watcherDebounceTimer);
+      watcherDebounceTimer = setTimeout(triggerWatcherEmit, 300);
+    });
+  };
+
+  startReqlyWatcher(path.dirname(context.collectionManager.getBaseDir()));
 
   // Intercept res.json on mutating requests to emit the right event type.
   // One middleware covers all routes - no need to add emit() calls per route.
@@ -1005,6 +1052,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       context.dotEnvLoader = new DotEnvLoader(projectDir, dotenvFiles);
       await context.dotEnvLoader.load();
       context.dotEnvLoader.watch();
+      startReqlyWatcher(projectDir);
 
       const lock = await readLock();
       await writeLock(projectDir, lock?.port || port);
