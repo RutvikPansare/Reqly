@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CollectionsPanel } from './CollectionsPanel.js';
+import { CollectionsPanel } from './CollectionsPanel/index.js';
 import { WorkspaceTabBar } from './WorkspaceTabBar.js';
 import { WebSocketPanel } from './WebSocketPanel.js';
 import { SSEPanel } from './SSEPanel.js';

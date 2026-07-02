@@ -1,0 +1,56 @@
+{
+  "httpbin-get": {
+    "status": 200,
+    "body": {
+      "args": {},
+      "headers": {
+        "Accept": "*/*",
+        "Accept-Encoding": "br, gzip, deflate",
+        "Accept-Language": "*",
+        "Host": "httpbin.org",
+        "Sec-Fetch-Mode": "cors",
+        "User-Agent": "undici",
+        "X-Amzn-Trace-Id": "Root=1-6a46cb1f-4537f8177c4ee7cc4789085f"
+      },
+      "origin": "73.194.127.90",
+      "url": "https://httpbin.org/get"
+    },
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-origin": "*",
+      "content-length": "355",
+      "content-type": "application/json",
+      "date": "Thu, 02 Jul 2026 20:33:35 GMT",
+      "server": "gunicorn/19.9.0"
+    },
+    "latency": 299,
+    "timestamp": "2026-07-02T20:33:35.372Z"
+  },
+  "get-test": {
+    "status": 200,
+    "body": {
+      "args": {},
+      "headers": {
+        "Accept": "*/*",
+        "Accept-Encoding": "br, gzip, deflate",
+        "Accept-Language": "*",
+        "Host": "httpbin.org",
+        "Sec-Fetch-Mode": "cors",
+        "User-Agent": "undici",
+        "X-Amzn-Trace-Id": "Root=1-6a46ca7c-2620284e2ff9149b60cf4bc8"
+      },
+      "origin": "73.194.127.90",
+      "url": "https://httpbin.org/get"
+    },
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-origin": "*",
+      "content-length": "355",
+      "content-type": "application/json",
+      "date": "Thu, 02 Jul 2026 20:30:52 GMT",
+      "server": "gunicorn/19.9.0"
+    },
+    "latency": 136,
+    "timestamp": "2026-07-02T20:30:52.692Z"
+  }
+}

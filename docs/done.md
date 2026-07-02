@@ -2,6 +2,22 @@
 
 ## 2026-07-02
 
+- [x] **T-228** Modularize CollectionsPanel - fix JSX brace error and split 885-line file
+  - Root cause: Gemini's T-225 work introduced a broken IIFE closing sequence (missing `</div>` and `)` tokens), causing a Vite/rolldown build failure.
+  - Resolution: replaced the monolithic `CollectionsPanel.tsx` with a `CollectionsPanel/` directory of 10 focused files, each under 200 lines:
+    - `types.ts` - shared TypeScript interfaces
+    - `useCollectionState.ts` - all state + async handlers as a custom hook
+    - `SidebarEmptyHint.tsx` - empty-state hint component
+    - `ProjectPathWidget.tsx` - project path button and switch modal
+    - `SearchResults.tsx` - sidebar search results list
+    - `RequestRow.tsx` - single request item with rename and examples
+    - `CollectionRow.tsx` - single collection header + requests list with drag-drop
+    - `ContextMenu.tsx` - right-click context menu
+    - `BrunoMigrationModal.tsx` - Bruno script migration reference table
+    - `MoveToModal.tsx` - move-request-to-collection modal
+    - `index.tsx` - orchestrating shell (200 lines)
+  - TSC clean, Vite build clean.
+
 - [x] **T-229** Bug fixes and regression verification post v2 arch
   - Fixed GraphQL executor bug: requests with `type: 'graphql'` and no explicit `method` were defaulting to GET, causing `Request with GET/HEAD method cannot have body` error. Executor now auto-sets POST for graphql type.
   - Fixed `SettingsPanel.tsx` unused imports (`fetchDotenvFiles`, `fetchLoginItem`) that blocked the UI build.
