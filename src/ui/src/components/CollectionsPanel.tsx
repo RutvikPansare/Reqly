@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Folder, AlertTriangle, Copy, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronRight, Play, Plus, Search, Download, BookMarked, Trash2, Settings, FolderOpen, Copy, Check } from 'lucide-react';
 import { fetchCollections, createCollection, addRequest, deleteRequest, updateRequest, renameCollection, deleteCollection, duplicateCollection, duplicateRequest, moveRequest, exportCollection, deleteExample } from '../api.js';
 import { requestBadgeInfo } from '../lib/colors.js';
 import { useLocalStorage } from '../hooks/useLocalStorage.js';
@@ -50,29 +50,17 @@ function SidebarEmptyHint() {
   );
 }
 
-function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { projectPath: string; lastMcpActivityAt: number | null; onSwitch: (p: string) => void }) {
+function ProjectPathWidget({ projectPath, onSwitch }: { projectPath: string; onSwitch: (p: string) => void }) {
   const [editing, setEditing] = useState(false);
-  const [input, setInput] = useState('');
-  const [error, setError] = useState('');
   const [switching, setSwitching] = useState(false);
-  const [pickerBusy, setPickerBusy] = useState(false);
   const [pendingDir, setPendingDir] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const hasRecentMcpActivity = !!lastMcpActivityAt && Date.now() - lastMcpActivityAt < 60000;
 
   const startEdit = () => {
-    setInput(projectPath);
-    setError('');
     setEditing(true);
-    setTimeout(() => inputRef.current?.select(), 30);
   };
-
-  const cancel = () => { setEditing(false); setError(''); setPendingDir(null); };
 
   const doSwitch = async (target: string, createIfMissing = false) => {
     setSwitching(true);
-    setError('');
     try {
       const res = await fetch('/api/switch-project', {
         method: 'POST',
@@ -81,11 +69,10 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
       });
       const data = await res.json();
       if (res.status === 404 && data.notFound) {
-        setError('Path not found');
         setSwitching(false);
         return;
       }
-      if (!res.ok) { setError(data.error || 'Failed to switch'); setSwitching(false); return; }
+      if (!res.ok) { setSwitching(false); return; }
       if (data.needsReqlyDir) {
         setPendingDir(target);
         setSwitching(false);
@@ -95,30 +82,9 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
       setEditing(false);
       setPendingDir(null);
     } catch {
-      setError('Network error');
+      // ignore
     }
     setSwitching(false);
-  };
-
-  const submit = () => {
-    const target = input.trim();
-    if (!target || target === projectPath) { cancel(); return; }
-    doSwitch(target);
-  };
-
-  const openPicker = async () => {
-    setPickerBusy(true);
-    try {
-      const res = await fetch('/api/open-folder-picker');
-      const data = await res.json();
-      if (data.path) {
-        setInput(data.path);
-        setError('');
-      }
-    } catch {
-      // ignore - leave input as-is
-    }
-    setPickerBusy(false);
   };
 
   const { name, display } = formatProjectPath(projectPath);
@@ -146,7 +112,7 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
                 {switching ? 'Creating…' : `Create .reqly/ here`}
               </button>
               <button
-                onClick={async () => { setPendingDir(null); await openPicker(); }}
+                onClick={() => { setPendingDir(null); setEditing(true); }}
                 disabled={switching}
                 className="text-xs rounded px-2 py-1.5"
                 style={{ background: 'var(--surface-4)', color: 'var(--text-muted)' }}
@@ -194,7 +160,6 @@ function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: { proje
 export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollection, typeFilter = undefined, defaultRequestType = undefined }: CollectionsPanelProps) {
   const [collections, setCollections] = useState<any[]>([]);
   const [projectPath, setProjectPath] = useState<string>('');
-  const [lastMcpActivityAt, setLastMcpActivityAt] = useState<number | null>(null);
   const [expandedCols, setExpandedCols] = useLocalStorage<Record<string, boolean>>('reqly.expandedCols', {});
   const [expandedReqs, setExpandedReqs] = useLocalStorage<Record<string, boolean>>('reqly.expandedReqs', {});
 
@@ -229,7 +194,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   const loadData = () => {
     fetchCollections().then(setCollections).catch(console.error);
-    fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); setLastMcpActivityAt(d.lastMcpActivityAt ?? null); }).catch(() => {});
+    fetch('/api/project').then(r => r.json()).then(d => { setProjectPath(d.path); }).catch(() => {});
   };
 
   const visibleCollections = typeFilter
@@ -370,7 +335,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
     <div className="p-3 flex flex-col gap-3 relative min-h-full">
 
       {/* Active project path - click to switch project */}
-      {projectPath && <ProjectPathWidget projectPath={projectPath} lastMcpActivityAt={lastMcpActivityAt} onSwitch={setProjectPath} />}
+      {projectPath && <ProjectPathWidget projectPath={projectPath} onSwitch={setProjectPath} />}
 
       {/* Environments section - above collections */}
       <div className="-mx-3 -mt-1" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>

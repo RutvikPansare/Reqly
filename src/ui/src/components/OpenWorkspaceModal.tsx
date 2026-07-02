@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Folder, Github, ArrowLeft, FolderOpen } from 'lucide-react';
-import { Modal, ModalFooter } from './ui/Modal';
+import { Folder, GitBranch, ArrowLeft, FolderOpen } from 'lucide-react';
+import { Modal } from './ui/Modal';
 
 interface OpenWorkspaceModalProps {
   onSwitch: (path: string) => void;
@@ -96,7 +96,7 @@ export function OpenWorkspaceModal({ onSwitch, onClose }: OpenWorkspaceModalProp
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
           >
-            <Github size={24} style={{ color: '#fff', flexShrink: 0, marginTop: '2px' }} />
+            <GitBranch size={24} style={{ color: '#fff', flexShrink: 0, marginTop: '2px' }} />
             <div>
               <div className="font-medium text-sm text-white mb-1">Clone from GitHub</div>
               <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Automatically download and open a repository from GitHub.</div>
