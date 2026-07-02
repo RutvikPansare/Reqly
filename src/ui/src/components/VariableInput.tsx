@@ -195,8 +195,22 @@ export function VariableInput({
         setShowMenu(false);
       }
     };
+    
+    const handleScroll = (e: Event) => {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        inputRef.current && !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowMenu(false);
+      }
+    };
+    
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -307,6 +321,52 @@ export function VariableInput({
     spellCheck,
   };
 
+  const menu = showMenu && menuItems.length > 0 ? createPortal(
+    <div
+      ref={menuRef}
+      className="fixed z-[9999] bg-[var(--surface-3)] border border-[var(--border-strong)] rounded shadow-2xl max-h-48 overflow-y-auto"
+      style={{
+        minWidth: '200px',
+        width: inputRef.current ? inputRef.current.getBoundingClientRect().width : 'auto',
+        top: inputRef.current ? inputRef.current.getBoundingClientRect().bottom + 4 : 0,
+        left: inputRef.current ? inputRef.current.getBoundingClientRect().left : 0,
+      }}
+    >
+      {menuItems.map((item, index) => {
+        const isActive = index === activeIndex;
+        const typeColor =
+          item.sourceType === 'env'
+            ? isActive ? 'bg-emerald-500 text-white' : 'bg-emerald-900 text-emerald-300'
+            : item.sourceType === 'collection'
+            ? isActive ? 'bg-violet-500 text-white' : 'bg-violet-900 text-violet-300'
+            : isActive ? 'bg-gray-500 text-white' : 'bg-gray-700 text-gray-400';
+        return (
+          <div
+            key={item.name + ':' + item.sourceType + ':' + item.sourceName}
+            className={`flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer ${
+              isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-[var(--surface-4)]'
+            }`}
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => insertVariable(item)}
+          >
+            <span className="font-mono">{`{{${item.name}}}`}</span>
+            <span className="flex items-center gap-1 ml-3 shrink-0">
+              <span className={`text-xs rounded px-1.5 py-0.5 font-semibold ${typeColor}`}>
+                {item.sourceType}
+              </span>
+              {item.sourceName && item.sourceName !== item.sourceType && (
+                <span className={`text-xs ${isActive ? 'text-blue-200' : 'text-gray-500'}`}>
+                  {item.sourceName}
+                </span>
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div className="relative flex-1 flex">
       {multiline ? (
@@ -314,47 +374,7 @@ export function VariableInput({
       ) : (
         <input {...commonProps} type={type} className={`${className} w-full`} />
       )}
-
-      {showMenu && (
-        <div
-          ref={menuRef}
-          className="absolute z-50 bg-[var(--surface-3)] border border-[var(--border-strong)] rounded shadow-lg max-h-48 overflow-y-auto w-full min-w-[200px]"
-          style={{ top: '100%', left: 0, marginTop: '4px' }}
-        >
-          {menuItems.map((item, index) => {
-            const isActive = index === activeIndex;
-            const typeColor =
-              item.sourceType === 'env'
-                ? isActive ? 'bg-emerald-500 text-white' : 'bg-emerald-900 text-emerald-300'
-                : item.sourceType === 'collection'
-                ? isActive ? 'bg-violet-500 text-white' : 'bg-violet-900 text-violet-300'
-                : isActive ? 'bg-gray-500 text-white' : 'bg-gray-700 text-gray-400';
-            return (
-              <div
-                key={item.name + ':' + item.sourceType + ':' + item.sourceName}
-                className={`flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer ${
-                  isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'
-                }`}
-                onMouseDown={e => e.preventDefault()}
-                onClick={() => insertVariable(item)}
-              >
-                <span className="font-mono">{`{{${item.name}}}`}</span>
-                <span className="flex items-center gap-1 ml-3 shrink-0">
-                  <span className={`text-xs rounded px-1.5 py-0.5 font-semibold ${typeColor}`}>
-                    {item.sourceType}
-                  </span>
-                  {item.sourceName && item.sourceName !== item.sourceType && (
-                    <span className={`text-xs ${isActive ? 'text-blue-200' : 'text-gray-500'}`}>
-                      {item.sourceName}
-                    </span>
-                  )}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {menu}
     </div>
   );
 }
-
