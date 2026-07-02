@@ -2,6 +2,9 @@
 
 ## 2026-07-02
 
+- [x] **T-217** Add "Git is your RBAC" selling point to README
+  - Added a bullet point highlighting that Reqly inherits Git security policies and CODEOWNERS for free.
+
 - [x] **T-216** Add PM/QA democratization point to README
   - Added a new bullet point explaining how AI-driven API testing lowers the barrier for non-technical users.
 

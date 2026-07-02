@@ -104,6 +104,8 @@ Reqly shifts API testing from a tedious manual chore to a rapid, agent-driven wo
 
 **Collections are plain YAML in your repo.** Every other tool stores collections in a proprietary format or database (Insomnia uses NeDB binary files, Postman locks them behind a cloud account). Reqly's `.reqly/` folder travels with your code via git - readable, diffable, committable. AI agents can read and write collection files directly without any tool calls.
 
+**Git is your Enterprise RBAC.** Stop paying per-user enterprise licenses just to set permissions on an API collection. Because Reqly collections are files in your repo, you automatically inherit the security policies of your Git provider. Use branch protections and `CODEOWNERS` to restrict who can edit production flows.
+
 **Reqly is an MCP server, not an MCP client.** Insomnia recently added an MCP client so it can call external tools. Reqly goes further: it *is* the MCP server. Your AI agent in Cursor or Claude Code connects once and gets a full set of tools to fire requests, chain responses, run collections, and verify assertions - no UI required, no extra configuration. The desktop UI (coming soon) is a shell around the same headless engine - the MCP connection stays alive whether the window is open or closed. Other tools built GUI-first have to extract a headless runtime as an afterthought; Reqly was headless from day one.
 
 **Auto-capture, zero manual work.** Reqly can capture outbound traffic from your dev server via a proxy (`reqly exec npm run dev`), inbound traffic via a one-line middleware, and inbound webhooks via a public tunnel - then save everything into collections automatically. No other tool does all three.
