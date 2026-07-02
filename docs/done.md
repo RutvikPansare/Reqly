@@ -2,6 +2,13 @@
 
 ## 2026-07-02
 
+- [x] **T-229** Bug fixes and regression verification post v2 arch
+  - Fixed GraphQL executor bug: requests with `type: 'graphql'` and no explicit `method` were defaulting to GET, causing `Request with GET/HEAD method cannot have body` error. Executor now auto-sets POST for graphql type.
+  - Fixed `SettingsPanel.tsx` unused imports (`fetchDotenvFiles`, `fetchLoginItem`) that blocked the UI build.
+  - Fixed workspace MCP tools (`add_workspace_project`, `list_workspace_projects`, `remove_workspace_project`): wrong `EngineContext` import path + missing `ToolHandlerResult` return type causing TS2769 build error.
+  - Added `scripts/mcp-regression.ts`: live MCP regression suite covering REST, GraphQL, SigV4 auth, disk-persisted history, response store, `switch_project`, and `get_project`.
+  - 836/836 tests pass. Known pre-existing build error logged as T-228.
+
 - [x] **T-225** Multi-project path list + grouped sidebar
   - **Config/Engine:** Added `workspaceProjects: string[]` to `~/.reqly/config.json` via global `AuthManager`.
   - **Engine:** `CollectionManager.loadAll()` loads from multiple project dirs.

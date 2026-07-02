@@ -25,7 +25,12 @@
 
 > Goal: go beyond Bruno. Introduce a named, shareable workspace definition and let flows reference requests from any repo in the workspace by alias. This is what makes Reqly uniquely agent-native for microservices teams.
 
-- [ ] **T-226** Formal workspace model: `~/.reqly/workspaces/<name>/workspace.yaml`
+- [ ] **T-228** Fix `CollectionsPanel.tsx` build error (pre-existing from T-225)
+  - TS compiler reports unclosed JSX/brace at line 679 in `src/ui/src/components/CollectionsPanel.tsx`
+  - Build fails silently (UI vite build may succeed but `tsc -b` errors)
+  - Fix the JSX structure and verify `npm run build` passes clean with zero errors
+
+
   - **Engine:** Define workspace YAML schema:
     ```yaml
     name: checkout-team

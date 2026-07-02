@@ -1,9 +1,8 @@
-import { ToolDefinition } from './types.js';
-import { EngineContext } from '../../engine/context.js';
+import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'add_workspace_project',
-  description: 'Add a project directory to the Reqly workspace. The directory must contain a .reqly/ folder.',
+  description: 'Add a project directory to the Reqly workspace. Use list_workspace_projects to see existing projects. The directory must contain a .reqly/ folder.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -13,9 +12,11 @@ export const definition: ToolDefinition = {
   }
 };
 
-export const handler = async (args: { path: string }, context: EngineContext) => {
-  await context.authManager.addWorkspaceProject(args.path);
-  return {
-    content: [{ type: 'text', text: `Added project to workspace: ${args.path}` }]
-  };
-};
+export async function handler(args: { path: string }, context: EngineContext): Promise<ToolHandlerResult> {
+  try {
+    await context.authManager.addWorkspaceProject(args.path);
+    return { content: [{ type: 'text', text: JSON.stringify({ ok: true, path: args.path }) }] };
+  } catch (e: any) {
+    return { content: [{ type: 'text', text: e.message }], isError: true };
+  }
+}

@@ -1,9 +1,8 @@
-import { ToolDefinition } from './types.js';
-import { EngineContext } from '../../engine/context.js';
+import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'remove_workspace_project',
-  description: 'Remove a project directory from the Reqly workspace',
+  description: 'Remove a project directory from the Reqly workspace. Does not delete any files; only removes the path from the workspace config.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -13,9 +12,11 @@ export const definition: ToolDefinition = {
   }
 };
 
-export const handler = async (args: { path: string }, context: EngineContext) => {
-  await context.authManager.removeWorkspaceProject(args.path);
-  return {
-    content: [{ type: 'text', text: `Removed project from workspace: ${args.path}` }]
-  };
-};
+export async function handler(args: { path: string }, context: EngineContext): Promise<ToolHandlerResult> {
+  try {
+    await context.authManager.removeWorkspaceProject(args.path);
+    return { content: [{ type: 'text', text: JSON.stringify({ ok: true, path: args.path }) }] };
+  } catch (e: any) {
+    return { content: [{ type: 'text', text: e.message }], isError: true };
+  }
+}

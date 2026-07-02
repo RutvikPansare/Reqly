@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as listWorkspaceProjects from './list-workspace-projects.js';
 import * as addWorkspaceProject from './add-workspace-project.js';
 import * as removeWorkspaceProject from './remove-workspace-project.js';
-import { EngineContext } from '../../engine/context.js';
+import { EngineContext } from './types.js';
 import { CollectionManager } from '../../engine/collection-manager.js';
 import { AuthManager } from '../../engine/auth-manager.js';
 
