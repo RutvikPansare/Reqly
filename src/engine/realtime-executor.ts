@@ -3,6 +3,7 @@ import WebSocket from 'ws';
 import { EventSource } from 'eventsource';
 import { io as socketIo } from 'socket.io-client';
 import mqtt from 'mqtt';
+import aws4 from 'aws4';
 import type { RealtimeConfig } from '../types/request.js';
 
 // ---------------------------------------------------------------------------
@@ -40,11 +41,21 @@ export interface RealtimeSendMessage {
   retain?: boolean;
 }
 
+export interface AwsV4Credentials {
+  accessKey: string;
+  secretKey: string;
+  region: string;
+  service: string;
+  sessionToken?: string;
+}
+
 export interface RealtimeCaptureRequest {
   type: 'websocket' | 'sse' | 'socketio' | 'mqtt';
   url: string;
   config: RealtimeConfig;
   sendMessages?: RealtimeSendMessage[];
+  /** AWS SigV4 credentials - when present, the URL is presigned before connecting. */
+  awsAuth?: AwsV4Credentials;
 }
 
 // Dependency injection type - allows tests to swap out connection factories
@@ -84,6 +95,41 @@ export interface MqttLike {
   subscribe(topic: string, opts: { qos: 0 | 1 | 2 }, cb: (err: any) => void): void;
   publish(topic: string, message: string, opts: { retain: boolean; qos: 0 | 1 | 2 }, cb: (err: any) => void): void;
   end(force?: boolean): void;
+}
+
+// ---------------------------------------------------------------------------
+// AWS SigV4 URL presigning for WebSocket connections (T-214)
+//
+// Browser WebSocket APIs cannot send custom HTTP headers, so SigV4 auth for
+// services like AWS AppSync, IoT Core, and API Gateway WebSocket APIs must be
+// applied as query parameters on the connection URL (presigned URL pattern).
+// ---------------------------------------------------------------------------
+
+export function signRealtimeUrlForAws(url: string, creds: AwsV4Credentials): string {
+  const parsed = new URL(url);
+  // aws4 uses http/https host resolution; convert wss -> https, ws -> http for signing.
+  const httpUrl = url.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  const httpParsed = new URL(httpUrl);
+
+  const signingOpts: Record<string, any> = {
+    host: httpParsed.host,
+    method: 'GET',
+    path: httpParsed.pathname + (httpParsed.search || ''),
+    service: creds.service,
+    region: creds.region,
+    signQuery: true,
+  };
+
+  const awsCreds: Record<string, string> = {
+    accessKeyId: creds.accessKey,
+    secretAccessKey: creds.secretKey,
+  };
+  if (creds.sessionToken) awsCreds.sessionToken = creds.sessionToken;
+
+  aws4.sign(signingOpts, awsCreds);
+
+  // Rebuild with original wss/ws scheme and signed path (which contains the query params)
+  return `${parsed.protocol}//${httpParsed.host}${signingOpts.path}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,12 +392,19 @@ export async function runRealtimeCapture(
 ): Promise<RealtimeCaptureResult> {
   const captureTimeoutMs = opts.captureTimeout * 1000;
 
+  // Presign WebSocket URL when AWS SigV4 credentials are provided.
+  // Other realtime types (SSE, MQTT) may also support query-param signing
+  // in the future; for now only WebSocket is standardised across AWS services.
+  const effectiveReq: RealtimeCaptureRequest = (req.awsAuth && req.type === 'websocket')
+    ? { ...req, url: signRealtimeUrlForAws(req.url, req.awsAuth) }
+    : req;
+
   try {
-    switch (req.type) {
-      case 'websocket': return await captureWebSocket(req, captureTimeoutMs, adapters);
-      case 'sse':       return await captureSSE(req, captureTimeoutMs, adapters);
-      case 'socketio':  return await captureSocketIO(req, captureTimeoutMs, adapters);
-      case 'mqtt':      return await captureMQTT(req, captureTimeoutMs, adapters);
+    switch (effectiveReq.type) {
+      case 'websocket': return await captureWebSocket(effectiveReq, captureTimeoutMs, adapters);
+      case 'sse':       return await captureSSE(effectiveReq, captureTimeoutMs, adapters);
+      case 'socketio':  return await captureSocketIO(effectiveReq, captureTimeoutMs, adapters);
+      case 'mqtt':      return await captureMQTT(effectiveReq, captureTimeoutMs, adapters);
       default:
         return { messages: [], truncated: false, isError: true, errorMessage: `Unknown type: ${(req as any).type}` };
     }

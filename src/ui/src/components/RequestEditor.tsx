@@ -551,14 +551,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <div className="mb-6 flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24">Auth Type</label>
               <div className="flex gap-2 flex-wrap">
-                {['none', 'bearer', 'apikey', 'basic', 'oauth2', 'mtls'].map(t => (
+                {['none', 'bearer', 'apikey', 'basic', 'oauth2', 'mtls', 'awsv4'].map(t => (
                   <button 
                     key={t}
                     disabled={!!authProfileId}
                     className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'}`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
-                    {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t}
+                    {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t === 'awsv4' ? 'AWS SigV4' : t}
                   </button>
                 ))}
               </div>
@@ -842,6 +842,75 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                   </p>
                 </div>
               )}
+
+              {authType === 'awsv4' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Access Key ID</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="AKIAIOSFODNN7EXAMPLE"
+                        value={authCreds.accessKey || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, accessKey: val })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Secret Access Key</label>
+                      <VariableInput
+                        type="password"
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="wJalrXUtnFEMI/K7MDENG"
+                        value={authCreds.secretKey || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, secretKey: val })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Region</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="us-east-1"
+                        value={authCreds.region || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, region: val })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Service</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                        placeholder="execute-api"
+                        value={authCreds.service || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, service: val })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Session Token <span className="text-gray-500 font-normal">(optional - for temporary credentials)</span></label>
+                    <VariableInput
+                      type="password"
+                      variables={availableVariables}
+                      disabled={!!authProfileId}
+                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-[var(--border-strong)] font-mono"
+                      placeholder="{{aws_session_token}}"
+                      value={authCreds.sessionToken || ''}
+                      onChange={val => setAuthCreds({ ...authCreds, sessionToken: val })}
+                    />
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Signs REST and GraphQL requests via headers (Authorization, X-Amz-Date). For WebSocket connections (AppSync, IoT Core), the signature is applied as query parameters. Use <code>{'{{variables}}'}</code> - never commit credentials to YAML.
+                  </p>
+                </div>
+              )}
             </div>
 
             {!authProfileId && authType !== 'none' && (
@@ -934,6 +1003,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
               }
               if (effectiveCreds.caPath) {
                 rows.push({ header: 'TLS Root CA', value: effectiveCreds.caPath, source: authSource });
+              }
+            } else if (effectiveType === 'awsv4') {
+              const region = effectiveCreds.region || 'us-east-1';
+              const service = effectiveCreds.service || 'execute-api';
+              rows.push({ header: 'Authorization', value: `AWS4-HMAC-SHA256 (signed at request time)`, source: authSource, note: `${region} / ${service}` });
+              rows.push({ header: 'X-Amz-Date', value: '(computed at request time)', source: authSource });
+              if (effectiveCreds.sessionToken) {
+                rows.push({ header: 'X-Amz-Security-Token', value: mask(effectiveCreds.sessionToken), source: authSource });
               }
             }
           }

@@ -6,7 +6,17 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
-## 2026-07-02 - gRPC in flows: adapt GrpcResponse to HttpResponse shape, not a new step type
+## 2026-07-02 - AWS SigV4: header signing for REST/GraphQL, URL query signing for WebSocket
+
+Two different signing modes are required because browser WebSocket APIs cannot send custom HTTP headers at connection time.
+
+**REST and GraphQL (header signing):** `aws4.sign()` mutates a signing options object that mirrors the fetch request - host, method, path, headers, and body. The signed headers (`Authorization`, `X-Amz-Date`, optionally `X-Amz-Security-Token`) are merged back into the request headers before `fetch()` is called. This runs entirely in `http-executor.ts` with no new abstractions.
+
+**WebSocket (query param presigning):** `signRealtimeUrlForAws()` in `realtime-executor.ts` uses `aws4`'s `signQuery: true` option to append signature params to the URL path. `wss://` is temporarily rewritten to `https://` for `aws4` (which only understands http/https host resolution), then the scheme is restored on the output URL. This is the standard pattern for AWS AppSync, IoT Core, and API Gateway WebSocket endpoints.
+
+**Why `awsv4` string value (not `aws_v4` or `AWS_V4`):** Consistent with existing auth type strings in the codebase (`bearer`, `apiKey`, `basic`, `oauth2`, `mtls`). UI and YAML use the string value; TypeScript code uses the `AuthType.AWS_V4` enum.
+
+
 
 When adding gRPC support to `flow-runner.ts`, the question was whether to introduce a new step type (`type: grpc-run`) or reuse the existing `run` step with routing inside `fireRequest`.
 

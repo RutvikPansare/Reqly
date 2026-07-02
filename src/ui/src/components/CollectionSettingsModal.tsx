@@ -26,7 +26,7 @@ interface CollectionSettingsModalProps {
   onClose: () => void;
 }
 
-const AUTH_TYPES = ['none', 'bearer', 'apiKey', 'basic', 'oauth2', 'mtls'] as const;
+const AUTH_TYPES = ['none', 'bearer', 'apiKey', 'basic', 'oauth2', 'mtls', 'awsv4'] as const;
 type AuthTabType = typeof AUTH_TYPES[number];
 
 export function CollectionSettingsModal({ collectionName, onClose }: CollectionSettingsModalProps) {
@@ -283,7 +283,7 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                     className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
-                    {t === 'apiKey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t === 'none' ? 'None' : t.charAt(0).toUpperCase() + t.slice(1)}
+                    {t === 'apiKey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t === 'none' ? 'None' : t === 'awsv4' ? 'AWS SigV4' : t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
                 ))}
               </div>
@@ -465,6 +465,75 @@ export function CollectionSettingsModal({ collectionName, onClose }: CollectionS
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     Provide either (Certificate + Private Key) OR a (PFX) file. All fields support <code>{'{{variables}}'}</code> to avoid hardcoding secrets in YAML. Store files outside the project repo (e.g. <code>~/.reqly/certs/</code>).
+                  </p>
+                </div>
+              )}
+
+              {authType === 'awsv4' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Access Key ID</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="AKIAIOSFODNN7EXAMPLE"
+                        value={authCreds.accessKey || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, accessKey: val })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Secret Access Key</label>
+                      <VariableInput
+                        type="password"
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="wJalrXUtnFEMI/K7MDENG"
+                        value={authCreds.secretKey || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, secretKey: val })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Region</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="us-east-1"
+                        value={authCreds.region || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, region: val })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Service</label>
+                      <VariableInput
+                        variables={availableVariables}
+                        disabled={!!authProfileId}
+                        className={inputCls}
+                        placeholder="execute-api"
+                        value={authCreds.service || ''}
+                        onChange={val => setAuthCreds({ ...authCreds, service: val })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Session Token (optional - for temporary credentials)</label>
+                    <VariableInput
+                      type="password"
+                      variables={availableVariables}
+                      disabled={!!authProfileId}
+                      className={inputCls}
+                      placeholder="{{aws_session_token}}"
+                      value={authCreds.sessionToken || ''}
+                      onChange={val => setAuthCreds({ ...authCreds, sessionToken: val })}
+                    />
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    SigV4 signs REST and GraphQL requests via headers (Authorization, X-Amz-Date). For WebSocket connections (AppSync, IoT Core), the signature is applied as query parameters. Use <code>{'{{variables}}'}</code> to avoid hardcoding credentials in YAML.
                   </p>
                 </div>
               )}

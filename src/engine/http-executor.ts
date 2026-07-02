@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { RequestConfig, Environment, AuthProfile, AuthType, HttpResponse, MultipartBody } from '../types/index.js';
 import { runScript, RunnerContext } from './script-runner.js';
+import aws4 from 'aws4';
 
 export class RequestError extends Error {
   constructor(message: string) {
@@ -355,6 +356,26 @@ export async function execute(
       //   expiresAt && Date.now() > Number(expiresAt) - 60_000
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+    } else if (auth.type === AuthType.AWS_V4) {
+      const { accessKey, secretKey, region, service, sessionToken } = auth.credentials;
+      if (accessKey && secretKey) {
+        const parsed = new URL(url);
+        const signingOpts: Record<string, any> = {
+          host: parsed.host,
+          method: config.method,
+          path: parsed.pathname + (parsed.search || ''),
+          service: service || 'execute-api',
+          region: region || 'us-east-1',
+          headers: { ...headers },
+        };
+        if (body && typeof body === 'string') {
+          signingOpts.body = body;
+        }
+        const awsCreds: Record<string, string> = { accessKeyId: accessKey, secretAccessKey: secretKey };
+        if (sessionToken) awsCreds.sessionToken = sessionToken;
+        aws4.sign(signingOpts, awsCreds);
+        Object.assign(headers, signingOpts.headers);
       }
     }
   }

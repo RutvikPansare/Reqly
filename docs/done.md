@@ -2,6 +2,17 @@
 
 ## 2026-07-02
 
+- [x] **T-218** Implement AWS Signature v4 (SigV4) authentication
+  - Added `AuthType.AWS_V4 = 'awsv4'` to `src/types/auth.ts`.
+  - `http-executor.ts`: uses `aws4.sign()` to compute and inject `Authorization`, `X-Amz-Date` (and `X-Amz-Security-Token` when `sessionToken` is set) headers. Works for REST GET/POST and GraphQL. Body is included in the signature for POST/PUT.
+  - `realtime-executor.ts`: added `signRealtimeUrlForAws()` (exported) that presigns a WebSocket URL via `signQuery: true` - appends `X-Amz-Algorithm`, `X-Amz-Date`, `X-Amz-Credential`, `X-Amz-Signature` (and `X-Amz-Security-Token` when sessionToken provided) as query params. `runRealtimeCapture()` accepts `awsAuth` and presigns the URL before connecting (WebSocket only).
+  - `run_realtime` MCP tool: updated description and added `awsAuth` input schema parameter.
+  - `run_request` MCP tool: description updated to document AWS SigV4 header injection.
+  - UI `RequestEditor.tsx`: added `awsv4` to auth type selector, AWS SigV4 credential form (Access Key, Secret Key masked, Region, Service, Session Token masked), Inherited tab shows computed header names.
+  - UI `CollectionSettingsModal.tsx`: same credential form at collection level.
+  - 9 new TDD tests; 834/834 tests pass.
+  - E2E validated via httpbin.org (header echo): correct `AWS4-HMAC-SHA256` format, correct credential scope, X-Amz-Security-Token propagated.
+
 - [x] **T-217** Add "Git is your RBAC" selling point to README
   - Added a bullet point highlighting that Reqly inherits Git security policies and CODEOWNERS for free.
 

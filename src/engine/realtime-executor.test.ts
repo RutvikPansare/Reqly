@@ -442,3 +442,65 @@ describe('runRealtimeCapture - unknown type', () => {
     expect(result.errorMessage).toContain('Unknown type');
   });
 });
+
+// ---------------------------------------------------------------------------
+// AWS SigV4 URL signing for WebSocket (T-214)
+// ---------------------------------------------------------------------------
+
+import { signRealtimeUrlForAws } from './realtime-executor.js';
+
+describe('signRealtimeUrlForAws', () => {
+  it('appends AWS SigV4 query params to a ws:// URL', () => {
+    const signed = signRealtimeUrlForAws(
+      'wss://xyz.appsync-realtime-api.us-east-1.amazonaws.com/graphql/realtime',
+      { accessKey: 'AKIDEXAMPLE', secretKey: 'wJalrXUtnFEMI', region: 'us-east-1', service: 'appsync' },
+    );
+    expect(signed).toContain('X-Amz-Algorithm=AWS4-HMAC-SHA256');
+    expect(signed).toContain('X-Amz-Credential=AKIDEXAMPLE');
+    expect(signed).toContain('X-Amz-Signature=');
+    expect(signed).toContain('X-Amz-Date=');
+    // The base URL must be preserved
+    expect(signed).toContain('xyz.appsync-realtime-api.us-east-1.amazonaws.com');
+  });
+
+  it('includes X-Amz-Security-Token in query params when sessionToken is provided', () => {
+    const signed = signRealtimeUrlForAws(
+      'wss://example.iot.us-east-1.amazonaws.com/mqtt',
+      { accessKey: 'AKID', secretKey: 'secret', region: 'us-east-1', service: 'iotdevicegateway', sessionToken: 'TOK' },
+    );
+    expect(signed).toContain('X-Amz-Security-Token=TOK');
+  });
+
+  it('respects a custom region and service in the credential scope', () => {
+    const signed = signRealtimeUrlForAws(
+      'wss://api.execute-api.ap-southeast-2.amazonaws.com/prod',
+      { accessKey: 'AKID', secretKey: 'secret', region: 'ap-southeast-2', service: 'execute-api' },
+    );
+    expect(signed).toContain('ap-southeast-2%2Fexecute-api%2Faws4_request');
+  });
+
+  it('runRealtimeCapture passes the signed URL to createWebSocket when awsv4 auth is provided', async () => {
+    const ws = makeFakeWs();
+    let capturedUrl = '';
+    const adapters: RealtimeAdapters = {
+      createWebSocket: (url) => { capturedUrl = url; return ws; },
+    };
+    setImmediate(() => {
+      ws._emit('open');
+    });
+
+    await runRealtimeCapture(
+      {
+        type: 'websocket',
+        url: 'wss://xyz.execute-api.us-east-1.amazonaws.com/prod',
+        config: {},
+        awsAuth: { accessKey: 'AKID', secretKey: 'secret', region: 'us-east-1', service: 'execute-api' },
+      },
+      { captureTimeout: 1 },
+      adapters,
+    );
+
+    expect(capturedUrl).toContain('X-Amz-Signature=');
+    expect(capturedUrl).toContain('AKID');
+  });
+});

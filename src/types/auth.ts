@@ -4,6 +4,7 @@ export enum AuthType {
   BASIC = 'basic',
   OAUTH2 = 'oauth2',
   MTLS = 'mtls',
+  AWS_V4 = 'awsv4',
 }
 
 export interface AuthProfile {

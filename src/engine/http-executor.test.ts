@@ -619,4 +619,80 @@ describe('http-executor', () => {
       ).rejects.toThrow(RequestError);
     });
   });
+
+  // ---- AWS SigV4 (T-214) ----
+  describe('AWS SigV4 auth', () => {
+    const mockOkResp = () => {
+      vi.mocked(fetch).mockResolvedValue({
+        status: 200,
+        headers: new Headers(),
+        arrayBuffer: vi.fn().mockResolvedValue(new TextEncoder().encode('{}').buffer),
+      } as any);
+    };
+
+    it('injects Authorization, X-Amz-Date headers for a REST GET request', async () => {
+      mockOkResp();
+      const auth: AuthProfile = {
+        id: 'aws1', name: 'AWS Test', type: AuthType.AWS_V4,
+        credentials: { accessKey: 'AKIDEXAMPLE', secretKey: 'wJalrXUtnFEMI', region: 'us-east-1', service: 'execute-api' },
+      };
+      await execute({ method: 'GET', url: 'https://api.example.com/prod/resource' }, undefined, auth);
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['Authorization']).toMatch(/^AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/);
+      expect(calledHeaders['X-Amz-Date']).toMatch(/^\d{8}T\d{6}Z$/);
+    });
+
+    it('injects Authorization, X-Amz-Date headers for a REST POST with body', async () => {
+      mockOkResp();
+      const auth: AuthProfile = {
+        id: 'aws2', name: 'AWS POST', type: AuthType.AWS_V4,
+        credentials: { accessKey: 'AKID', secretKey: 'secret', region: 'eu-west-1', service: 's3' },
+      };
+      await execute(
+        { method: 'POST', url: 'https://mybucket.s3.eu-west-1.amazonaws.com/key', body: '{"hello":"world"}' },
+        undefined,
+        auth,
+      );
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['Authorization']).toMatch(/^AWS4-HMAC-SHA256/);
+      expect(calledHeaders['X-Amz-Date']).toBeDefined();
+    });
+
+    it('injects X-Amz-Security-Token when sessionToken is provided', async () => {
+      mockOkResp();
+      const auth: AuthProfile = {
+        id: 'aws3', name: 'AWS Session', type: AuthType.AWS_V4,
+        credentials: { accessKey: 'AKID', secretKey: 'secret', region: 'us-east-1', service: 'execute-api', sessionToken: 'SESSION' },
+      };
+      await execute({ method: 'GET', url: 'https://api.example.com/v1/ping' }, undefined, auth);
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['X-Amz-Security-Token']).toBe('SESSION');
+    });
+
+    it('also signs a GraphQL POST request correctly', async () => {
+      mockOkResp();
+      const auth: AuthProfile = {
+        id: 'aws4', name: 'AppSync', type: AuthType.AWS_V4,
+        credentials: { accessKey: 'AKID', secretKey: 'secret', region: 'us-east-1', service: 'appsync' },
+      };
+      await execute(
+        { method: 'POST', url: 'https://xyz.appsync-api.us-east-1.amazonaws.com/graphql', type: 'graphql', graphql: { query: 'query { listItems { id } }' } },
+        undefined,
+        auth,
+      );
+      const calledHeaders = (vi.mocked(fetch).mock.lastCall![1] as any).headers;
+      expect(calledHeaders['Authorization']).toMatch(/^AWS4-HMAC-SHA256/);
+    });
+
+    it('respects region and service from credentials in the credential scope', async () => {
+      mockOkResp();
+      const auth: AuthProfile = {
+        id: 'aws5', name: 'Bedrock', type: AuthType.AWS_V4,
+        credentials: { accessKey: 'AKID', secretKey: 'secret', region: 'ap-southeast-1', service: 'bedrock' },
+      };
+      await execute({ method: 'POST', url: 'https://bedrock.ap-southeast-1.amazonaws.com/model/invoke', body: '{}' }, undefined, auth);
+      const authHeader = (vi.mocked(fetch).mock.lastCall![1] as any).headers['Authorization'] as string;
+      expect(authHeader).toContain('ap-southeast-1/bedrock/aws4_request');
+    });
+  });
 });
