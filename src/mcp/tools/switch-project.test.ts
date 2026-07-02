@@ -60,6 +60,8 @@ describe('switch_project', () => {
     expect(context.collectionManager).toBeDefined();
     expect(context.environmentManager).toBeDefined();
     expect(context.flowManager).toBeDefined();
+    expect(context.historyStore).toBeDefined();
+    expect(context.responseStore).toBeDefined();
     expect(writeLock).toHaveBeenCalledWith('/Users/dev/other-project', 4242);
   });
 

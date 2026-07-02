@@ -9,7 +9,7 @@ import { writeLock, readLock } from '../../server/lock.js';
 
 export const definition: ToolDefinition = {
   name: 'switch_project',
-  description: 'Points Reqly at a different project directory, reinitialising collections, environments, flows, and dotenv loading to read from that project\'s .reqly folder. When to use: when the agent needs to operate on a different project than the one Reqly currently has open. Returns the new projectDir on success, or a structured error if the path does not exist.',
+  description: 'Points Reqly at a different project directory, reinitialising collections, environments, flows, and dotenv loading to read from that project\'s .reqly folder locally without affecting other running instances. When to use: when the agent needs to operate on a different project than the one Reqly currently has open. Returns the new projectDir on success, or a structured error if the path does not exist.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -38,6 +38,12 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
     context.collectionManager = new CollectionManager(collectionsDir);
     context.environmentManager = new EnvironmentManager(environmentsPath);
     context.flowManager = new FlowManager(collectionsDir);
+    
+    // Lazy-load so we don't need top-level imports that might cause circular deps if not needed
+    const { HistoryStore } = await import('../../engine/history-store.js');
+    const { ResponseStore } = await import('../../engine/response-store.js');
+    context.historyStore = new HistoryStore(projectDir);
+    context.responseStore = new ResponseStore(projectDir);
 
     context.dotEnvLoader.stopWatching();
     const dotenvFiles = await context.authManager.getDotenvFiles();

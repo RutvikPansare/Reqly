@@ -2,6 +2,12 @@
 
 ## 2026-07-02
 
+- [x] **T-223** Update `switch_project` MCP tool to local context swap
+  - **Engine/MCP:** Ensured `switch_project` MCP tool operates purely locally on the current process's `EngineContext` (no inter-process `fetch` to `/api/switch-project`).
+  - Added `HistoryStore` and `ResponseStore` to the context re-instantiation in `switch-project.ts`.
+  - Updated tool descriptions in `switch-project.ts` and `llms.txt` to explicitly document that the tool operates locally without affecting other running agents.
+  - Added test assertions in `switch-project.test.ts` to verify `historyStore` and `responseStore` swap.
+
 - [x] **T-222** Remove singleton lock as state coordinator - each process runs a full engine
   - Removed MCP-only mode from `index.ts` startup. Every `reqly mcp` spawn now runs its own full `EngineContext` + Express regardless of whether another process holds the lock.
   - Removed inter-process `fetch` to `/api/switch-project` and all `mcpOnly` branching.

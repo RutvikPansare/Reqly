@@ -10,11 +10,6 @@
 
 
 
-- [ ] **T-223** Update `switch_project` MCP tool to local context swap
-  - **Engine/MCP:** Replace the HTTP call to `/api/switch-project` with direct re-instantiation of `CollectionManager` and `EnvironmentManager` on the current process's `EngineContext`. No inter-process communication.
-  - **UI:** No change - UI's project switcher still calls `POST /api/switch-project` on its own process's Express, which remains and works as before
-  - Update tool description in `switch-project.ts` and `llms.txt` to document that the tool now operates locally
-  - Add/update tests for the new local swap behaviour
 
 - [ ] **T-224** Update `reqly init` to auto-gitignore runtime state files
   - **CLI:** When `reqly init` creates `.reqly/` in a project, append to `.gitignore` (or create it):
