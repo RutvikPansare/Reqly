@@ -15,7 +15,8 @@ import type { KeyValuePair } from './KeyValueEditor';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 import { CollapsibleJson } from './InteractiveJsonTree';
-import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
+import { fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
+import { SaveToCollectionModal } from './SaveToCollectionModal.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -88,12 +89,8 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
   const [copied, setCopied]         = useState(false);
 
   // --- Save state ---
-  const [collections, setCollections]     = useState<string[]>([]);
-  const [saveCollection, setSaveCollection] = useState('');
-  const [saveName, setSaveName]           = useState('');
-  const [saveError, setSaveError]         = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess]     = useState(false);
-  const [showSaveForm, setShowSaveForm]   = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
 
   // --- Context tracking ---
   const [activeCollection, setActiveCollection]   = useState<string | undefined>(seed?._collection);
@@ -148,12 +145,6 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
     return () => clearTimeout(t);
   }, [url, protoFile, service, method, insecure, streamTimeout, streamingType, messageJson, metadata, activeCollection, activeRequestName, onUpdate]);
 
-  // --- Load collections for save form ---
-  useEffect(() => {
-    fetchCollections().then((cols: any[]) => {
-      setCollections(cols.map((c: any) => c.name));
-    }).catch(() => {});
-  }, []);
 
   // --- Load env / dotenv vars for autocomplete ---
   useEffect(() => {
@@ -299,56 +290,57 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
     }
   };
 
-  const handleSave = async () => {
-    setSaveError(null);
-
-    // If already saved (has collection + name), use them directly
-    const col = activeCollection || saveCollection;
-    const name = activeRequestName || saveName;
-
-    if (!name.trim() || !col.trim()) { setSaveError('Collection and name are required'); return; }
+  const buildRequestToSave = () => {
     const parsed = parseMessageJson();
-    if (!parsed.ok) { setSaveError(parsed.error!); return; }
-
+    if (!parsed.ok) return null;
     const enabledMeta = Object.fromEntries(metadata.filter(m => m.enabled && m.key.trim()).map(m => [m.key, m.value]));
     const grpcCfg = buildGrpcConfig(parsed.value);
-    try {
-      const reqToSave = {
-        id: initialRequest?.id || Date.now().toString(),
-        name: name.trim(),
-        method: 'POST',
-        url: url.trim(),
-        type: 'grpc',
-        ...(Object.keys(enabledMeta).length > 0 ? { headers: enabledMeta } : {}),
-        grpc: grpcCfg,
-      };
+    return {
+      id: initialRequest?.id,
+      name: activeRequestName || 'New Request',
+      method: 'POST',
+      url: url.trim(),
+      type: 'grpc',
+      ...(Object.keys(enabledMeta).length > 0 ? { headers: enabledMeta } : {}),
+      grpc: grpcCfg,
+    };
+  };
 
-      if (activeCollection && activeRequestName) {
-        await updateRequest(col, activeRequestName, reqToSave);
-      } else {
-        await addRequest(col, reqToSave);
+  const handleSaveClick = async () => {
+    if (activeCollection && activeRequestName) {
+      const reqToSave = buildRequestToSave();
+      if (!reqToSave) {
+        alert('Message JSON is invalid - fix before saving');
+        return;
       }
-
-      setSaveSuccess(true);
-      setShowSaveForm(false);
-      setTimeout(() => setSaveSuccess(false), 2000);
-      window.dispatchEvent(new Event('reqly-reload'));
-      window.dispatchEvent(new CustomEvent('reqly-request-saved', { detail: { col } }));
-      if (onUpdate) onUpdate({ ...reqToSave, _collection: col });
-    } catch (e: any) {
-      setSaveError(e.message || 'Save failed');
+      try {
+        await updateRequest(activeCollection, activeRequestName, reqToSave);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+        window.dispatchEvent(new Event('reqly-reload'));
+        if (onUpdate) onUpdate({ ...reqToSave, _collection: activeCollection });
+      } catch (e: any) {
+        alert(e.message || 'Save failed');
+      }
+    } else {
+      const reqToSave = buildRequestToSave();
+      if (!reqToSave) {
+        alert('Message JSON is invalid - fix before saving');
+        return;
+      }
+      setSaveModalOpen(true);
     }
   };
 
-  // Only show the save form when there's no pre-existing collection+name
-  const handleSaveClick = () => {
-    if (activeCollection && activeRequestName) {
-      handleSave();
-    } else {
-      setSaveCollection(saveCollection || '');
-      setSaveName(saveName || '');
-      setShowSaveForm(v => !v);
-    }
+  const handleSaved = (collectionName: string, requestName: string, requestId?: string) => {
+    const reqToSave = buildRequestToSave();
+    if (!reqToSave) return;
+    reqToSave.id = requestId || reqToSave.id;
+    reqToSave.name = requestName;
+    setSaveModalOpen(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2000);
+    if (onUpdate) onUpdate({ ...reqToSave, _collection: collectionName, tabName: requestName });
   };
 
 
@@ -392,12 +384,7 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
             availableVariables={availableVariables}
             isSending={isSending}
             sendError={sendError}
-            showSaveForm={showSaveForm} setShowSaveForm={setShowSaveForm}
             saveSuccess={saveSuccess}
-            saveCollection={saveCollection} setSaveCollection={setSaveCollection}
-            saveName={saveName} setSaveName={setSaveName}
-            saveError={saveError}
-            collections={collections}
             metadataCount={metadataCount}
             isMultiMessage={isMultiMessage}
             isStreaming={isStreaming}
@@ -412,6 +399,14 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
             onCopy={handleCopyResponse}
           />}
         />
+        {saveModalOpen && (
+          <SaveToCollectionModal
+            request={buildRequestToSave() || {}}
+            defaultName={activeRequestName || ''}
+            onClose={() => setSaveModalOpen(false)}
+            onSaved={handleSaved}
+          />
+        )}
       </div>
     </div>
   );
@@ -435,12 +430,7 @@ interface RequestPanelProps {
   availableVariables: VariableItem[];
   isSending: boolean;
   sendError: string | null;
-  showSaveForm: boolean; setShowSaveForm: (fn: (v: boolean) => boolean) => void;
   saveSuccess: boolean;
-  saveCollection: string; setSaveCollection: (v: string) => void;
-  saveName: string; setSaveName: (v: string) => void;
-  saveError: string | null;
-  collections: string[];
   metadataCount: number;
   isMultiMessage: boolean;
   isStreaming: boolean;
@@ -504,43 +494,6 @@ function RequestPanel(p: RequestPanelProps) {
           {p.saveSuccess ? 'Saved!' : 'Save'}
         </button>
       </div>
-
-      {/* ── Save form ────────────────────────────────────────────────────── */}
-      {p.showSaveForm && (
-        <div
-          className="flex items-center gap-2 shrink-0"
-          style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}
-        >
-          <select
-            className="text-xs rounded px-2 focus:outline-none"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
-            value={p.saveCollection}
-            onChange={e => p.setSaveCollection(e.target.value)}
-          >
-            <option value="">-- collection --</option>
-            {p.collections.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <input
-            className="flex-1 text-xs rounded px-3 focus:outline-none"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-strong)', height: '30px' }}
-            value={p.saveName}
-            onChange={e => p.setSaveName(e.target.value)}
-            placeholder="Request name"
-            onKeyDown={e => e.key === 'Enter' && p.onSave()}
-            onFocus={e => (e.currentTarget.style.borderColor = '#06b6d4')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
-          />
-          <button
-            className="btn rounded text-xs px-4"
-            style={{ background: '#0891b2', borderColor: '#0e7490', color: '#fff', height: '30px' }}
-            onClick={p.onSave}
-          >
-            Save
-          </button>
-          {p.saveError && <span className="text-xs text-red-400">{p.saveError}</span>}
-        </div>
-      )}
-
       {/* ── Mode + TLS + Timeout ─────────────────────────────────────────── */}
       <div
         className="flex items-center gap-1.5 shrink-0"

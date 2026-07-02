@@ -19,7 +19,8 @@ import type { KeyValuePair } from './KeyValueEditor';
 import { GraphQLDocsExplorer } from './GraphQLDocsExplorer';
 import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
-import { addRequest, fetchCollections, fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
+import { fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
+import { SaveToCollectionModal } from './SaveToCollectionModal';
 
 const INTROSPECTION_QUERY = getIntrospectionQuery();
 
@@ -47,12 +48,8 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
   const editorViewRef = useRef<EditorView | null>(null);
   const [response, setResponse] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
-  const [collections, setCollections] = useState<string[]>([]);
-  const [saveCollection, setSaveCollection] = useState('');
-  const [saveName, setSaveName] = useState('');
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [operationName, setOperationName] = useState<string>(initialRequest?.graphql?.operationName ?? '');
   const [prettifyError, setPrettifyError] = useState<string | null>(null);
   const [curlCopied, setCurlCopied] = useState(false);
@@ -102,11 +99,6 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [isDirty]);
 
-  useEffect(() => {
-    fetchCollections().then((cols: any[]) => {
-      setCollections(cols.map((c: any) => c.name));
-    }).catch(() => {});
-  }, []);
 
   // Load env vars, collection vars, and dotenv vars for variable autocomplete
   useEffect(() => {
@@ -237,60 +229,62 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
     }
   };
 
-  const handleSave = async () => {
-    setSaveError(null);
-
-    // If already saved (has collection + name), use them directly
-    const col = activeCollection || saveCollection;
-    const name = activeRequestName || saveName;
-
-    if (!name.trim() || !col.trim()) {
-      setSaveError('Collection and request name are required.');
-      return;
+  const buildRequestToSave = () => {
+    let parsedVariables: Record<string, unknown> | undefined;
+    if (variables.trim()) {
+      try { parsedVariables = JSON.parse(variables); } catch { return null; }
     }
-    try {
-      let parsedVariables: Record<string, unknown> | undefined;
-      if (variables.trim()) {
-        try { parsedVariables = JSON.parse(variables); } catch { setSaveError('Variables must be valid JSON.'); return; }
-      }
-      const savedHeaders = Object.keys(enabledHeaders).length > 0 ? enabledHeaders : undefined;
-      const reqToSave = {
-        id: initialRequest?.id || Date.now().toString(),
-        name: name.trim(),
-        method: 'POST',
-        url: url.trim(),
-        type: isSubscriptionQuery ? 'graphql-subscription' : 'graphql',
-        ...(savedHeaders ? { headers: savedHeaders } : {}),
-        graphql: {
-          ...(useQueryFile && queryFile.trim() ? { queryFile: queryFile.trim() } : { query }),
-          ...(parsedVariables !== undefined ? { variables: parsedVariables } : {}),
-          ...(operationName.trim() ? { operationName: operationName.trim() } : {}),
-        },
-      };
-      
-      if (activeCollection && activeRequestName) {
-        await updateRequest(col, activeRequestName, reqToSave);
-      } else {
-        await addRequest(col, reqToSave);
-      }
+    const savedHeaders = Object.keys(enabledHeaders).length > 0 ? enabledHeaders : undefined;
+    return {
+      id: initialRequest?.id,
+      name: activeRequestName || 'New Request',
+      method: 'POST',
+      url: url.trim(),
+      type: isSubscriptionQuery ? 'graphql-subscription' : 'graphql',
+      ...(savedHeaders ? { headers: savedHeaders } : {}),
+      graphql: {
+        ...(useQueryFile && queryFile.trim() ? { queryFile: queryFile.trim() } : { query }),
+        ...(parsedVariables !== undefined ? { variables: parsedVariables } : {}),
+        ...(operationName.trim() ? { operationName: operationName.trim() } : {}),
+      },
+    };
+  };
 
-      setSaveSuccess(true);
-      setShowSaveForm(false);
-      setTimeout(() => setSaveSuccess(false), 2000);
-      window.dispatchEvent(new Event('reqly-reload'));
-      window.dispatchEvent(new CustomEvent('reqly-request-saved', { detail: { col } }));
-      if (onUpdate) onUpdate({ ...reqToSave, _collection: col });
-    } catch (e: any) {
-      setSaveError(e.message || 'Save failed.');
+  const handleSaveClick = async () => {
+    if (activeCollection && activeRequestName) {
+      const reqToSave = buildRequestToSave();
+      if (!reqToSave) {
+        alert('Variables must be valid JSON.');
+        return;
+      }
+      try {
+        await updateRequest(activeCollection, activeRequestName, reqToSave);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+        window.dispatchEvent(new Event('reqly-reload'));
+        if (onUpdate) onUpdate({ ...reqToSave, _collection: activeCollection });
+      } catch (e: any) {
+        alert(e.message || 'Save failed.');
+      }
+    } else {
+      const reqToSave = buildRequestToSave();
+      if (!reqToSave) {
+        alert('Variables must be valid JSON.');
+        return;
+      }
+      setSaveModalOpen(true);
     }
   };
 
-  const handleSaveClick = () => {
-    if (activeCollection && activeRequestName) {
-      handleSave();
-    } else {
-      setShowSaveForm(v => !v);
-    }
+  const handleSaved = (collectionName: string, requestName: string, requestId?: string) => {
+    const reqToSave = buildRequestToSave();
+    if (!reqToSave) return;
+    reqToSave.id = requestId || reqToSave.id;
+    reqToSave.name = requestName;
+    setSaveModalOpen(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2000);
+    if (onUpdate) onUpdate({ ...reqToSave, _collection: collectionName, tabName: requestName });
   };
 
   const gqlSchemaObj = useMemo(() => {
@@ -524,32 +518,13 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
             )}
           </div>
 
-          {showSaveForm && (
-            <div className="flex items-center gap-2 mb-4 p-2 rounded border border-[var(--border)] bg-[var(--surface-2)]">
-              <select
-                className="bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1 text-xs focus:outline-none"
-                value={saveCollection}
-                onChange={e => setSaveCollection(e.target.value)}
-              >
-                <option value="">-- collection --</option>
-                {collections.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <input
-                type="text"
-                className="flex-1 bg-[var(--surface-3)] text-gray-200 border border-[var(--border-strong)] rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500"
-                value={saveName}
-                onChange={e => setSaveName(e.target.value)}
-                placeholder="Request name"
-                onKeyDown={e => e.key === 'Enter' && handleSave()}
-              />
-              <button
-                className="btn btn-primary rounded text-xs px-3 py-1"
-                onClick={handleSave}
-              >
-                Save
-              </button>
-              {saveError && <span className="text-red-400 text-xs">{saveError}</span>}
-            </div>
+          {saveModalOpen && (
+            <SaveToCollectionModal
+              request={buildRequestToSave() || {}}
+              defaultName={activeRequestName || ''}
+              onClose={() => setSaveModalOpen(false)}
+              onSaved={handleSaved}
+            />
           )}
 
           <div className="tab-bar overflow-x-auto">
