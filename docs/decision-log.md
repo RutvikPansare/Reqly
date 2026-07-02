@@ -6,7 +6,33 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
-## 2026-07-02 - AWS SigV4: header signing for REST/GraphQL, URL query signing for WebSocket
+## 2026-07-02 - Multi-project workspace storage: separate root vs. inside repo
+
+**Decision:** Cross-repo workspace files and flows live in `~/.reqly/workspaces/<name>/`. Individual repo collections stay in `<repoDir>/.reqly/` as today.
+
+**Why:** A flow that references requests from two different repos cannot logically belong to either repo - it is a workspace-level artifact. Forcing it into one repo is arbitrary. The workspace definition (`workspace.yaml`, cross-repo flows, shared environments) must live at a level above any individual repo. Individual repo `.reqly/` folders continue to hold that repo's own collections and are committed to git as today. `reqly init` will auto-add `history.ndjson` and `responses.json` to `.gitignore` so runtime state is never committed.
+
+---
+
+## 2026-07-02 - v2 architecture: disk-persisted state, fully independent processes
+
+**Decision:** Migrate `HistoryStore` and `ResponseStore` from in-memory to disk-persisted files in `<projectDir>/.reqly/`. Remove the singleton lock coordination pattern. Each process (Electron, `reqly mcp`, CLI) runs its own full engine instance independently.
+
+**Why:** The current singleton lock (`~/.reqly/running.json`) exists solely because state lives in RAM. When two processes are running, one must proxy to the other to stay consistent. Moving state to disk eliminates the need for coordination entirely - the filesystem becomes the source of truth, same as collections already are. This unblocks: (1) Electron desktop app with no coupling to `reqly mcp`, (2) true multi-project workspaces where multiple processes work on different repos simultaneously, (3) history that survives process restarts. The lock file is retained as a process registry only (for `reqly stop`/`reqly status`/`reqly app`) but loses its role as a state coordinator.
+
+**Format chosen:** Append-only NDJSON (`history.ndjson`) for history, JSON for responses (`responses.json`). SQLite was considered and rejected for v1: appends are atomic at OS level for small payloads, NDJSON is human-readable and fits Reqly's plain-text philosophy, and Reqly's concurrency level (a PM + one agent) does not produce realistic write collisions. Revisit SQLite if concurrent write corruption is observed in practice.
+
+**Electron implication:** Electron main process runs its own full engine + Express on any free port (tries 4242, falls back to OS-assigned). It writes the lock with its pid and port. `reqly mcp` processes detect the lock and, in v1 interim, go MCP-only against Electron's Express. In v2, `reqly mcp` runs its own full engine - no lock coordination needed. Closing Electron has zero effect on the agent's MCP connection (agents connect to `reqly mcp` over stdio, not to Electron's Express).
+
+---
+
+## 2026-07-02 - switch_project MCP tool: local context swap in v2, not HTTP call
+
+**Decision:** In v2, `switch_project` re-instantiates the process's own `CollectionManager` and `EnvironmentManager` pointing at the new `projectDir`. No HTTP call to another process.
+
+**Why:** In v1 the tool must call `POST /api/switch-project` on the singleton Express because all state lives there. Once state is on disk, "switching project" is just reading a different directory - a local operation with no inter-process dependency. The `/api/switch-project` Express endpoint is removed in v2.
+
+
 
 Two different signing modes are required because browser WebSocket APIs cannot send custom HTTP headers at connection time.
 

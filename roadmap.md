@@ -199,21 +199,34 @@ All Windows Support items shipped (T-115 through T-119).
 
 ---
 
+## Next: v2 Architecture - Disk-Persisted State + Independent Processes
+
+**Why before Multi-Project Workspace:** the current singleton lock exists solely because state lives in RAM. Multi-project on the singleton architecture requires increasingly complex inter-process coordination. Moving state to disk first makes multi-project trivial - each process reads a different `.reqly/` directory, no coordination needed.
+
+**Goal:** every Reqly process (Electron, `reqly mcp`, CLI) runs a full independent engine. State shared via filesystem. Lock file retained for process registry only, not state coordination.
+
+- [ ] **T-220** Persist `HistoryStore` to `.reqly/history.ndjson` (append-only NDJSON)
+- [ ] **T-221** Persist `ResponseStore` to `.reqly/responses.json`
+- [ ] **T-222** Remove singleton lock as state coordinator - every process runs full engine, MCP-only mode removed
+- [ ] **T-223** Update `switch_project` MCP tool to local context swap (no HTTP call)
+- [ ] **T-224** `reqly init` auto-gitignores `history.ndjson` and `responses.json`
+
+---
+
 ## Later: Multi-Project Workspace
 
-**Why post-VS Code Extension:** the single-project model works well for the initial target user. This becomes important when microservices developers start using Reqly across 5+ services and need to see everything simultaneously without switching. Needs a meaningful user base to validate the right design before investing in the complexity.
+**Why post-v2 architecture:** requires disk-persisted state. After v2, each process reads its own `.reqly/` independently - multi-project is just pointing at different directories simultaneously.
 
-**Competitive context:** Bruno partially solves this today - it lets you open multiple collection directories and they appear together in the sidebar. Postman and Insomnia solve it differently by abandoning project-directory scoping entirely (cloud workspace, all collections flat). The design target is Bruno parity as the floor (multi-directory sidebar) plus Reqly's agent-native layer on top (per-project MCP scoping, cross-project flows). No other tool has the full picture: local-first + git-native + multi-project + MCP server.
+**Design (revised):** workspace config lives in `~/.reqly/workspaces/<name>/` (not in any repo). Individual repo `.reqly/` folders hold that repo's collections (committed to git). Cross-repo flows live in the workspace folder. `reqly workspace link <alias> <path>` maps logical names to local paths - decouples the shared workspace definition from each developer's local folder layout.
 
-**Current workaround for microservices developers:** use `reqly use <path>` for instant project switching, and point multiple projects at a shared `.env` file via `set_dotenv_files` to share secrets across services without switching. Agents can also coordinate across projects by holding extracted values in their context window and calling `switch-project` between steps.
+**Competitive context:** Bruno partially solves this - multiple collection directories in one sidebar. Postman/Insomnia abandoned project-directory scoping for cloud workspaces. Reqly's target: Bruno parity as the floor, plus agent-native cross-repo flows on top. No other tool has local-first + git-native + multi-project + MCP server.
 
-**Goal:** add multiple project roots to one Reqly instance. Sidebar shows all projects grouped by name (project → collections → requests). Each project retains its own environment context, history, and flows. No cross-project request chaining - environment variables are the bridge. The MCP stdio transport stays per-project (already correct).
+**Current workaround for microservices developers:** use `reqly use <path>` for instant project switching, share secrets via `set_dotenv_files` pointing at a shared `.env`, and have agents coordinate across projects by holding extracted values in their context window.
 
-- [ ] **Workspace model (`reqly-workspace.yml`)** - Introduce a git-committable workspace file that anchors a multi-project setup. It defines a `shared_env` (for cross-project secrets) and a list of *logical* project names (e.g., `auth-service`, `billing-service`). It avoids hardcoded file paths so it doesn't break when different team members organize their folders differently.
-- [ ] **Local Project Linking** - The UI and CLI resolve logical project names against the developer's local `~/.reqly/config.json`. If a workspace requires `auth-service` and it's not linked, Reqly prompts the user (or the AI agent) to run `reqly link auth-service <path>`. This decouples the shared team configuration from the individual developer's local machine setup.
-- [ ] **Per-project environment context** - when multiple projects are loaded, each project's requests resolve variables against that project's own environments. No cross-contamination.
-- [ ] **Unified history** - the history panel shows requests across all workspace projects, tagged with the project name.
-- [ ] **Cross-project flows** - a flow step can reference `project/collection/request` instead of just `collection/request`. The flow runner switches project context per step. Since flows use logical project names, they can be checked into git in the workspace root and run flawlessly on any teammate's machine.
+- [ ] **T-225** Workspace model: `~/.reqly/workspaces/<name>/workspace.yaml` with repo aliases and CLI/MCP tooling
+- [ ] **T-226** Cross-repo flows: `repo: <alias>` field on flow steps, flow runner resolves alias to `projectDir`
+
+
 
 ---
 
