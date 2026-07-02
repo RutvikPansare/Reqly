@@ -7,11 +7,11 @@
 Reqly is a prompt-first, agent-native API client. It is a local background service that developers install once and run alongside their projects. It exposes two interfaces from the same engine:
 
 1. **MCP server (stdio)** - AI coding agents (Cursor, Claude Code, Windsurf) call Reqly's tools directly to fire requests, manage collections, and verify API behaviour. Zero UI, zero LLM cost on our side.
-2. **Localhost web UI** - Humans open `localhost:4242` to browse collections, run requests visually, and use a prompt bar (BYOK) to describe what they want. The LLM is the user's own, on their own API key.
+2. **Localhost web UI** - Humans open `localhost:4242` to browse collections and run requests visually. No AI logic is built into the UI.
 
 Collections are YAML files in `.reqly/` inside the user's project directory - git-native, human-readable.
 
-**Reqly contains no AI logic.** The server fires HTTP requests and manages YAML files. The only LLM calls are in the UI's prompt bar, which forwards to the user's own API key (BYOK). Do not add LLM calls to the server, routes, or engine.
+**Reqly contains no AI logic.** The server fires HTTP requests and manages YAML files. There are no LLM calls anywhere in the codebase. Do not add LLM calls to the server, routes, or engine.
 
 ## Repo organization
 
@@ -135,7 +135,7 @@ The `example/hoppscotch/` folder contains a clone of the Hoppscotch open source 
 
 ### Config and secrets
 
-- Global config: `~/.reqly/config.json` (BYOK API key, model, active project, `maxBodyBytes`).
+- Global config: `~/.reqly/config.json` (active project, `maxBodyBytes`).
 - Never log or store the user's API key anywhere in the repo or server.
 
 ## Project management

@@ -111,7 +111,7 @@ Reqly shifts API testing from a tedious manual chore to a rapid, agent-driven wo
 
 **Auto-capture, zero manual work.** Reqly can capture outbound traffic from your dev server via a proxy (`reqly exec npm run dev`), inbound traffic via a one-line middleware, and inbound webhooks via a public tunnel - then save everything into collections automatically. No other tool does all three.
 
-**BYOK, no cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. The prompt bar in the UI uses your own API key. Nothing is sent to Reqly's servers - because there are no Reqly servers. No account required, no telemetry, no sync.
+**No cloud dependency.** There is no Reqly cloud. Collections stay in your repo. Secrets stay in `~/.reqly/config.json` on your machine. Nothing is sent to Reqly's servers - because there are no Reqly servers. No account required, no telemetry, no sync.
 
 **Democratizes testing for PMs & QA.** Postman's UI is intimidating for non-developers. With Reqly, non-technical team members can just ask their AI: *"Run the checkout flow and tell me if tax is calculated correctly."* The AI handles the auth, formatting, and JSON payloads, then explains the response in plain English. No developer hand-holding required.
 
@@ -660,7 +660,7 @@ Bruno is the closest comparison - it's also local, file-based, and git-native. T
 <details>
 <summary><strong>Does Reqly send any data to the cloud?</strong></summary>
 <br>
-No. Reqly is a local process. Collections stay in <code>.reqly/</code> in your repo. Your API keys stay in <code>~/.reqly/config.json</code> on your machine. The prompt bar in the UI sends requests to your own API key directly from your browser - nothing routes through Reqly's servers, because there are no Reqly servers.
+No. Reqly is a local process. Collections stay in <code>.reqly/</code> in your repo. Your API keys stay in <code>~/.reqly/config.json</code> on your machine. Nothing routes through Reqly's servers, because there are no Reqly servers.
 </details>
 
 <details>

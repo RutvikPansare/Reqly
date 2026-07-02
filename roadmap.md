@@ -28,14 +28,14 @@ When a milestone becomes the focus, break it into `T-NNN` tasks in `docs/todo.md
 
 ## M2 - Done: Localhost UI
 
-**Goal:** A human-usable interface at `localhost:4242`. Developers who prefer a visual interface can use the same engine their agents use. BYOK prompt interface makes it AI-native.
+**Goal:** A human-usable interface at `localhost:4242`. Developers who prefer a visual interface can use the same engine their agents use.
 
 - [x] **Sidebar** - Collection tree: folders, requests, environments. Click to open, right-click to rename/delete.
 - [x] **Request Editor** - Method dropdown, URL bar, tabs for Headers / Body / Auth / Params. Pre-filled from saved request, editable before firing.
 - [x] **Response Viewer** - Status code, latency, response body (JSON pretty-printed), response headers. Copy button. Save response as example.
 - [x] **Environment Switcher** - Dropdown in top bar. Switch between dev/staging/prod instantly.
-- [x] **Settings Panel** - BYOK API key input stored in `~/.reqly/config.json`. Model selector (GPT-4o, Claude, etc.). Never stored in the repo.
-- [x] **Prompt Bar** - Text input. User describes what they want. Sends to LLM with their API key. LLM calls MCP tools. Result appears in the UI. Zero AI cost on our side.
+- [x] **Settings Panel** - Placeholder for future global preferences. Config is stored in `~/.reqly/config.json`.
+- [x] **Prompt Bar** - (Removed) We removed the prompt bar to enforce the engine-only philosophy. Agents run via MCP, not the UI.
 
 ---
 

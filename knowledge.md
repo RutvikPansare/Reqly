@@ -30,7 +30,6 @@ Reqly is an execution engine, not an AI product. The AI always lives outside Req
 - **Tool-First:** If it can't be called via MCP, it doesn't exist.
 - **Dumb Server:** The server fires HTTP requests and manages files. No LLM logic.
 - **Plain Text:** Collections are YAML. No binary formats, no proprietary DB.
-- **BYOK:** The user's API key stays on their machine. Nothing sent to Reqly servers.
 
 ## Protocol Architecture Rule: Request/Response vs. Long-Lived Connections
 
@@ -73,7 +72,7 @@ Connections are long-lived - potentially open for minutes or hours. A server-sid
 | **Git-native YAML collections** | Every competitor stores collections in a proprietary format (Insomnia: NeDB binary `.db` files; Postman: cloud-locked). Reqly's `.reqly/` YAML is human-readable, git-diffable, and directly writable by AI agents from the codebase. |
 | **MCP server, not MCP client** | Insomnia recently added an MCP *client* (can call external tools). Reqly *is* the MCP server - AI agents connect once and get the full toolset with no UI required. Fundamentally different architecture. |
 | **Auto-capture, three ways** | Outbound proxy (`reqly exec npm run dev`), inbound middleware (`reqly-middleware`), and public webhook tunnel. No other tool covers all three capture modes. |
-| **BYOK + no cloud** | No Reqly cloud. No sync subscription. Collections travel with the repo via git. The prompt bar forwards to the user's own API key. |
+| **No cloud** | No Reqly cloud. No sync subscription. Collections travel with the repo via git. |
 | **Response diffing** | Detects what changed between runs - status, latency, body. No other mainstream API client does this. |
 
 ## Architecture

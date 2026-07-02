@@ -2,6 +2,10 @@
 
 ## 2026-07-02
 
+- [x] **T-219** Remove BYOK and prompt bar references from all documentation
+  - Cleaned up `README.md`, `CLAUDE.md`, `GEMINI.md`, `knowledge.md`, and `roadmap.md` to remove outdated references to the built-in UI prompt bar and BYOK API key config.
+  - Confirmed the core architectural identity: Reqly is an execution engine and MCP server, and all AI intelligence lives entirely outside of it.
+
 - [x] **T-218** Implement AWS Signature v4 (SigV4) authentication
   - Added `AuthType.AWS_V4 = 'awsv4'` to `src/types/auth.ts`.
   - `http-executor.ts`: uses `aws4.sign()` to compute and inject `Authorization`, `X-Amz-Date` (and `X-Amz-Security-Token` when `sessionToken` is set) headers. Works for REST GET/POST and GraphQL. Body is included in the signature for POST/PUT.

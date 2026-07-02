@@ -28,7 +28,7 @@ Reqly is composed of two primary interfaces sharing a single core engine:
 - **Collection metadata:** `.reqly/<collection-name>/collection.yaml` (variables, auth, spec config).
 - **Flows:** YAML files in `.reqly/flows/<flow-name>.yaml`.
 - **Environments:** `.reqly/environments.yaml`.
-- **Global Config:** `~/.reqly/config.json` (BYOK key, active project, dotenv files).
+- **Global Config:** `~/.reqly/config.json` (active project, dotenv files).
 - **Lock file:** `~/.reqly/running.json` (pid, projectDir, port, startedAt).
 
 ## Assertion Schema
