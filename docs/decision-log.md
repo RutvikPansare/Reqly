@@ -6,7 +6,15 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
-## 2026-07-01 - Realtime protocols use split architecture: buffered executor for MCP, direct browser connections for UI
+## 2026-07-02 - gRPC in flows: adapt GrpcResponse to HttpResponse shape, not a new step type
+
+When adding gRPC support to `flow-runner.ts`, the question was whether to introduce a new step type (`type: grpc-run`) or reuse the existing `run` step with routing inside `fireRequest`.
+
+**Decision:** Reuse the existing `run` step type. `fireRequest` checks `config.type === 'grpc'` and branches to `fireGrpcRequest`, which calls `runGrpcRequest` and adapts the `GrpcResponse` to a standard `HttpResponse` (status 200 = OK, status 500 = any error). All downstream steps (assert, extract, conditional) work unchanged.
+
+**Why:** The `run` step already captures collection + request name. Introducing a new step type would require changes to the type union, YAML schema, MCP tool schemas, and flow-step-schema.ts - significant breaking surface for no real user benefit. The adaptation layer is a clean internal concern; users and agents only see the unified `HttpResponse` shape.
+
+
 
 Two fundamentally different use cases require two different architectures.
 

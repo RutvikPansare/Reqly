@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { EngineContext } from '../mcp/tools/types.js';
 import {
   FlowConfig,
@@ -12,10 +13,12 @@ import {
   FlowRunResult,
   HttpResponse,
   AuthProfile,
+  RequestConfig,
 } from '../types/index.js';
 import { substituteConfig } from './variable-substitutor.js';
 import { runAssertions, extractBodyValue } from './assertion-runner.js';
 import { resolveCollectionAuth } from './collection-auth.js';
+import { runGrpcRequest, GrpcResponse } from './grpc-runner.js';
 
 export interface FlowRunOptions {
   dataRow?: FlowDataRow;
@@ -171,7 +174,78 @@ export class FlowRunner {
     const layers = [Object.fromEntries(flowScope), collectionVars, envVars];
     const config = substituteConfig(request, layers, this.context.responseStore);
 
+    // Route gRPC unary requests to the dedicated runner.
+    if (config.type === 'grpc' && config.grpc) {
+      return this.fireGrpcRequest(config, auth, collectionAuth);
+    }
+
     return this.context.executeRequest(config, env ?? undefined, auth, undefined, undefined, collectionVars, collectionAuth);
+  }
+
+  // Execute a unary gRPC request and adapt the GrpcResponse into an HttpResponse
+  // so the rest of the flow runner (assert, extract, conditional) works uniformly.
+  private async fireGrpcRequest(
+    config: RequestConfig,
+    auth: AuthProfile | undefined,
+    collectionAuth: AuthProfile | undefined,
+  ): Promise<HttpResponse> {
+    const grpcCfg = config.grpc!;
+    const protosDir = path.join(this.context.collectionManager.getBaseDir(), 'protos');
+
+    // Build gRPC metadata: collection auth first, request auth overrides, then explicit headers.
+    const metadata: Record<string, string> = {};
+    for (const a of [collectionAuth, auth].filter((a): a is AuthProfile => !!a)) {
+      const creds = (a as any).credentials ?? {};
+      if (a.type === 'bearer' && creds.token) {
+        metadata['authorization'] = `Bearer ${creds.token}`;
+      } else if (a.type === 'apiKey' && creds.key && creds.value) {
+        metadata[creds.key.toLowerCase()] = creds.value;
+      } else if (a.type === 'basic' && creds.username && creds.password) {
+        const encoded = Buffer.from(`${creds.username}:${creds.password}`).toString('base64');
+        metadata['authorization'] = `Basic ${encoded}`;
+      }
+    }
+    if (config.headers) {
+      Object.assign(metadata, config.headers);
+    }
+
+    const grpcResp = await runGrpcRequest(
+      {
+        serverUrl: config.url,
+        protoFile: grpcCfg.protoFile,
+        service: grpcCfg.service,
+        method: grpcCfg.method,
+        message: grpcCfg.message ?? {},
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        insecure: grpcCfg.insecure !== false,
+      },
+      protosDir,
+    );
+
+    return this.adaptGrpcResponse(grpcResp);
+  }
+
+  // Map a GrpcResponse onto the HttpResponse shape used throughout the flow runner.
+  // Status 200 = gRPC OK (code 0). Any non-zero code maps to 500 so assert steps
+  // can check `status === 200` to detect errors uniformly.
+  private adaptGrpcResponse(grpcResp: GrpcResponse): HttpResponse {
+    const ok = grpcResp.grpcStatusCode === 0;
+    return {
+      status: ok ? 200 : 500,
+      body: ok
+        ? (grpcResp.body ?? {})
+        : {
+            grpcStatus: grpcResp.grpcStatus,
+            grpcStatusCode: grpcResp.grpcStatusCode,
+            error: grpcResp.errorMessage ?? 'gRPC error',
+          },
+      headers: {
+        'grpc-status': String(grpcResp.grpcStatusCode),
+        'grpc-message': grpcResp.grpcStatus,
+      },
+      latency: grpcResp.latency,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   private async execRun(step: RunStep, flowScope: Map<string, string>): Promise<HttpResponse> {

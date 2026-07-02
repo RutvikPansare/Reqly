@@ -3,6 +3,15 @@ import { FlowRunner } from './flow-runner.js';
 import { ResponseStore } from './response-store.js';
 import { FlowConfig, HttpResponse } from '../types/index.js';
 
+// Hoist the gRPC mock so it is available inside the vi.mock() factory.
+const { mockRunGrpcRequest } = vi.hoisted(() => ({
+  mockRunGrpcRequest: vi.fn(),
+}));
+
+vi.mock('./grpc-runner.js', () => ({
+  runGrpcRequest: mockRunGrpcRequest,
+}));
+
 // Build a minimal EngineContext with stubs. executeRequest is a mock so no
 // real network calls happen.
 function makeContext(opts: {
@@ -30,6 +39,7 @@ function makeContext(opts: {
         requests: [],
         variables: collectionVars[col] || {},
       })),
+      getBaseDir: vi.fn(() => '/fake/project/.reqly'),
     },
     environmentManager: {
       getActiveEnvironment: vi.fn(async () => opts.activeEnv ?? null),
@@ -435,5 +445,120 @@ describe('FlowRunner', () => {
     const result = await new FlowRunner(ctx).run(flow);
     expect(result.passed).toBe(true);
     expect(seen[seen.length - 1]).toBe('http://x/use?t=tok9');
+  });
+
+  // ---- gRPC routing in flows ----
+
+  it('routes a gRPC run step through the grpc runner, not executeRequest', async () => {
+    mockRunGrpcRequest.mockResolvedValue({
+      grpcStatus: 'OK',
+      grpcStatusCode: 0,
+      body: { message: 'Hello Rutvik' },
+      latency: 8,
+    });
+    const executeRequest = vi.fn();
+    const ctx = makeContext({
+      requests: {
+        'Greeter/SayHello': {
+          name: 'SayHello',
+          method: 'POST',
+          url: 'localhost:50051',
+          type: 'grpc',
+          grpc: { protoFile: 'hello.proto', service: 'helloworld.Greeter', method: 'SayHello', message: { name: 'Rutvik' } },
+        },
+      },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'GrpcF1',
+      steps: [{ type: 'run', id: 's1', collection: 'Greeter', request: 'SayHello' }],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+
+    expect(result.passed).toBe(true);
+    expect(executeRequest).not.toHaveBeenCalled();
+    expect(mockRunGrpcRequest).toHaveBeenCalledOnce();
+    expect(result.steps[0].response).toMatchObject({ status: 200, body: { message: 'Hello Rutvik' } });
+  });
+
+  it('maps a non-OK gRPC status to status 500 with error body', async () => {
+    mockRunGrpcRequest.mockResolvedValue({
+      grpcStatus: 'NOT_FOUND',
+      grpcStatusCode: 5,
+      body: null,
+      latency: 3,
+      isError: true,
+      errorMessage: 'User not found',
+    });
+    const ctx = makeContext({
+      requests: {
+        'Users/GetUser': {
+          name: 'GetUser',
+          method: 'POST',
+          url: 'localhost:50051',
+          type: 'grpc',
+          grpc: { protoFile: 'users.proto', service: 'users.UserService', method: 'GetUser', message: { id: '999' } },
+        },
+      },
+      executeRequest: vi.fn(),
+    });
+    const flow: FlowConfig = {
+      name: 'GrpcF2',
+      steps: [{ type: 'run', id: 's1', collection: 'Users', request: 'GetUser' }],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+
+    expect(result.steps[0].response).toMatchObject({
+      status: 500,
+      body: { grpcStatus: 'NOT_FOUND', grpcStatusCode: 5, error: 'User not found' },
+    });
+    // The run step itself passes - failure comes from downstream assert if any
+    expect(result.steps[0].passed).toBe(true);
+  });
+
+  it('gRPC response body is available for downstream extract and run steps', async () => {
+    mockRunGrpcRequest.mockResolvedValue({
+      grpcStatus: 'OK',
+      grpcStatusCode: 0,
+      body: { userId: 'u42', token: 'tok-grpc' },
+      latency: 6,
+    });
+    const seen: string[] = [];
+    const executeRequest = vi.fn(async (config: any) => {
+      seen.push(config.url);
+      return resp({ ok: true });
+    });
+    const ctx = makeContext({
+      requests: {
+        'Auth/LoginGrpc': {
+          name: 'LoginGrpc',
+          method: 'POST',
+          url: 'localhost:50051',
+          type: 'grpc',
+          grpc: { protoFile: 'auth.proto', service: 'auth.AuthService', method: 'Login', message: { username: 'rutvik' } },
+        },
+        'API/GetProfile': {
+          name: 'GetProfile',
+          method: 'GET',
+          url: 'http://api/profile/{{userId}}',
+        },
+      },
+      executeRequest,
+    });
+    const flow: FlowConfig = {
+      name: 'GrpcF3',
+      steps: [
+        { type: 'run', id: 's1', collection: 'Auth', request: 'LoginGrpc' },
+        { type: 'extract', id: 's2', from: 'response.body.userId', into: 'userId' },
+        { type: 'run', id: 's3', collection: 'API', request: 'GetProfile' },
+      ],
+    };
+
+    const result = await new FlowRunner(ctx).run(flow);
+
+    expect(result.passed).toBe(true);
+    expect(seen[0]).toBe('http://api/profile/u42');
   });
 });

@@ -2,6 +2,14 @@
 
 ## 2026-07-02
 
+- [x] **T-213** Add gRPC unary support to flow runner
+  - `flow-runner.ts` now detects `type: grpc` run steps and routes them through `runGrpcRequest` instead of the HTTP executor.
+  - `GrpcResponse` is adapted to `HttpResponse` (status 200 = gRPC OK, status 500 = any non-zero gRPC code; body and grpc-status/grpc-message headers set accordingly).
+  - Auth (bearer, API key, basic) and explicit headers are injected as gRPC Metadata with the same precedence as REST (collection auth < request auth < explicit headers).
+  - MCP `run_flow` tool description updated to document gRPC support, response shape, and auth behaviour.
+  - 3 new TDD tests in `flow-runner.test.ts`; all 825 tests pass.
+  - E2E validated with a public flow: JSONPlaceholder (REST) + countries.trevorblades.com (GraphQL) + grpcb.in:9000 (gRPC) - all steps passed.
+
 - [x] **T-212** Add centered ASCII header and taglines to README
   - Added a `div align="center"` header block with `REQLY` ASCII art.
   - Added a feature tagline and quick navigation links.

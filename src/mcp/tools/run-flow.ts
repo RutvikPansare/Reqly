@@ -3,7 +3,7 @@ import { FlowRunner } from '../../engine/flow-runner.js';
 
 export const definition: ToolDefinition = {
   name: 'run_flow',
-  description: 'Runs a flow end to end and returns a structured FlowRunResult ({ flowName, passed, steps, dataRows?, duration }). When to use: after building a flow with add_flow_step, to verify the whole multi-step scenario actually works. Pass dataRow to run a single ad-hoc row instead of iterating the flow\'s saved data table.',
+  description: 'Runs a flow end to end and returns a structured FlowRunResult ({ flowName, passed, steps, dataRows?, duration }). Supported request types in flow steps: REST (type: rest or unset), GraphQL (type: graphql), and gRPC unary (type: grpc). gRPC steps route through the dedicated gRPC runner - the response is adapted to the standard HttpResponse shape (status 200 = gRPC OK, status 500 = any non-zero gRPC status code; body contains the decoded message on success, or { grpcStatus, grpcStatusCode, error } on failure). gRPC metadata is built from collection auth, request auth profiles, and explicit headers - same auth precedence as REST. When to use: after building a flow with add_flow_step, to verify the whole multi-step scenario actually works. Pass dataRow to run a single ad-hoc row instead of iterating the flow\'s saved data table.',
   inputSchema: {
     type: 'object',
     properties: {
