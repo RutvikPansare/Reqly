@@ -99,7 +99,8 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         watcherPendingEvents.add('environments');
       } else if (p.includes('/flows/') || p.endsWith('/flows')) {
         watcherPendingEvents.add('flows');
-      } else if (p.endsWith('history.json')) {
+      } else if (p.endsWith('history.ndjson')) {
+        context.historyStore.reloadFromDisk();
         watcherPendingEvents.add('history');
       } else if (p.endsWith('.reqly')) {
         watcherPendingEvents.add('collections');
@@ -374,7 +375,30 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       
       res.json({ path: targetPath });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      let errorMessage = 'Failed to clone repository.';
+      
+      // child_process.exec attaches the raw command output to e.stderr
+      const stderr = e.stderr || e.message || '';
+      
+      if (stderr.includes('already exists and is not an empty directory')) {
+        errorMessage = `The folder "${repoName}" already exists in that destination. Please choose a different folder or delete the existing one.`;
+      } else if (stderr.includes('Repository not found') || stderr.includes('not found')) {
+        errorMessage = 'Repository not found. Please check the URL and ensure the repository is public or you have the correct access rights.';
+      } else if (stderr.includes('Permission denied') || stderr.includes('Authentication failed')) {
+        errorMessage = 'Authentication failed. Please ensure you have access to this repository.';
+      } else if (stderr.includes('could not resolve host') || stderr.includes('Could not resolve host')) {
+        errorMessage = 'Network error. Could not connect to the repository host.';
+      } else if (e.code === 'ENOENT') {
+        errorMessage = 'Git is not installed or not available in the system PATH.';
+      } else {
+        // Fallback: extract just the fatal git error line if possible, avoiding the ugly Node.js command stack trace
+        const fatalMatch = stderr.match(/fatal: (.*)/i);
+        if (fatalMatch) {
+          errorMessage = `Git error: ${fatalMatch[1]}`;
+        }
+      }
+      
+      res.status(500).json({ error: errorMessage });
     }
   });
 

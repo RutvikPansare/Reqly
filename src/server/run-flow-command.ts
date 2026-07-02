@@ -90,8 +90,8 @@ export async function handleRunFlowCommand(
     await dotEnvLoader.load();
     const dotEnvVars = dotEnvLoader.getVariablesRecord();
 
-    const responseStore = new ResponseStore();
-    const historyStore = new HistoryStore();
+    const responseStore = new ResponseStore(projectDir);
+    const historyStore = new HistoryStore(projectDir);
     const proxyServer = new ProxyServer(collectionManager);
     const { TunnelManager } = await import('../engine/tunnel-manager.js');
     const tunnelManager = new TunnelManager();

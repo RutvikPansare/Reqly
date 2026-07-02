@@ -21,9 +21,48 @@ interface AppendMeta {
 
 const MAX_ENTRIES = 200;
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 export class HistoryStore {
   private entries: HistoryEntry[] = [];
   private counter = 0;
+  private filePath?: string;
+
+  constructor(projectDir?: string) {
+    if (projectDir) {
+      this.filePath = path.join(projectDir, '.reqly', 'history.ndjson');
+      this.load();
+    }
+  }
+
+  private load() {
+    if (!this.filePath || !fs.existsSync(this.filePath)) return;
+    try {
+      const content = fs.readFileSync(this.filePath, 'utf8');
+      const lines = content.split('\n').filter(Boolean);
+      const parsed = lines.map(line => {
+        try {
+          return JSON.parse(line) as HistoryEntry;
+        } catch {
+          return null;
+        }
+      }).filter(Boolean) as HistoryEntry[];
+      
+      // new lines are at the bottom of the file, we want newest first in memory
+      parsed.reverse();
+      this.entries = parsed.slice(0, MAX_ENTRIES);
+      
+      // Initialize counter so ids don't collide in the same millisecond
+      this.counter = this.entries.length;
+    } catch (e) {
+      // ignore read errors
+    }
+  }
+
+  public reloadFromDisk() {
+    this.load();
+  }
 
   public append(req: CollectionRequest, res: HttpResponse, meta: AppendMeta = {}): HistoryEntry {
     let body: string | undefined;
@@ -49,6 +88,17 @@ export class HistoryStore {
     if (this.entries.length > MAX_ENTRIES) {
       this.entries = this.entries.slice(0, MAX_ENTRIES);
     }
+
+    if (this.filePath) {
+      try {
+        const dir = path.dirname(this.filePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.appendFileSync(this.filePath, JSON.stringify(entry) + '\n', 'utf8');
+      } catch (e) {
+        // ignore write errors (fire and forget)
+      }
+    }
+
     return entry;
   }
 
@@ -67,5 +117,12 @@ export class HistoryStore {
 
   public clear(): void {
     this.entries = [];
+    if (this.filePath && fs.existsSync(this.filePath)) {
+      try {
+        fs.unlinkSync(this.filePath);
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 }

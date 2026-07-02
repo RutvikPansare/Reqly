@@ -39,6 +39,10 @@ describe('handleInitCommand', () => {
     expect(flowYaml).toBe('name: starter-flow\n');
     const envYaml = await fs.readFile(path.join(targetDir, '.reqly', 'environments.yaml'), 'utf8');
     expect(envYaml).toBe('environments: []\n');
+
+    const gitignore = await fs.readFile(path.join(targetDir, '.gitignore'), 'utf8');
+    expect(gitignore).toContain('.reqly/history.ndjson');
+    expect(gitignore).toContain('.reqly/responses.json');
   });
 
   it('does not overwrite existing files in the target project', async () => {

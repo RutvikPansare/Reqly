@@ -52,5 +52,35 @@ export async function handleInitCommand(_parsed: ParsedArgs, targetDir: string, 
     console.log(`  ${skipped.length} file(s) skipped (already exist).`);
   }
 
+  const gitignorePath = path.join(targetDir, '.gitignore');
+  try {
+    let content = '';
+    try {
+      content = await fs.readFile(gitignorePath, 'utf8');
+    } catch {
+      // doesn't exist
+    }
+
+    const lines = content.split('\n');
+    let changed = false;
+    
+    if (!lines.includes('.reqly/history.ndjson')) {
+      content += (content.endsWith('\n') || content === '' ? '' : '\n') + '.reqly/history.ndjson\n';
+      changed = true;
+    }
+    
+    if (!lines.includes('.reqly/responses.json')) {
+      content += (content.endsWith('\n') || content === '' ? '' : '\n') + '.reqly/responses.json\n';
+      changed = true;
+    }
+
+    if (changed) {
+      await fs.writeFile(gitignorePath, content, 'utf8');
+      console.log(`  Updated .gitignore with .reqly runtime state files`);
+    }
+  } catch (e) {
+    // ignore
+  }
+
   return 0;
 }

@@ -8,19 +8,7 @@
 
 > Goal: remove the singleton lock as a state coordinator. Each process (Electron, reqly mcp, CLI) runs a full independent engine. State is shared through files in `.reqly/`, same way collections already work. Do this before the Multi-Project Workspace milestone - it is the prerequisite.
 
-- [ ] **T-220** Persist `HistoryStore` to `.reqly/history.ndjson` (append-only NDJSON)
-  - **Engine:** Each `append()` call writes one JSON line to disk immediately (fire-and-forget, sync write, non-blocking on the request path)
-  - **Engine:** On startup, `HistoryStore` reads existing entries from the file (up to the 200-entry cap, most recent first)
-  - **Server:** Express server watches `history.ndjson` via `fs.watch`. On file change (new line appended by another process), push an SSE event on the existing `/api/events` stream - same pattern used for collection live-sync (T-205)
-  - **UI:** History panel subscribes to the SSE stream. On receiving a `history-updated` event, re-fetches `GET /api/history` and re-renders. No polling. Zero latency for the PM watching an agent run.
-  - `reqly init` auto-adds `history.ndjson` to `.gitignore`
-  - All existing `HistoryStore` tests must still pass; add tests for disk read/write and SSE event emission on cross-process write
 
-- [ ] **T-221** Persist `ResponseStore` to `.reqly/responses.json`
-  - **Engine:** `ResponseStore` maps `requestName -> last HttpResponse`. Write the full map to disk after every `set()` call (debounced 100ms to avoid rapid sequential writes)
-  - **Engine:** On startup, read and hydrate from disk so `{{requestName.response.field}}` chaining works across process restarts and is visible to both Electron and `reqly mcp`
-  - `reqly init` auto-adds `responses.json` to `.gitignore`
-  - No UI changes needed - `ResponseStore` is not displayed in the UI directly
 
 - [ ] **T-222** Remove singleton lock as state coordinator - each process runs a full engine
   - **Engine/Server:** After T-220 and T-221 land, remove the MCP-only mode from `index.ts` startup. Every `reqly mcp` spawn runs its own full `EngineContext` + Express regardless of whether another process holds the lock.

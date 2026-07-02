@@ -130,8 +130,8 @@ async function main() {
   // start command (default)
   const proxyServer = new ProxyServer(collectionManager);
   const tunnelManager = new TunnelManager();
-  const responseStore = new ResponseStore();
-  const historyStore = new HistoryStore();
+  const responseStore = new ResponseStore(cwd);
+  const historyStore = new HistoryStore(cwd);
   const mockServer = new MockServer(collectionManager);
   const scriptVariableStore = new ScriptVariableStore();
 

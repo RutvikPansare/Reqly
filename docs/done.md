@@ -2,6 +2,21 @@
 
 ## 2026-07-02
 
+- [x] **T-221** Persist `ResponseStore` to `.reqly/responses.json`
+  - Updated `ResponseStore` to read/write `.reqly/responses.json` so that `{{requestName.response.field}}` chaining works across process restarts.
+  - Initial load from disk happens synchronously on instantiation.
+  - Saving is debounced by 100ms.
+  - Passed `projectDir`/`cwd` into `ResponseStore` instantiation in `index.ts`, `run-command.ts`, and `run-flow-command.ts`.
+  - Updated `reqly init` in `init-command.ts` to automatically add `.reqly/responses.json` to `.gitignore`.
+  - Added TDD tests for file persistence to `response-store.test.ts`. All 838 tests pass.
+
+- [x] **T-220** Persist `HistoryStore` to `.reqly/history.ndjson` (append-only NDJSON)
+  - Updated `HistoryStore` to read/write `.reqly/history.ndjson` synchronously on startup and on `append()`.
+  - Wired `HistoryStore` instantiation to accept `cwd`/`projectDir` in `index.ts`, `run-command.ts`, and `run-flow-command.ts`.
+  - Updated `reqlyDirWatcher` in `express.ts` to watch `.reqly/history.ndjson`, trigger `context.historyStore.reloadFromDisk()`, and emit SSE event.
+  - Updated `init-command.ts` to automatically append `.reqly/history.ndjson` to `.gitignore`.
+  - Added TDD tests for file persistence, initialization from file, and cross-process reloading to `history-store.test.ts`. All 837 tests pass.
+
 - [x] **T-219** Remove BYOK and prompt bar references from all documentation
   - Cleaned up `README.md`, `CLAUDE.md`, `GEMINI.md`, `knowledge.md`, and `roadmap.md` to remove outdated references to the built-in UI prompt bar and BYOK API key config.
   - Confirmed the core architectural identity: Reqly is an execution engine and MCP server, and all AI intelligence lives entirely outside of it.

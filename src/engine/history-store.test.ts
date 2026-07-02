@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { HistoryStore } from './history-store.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 describe('HistoryStore', () => {
   it('appends an entry and lists newest first', () => {
@@ -149,4 +152,65 @@ describe('HistoryStore', () => {
       expect(two[0].requestName).toBe('GetUsers');
     });
   });
+
+  describe('Persistence', () => {
+    let tempDir: string;
+    let store: HistoryStore;
+
+    beforeEach(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reqly-test-'));
+      store = new HistoryStore(tempDir);
+    });
+
+    afterEach(() => {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('writes to history.ndjson on append', () => {
+      store.append(
+        { name: 'P1', method: 'GET', url: 'http://x' } as any,
+        { status: 200, latency: 5, body: '', headers: {} } as any
+      );
+      const ndjson = path.join(tempDir, '.reqly', 'history.ndjson');
+      expect(fs.existsSync(ndjson)).toBe(true);
+      const content = fs.readFileSync(ndjson, 'utf8');
+      expect(content).toContain('"requestName":"P1"');
+    });
+
+    it('loads existing history from disk on init', () => {
+      store.append(
+        { name: 'P1', method: 'GET', url: 'http://x' } as any,
+        { status: 200, latency: 5, body: '', headers: {} } as any
+      );
+      
+      const store2 = new HistoryStore(tempDir);
+      const list = store2.list();
+      expect(list).toHaveLength(1);
+      expect(list[0].requestName).toBe('P1');
+    });
+
+    it('reloads history from disk when reloadFromDisk is called', () => {
+      store.append(
+        { name: 'P1', method: 'GET', url: 'http://x' } as any,
+        { status: 200, latency: 5, body: '', headers: {} } as any
+      );
+      
+      const store2 = new HistoryStore(tempDir);
+      expect(store2.list()).toHaveLength(1);
+      
+      // another process writes to the file
+      store.append(
+        { name: 'P2', method: 'GET', url: 'http://x' } as any,
+        { status: 200, latency: 5, body: '', headers: {} } as any
+      );
+      
+      // store2 doesn't know yet
+      expect(store2.list()).toHaveLength(1);
+      
+      store2.reloadFromDisk();
+      expect(store2.list()).toHaveLength(2);
+      expect(store2.list()[0].requestName).toBe('P2'); // newest first
+    });
+  });
 });
+
