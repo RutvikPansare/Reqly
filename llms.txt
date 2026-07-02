@@ -97,7 +97,7 @@ Reqly exposes the following MCP tools for AI agents:
 - `get_mock_status`: Get running state, collection, port, and route list of the mock server.
 - `get_project`: Returns `{ projectDir, configSource, fallbackReason? }`. Call this on first connection to verify Reqly is pointed at the expected directory. `configSource` is `"flag" | "env" | "config" | "cwd"` - which priority level won. `fallbackReason` is present when a higher-priority source was detected but ignored (e.g. an unresolved `${workspaceFolder}` macro from a non-VS Code host).
 - `switch_project`: Switch Reqly to a different project directory at runtime.
-- `set_collection_auth`: Set collection-level auth inherited by all requests. Supported types: `bearer` (`credentials.token`), `basic` (`credentials.username` + `credentials.password`), `apiKey` (`credentials.key`), `oauth2`, `mtls` (`credentials.certPath` + `credentials.keyPath` - absolute paths to PEM files, store in `~/.reqly/certs/`), `none`. The executor attaches the right headers or TLS client certificate at request time.
+- `set_collection_auth`: Set collection-level auth inherited by all requests. Supported types: `bearer` (`credentials.token`), `basic` (`credentials.username` + `credentials.password`), `apiKey` (`credentials.key`), `oauth2`, `mtls` (`credentials.certPath` + `credentials.keyPath` - absolute paths to PEM files, store in `~/.reqly/certs/`), `awsv4` (`credentials.accessKey` + `credentials.secretKey` + `credentials.region` + `credentials.service`; optionally `credentials.sessionToken` for temporary STS credentials), `none`. The executor attaches the right headers or TLS client certificate at request time. For `awsv4`, it computes AWS Signature Version 4 and injects `Authorization`, `X-Amz-Date`, and (when `sessionToken` is set) `X-Amz-Security-Token` headers before every request.
 - `introspect_graphql`: Run full GraphQL schema introspection against a URL, cache the schema for autocomplete.
 - `list_grpc_services`: Discover gRPC services from a running server via server reflection (server must have `grpc.reflection.v1alpha.ServerReflection` enabled). Returns `{ services: [{ name }], fileDescriptorCount }`. Use this when no `.proto` file is available. Call with `{ serverUrl: "localhost:50051" }`.
 
@@ -143,7 +143,104 @@ For client/bidirectional streaming, use `grpc.messages` (array) instead of `grpc
 Response shape for streaming: `{ messages: [{ data, timestamp, direction: 'sent'|'received' }], truncated: boolean }`.
 `truncated: true` means the stream was still active when the timeout expired.
 
-## Reqly Features
+## AWS Signature Version 4 (SigV4) Auth
+
+Reqly has first-class support for AWS APIs secured with SigV4. Use auth type `awsv4`.
+
+### REST and GraphQL requests
+
+Set at collection level (all requests inherit it) or per-request. Credential fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `accessKey` | yes | IAM Access Key ID (e.g. `AKIAIOSFODNN7EXAMPLE`) |
+| `secretKey` | yes | IAM Secret Access Key |
+| `region` | yes | AWS region (e.g. `us-east-1`, `eu-west-1`) |
+| `service` | yes | AWS service name (e.g. `execute-api`, `bedrock`, `s3`, `sts`) |
+| `sessionToken` | no | STS session token for temporary credentials (`X-Amz-Security-Token` header) |
+
+Reqly computes the signature and injects three headers before the request is sent:
+- `Authorization: AWS4-HMAC-SHA256 Credential=<key>/<date>/<region>/<service>/aws4_request, SignedHeaders=..., Signature=<sig>`
+- `X-Amz-Date: <YYYYMMDDTHHmmssZ>`
+- `X-Amz-Security-Token: <token>` (only when `sessionToken` is provided)
+
+Via MCP tool (`set_collection_auth`):
+```json
+{
+  "collection": "my-aws-api",
+  "type": "awsv4",
+  "credentials": {
+    "accessKey": "AKIAIOSFODNN7EXAMPLE",
+    "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "region": "us-east-1",
+    "service": "execute-api"
+  }
+}
+```
+
+Per-request in YAML (overrides collection auth):
+```yaml
+name: invoke-bedrock
+method: POST
+url: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-v2/invoke
+auth:
+  type: awsv4
+  credentials:
+    accessKey: "{{env.AWS_ACCESS_KEY_ID}}"
+    secretKey: "{{env.AWS_SECRET_ACCESS_KEY}}"
+    region: us-east-1
+    service: bedrock
+    sessionToken: "{{env.AWS_SESSION_TOKEN}}"
+headers:
+  Content-Type: application/json
+body: '{"prompt": "Hello Claude"}'
+```
+
+Common `service` values:
+- `execute-api` - API Gateway REST/HTTP APIs
+- `appsync` - AppSync GraphQL
+- `bedrock` - Amazon Bedrock (Claude, Titan, etc.)
+- `s3` - S3 REST API
+- `sts` - Security Token Service
+- `iotdevicegateway` - IoT Core WebSocket
+
+### WebSocket (AppSync, IoT Core, API Gateway WebSocket)
+
+Browser WebSocket APIs cannot send custom headers, so Reqly presigns the connection URL instead. The SigV4 signature is appended as query parameters (`X-Amz-Algorithm`, `X-Amz-Date`, `X-Amz-Credential`, `X-Amz-Signature`).
+
+Via the `run_realtime` MCP tool:
+```json
+{
+  "type": "websocket",
+  "url": "wss://abc123.appsync-realtime-api.us-east-1.amazonaws.com/graphql",
+  "awsAuth": {
+    "accessKey": "AKIAIOSFODNN7EXAMPLE",
+    "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "region": "us-east-1",
+    "service": "appsync",
+    "sessionToken": "optional-sts-token"
+  },
+  "captureTimeout": 5
+}
+```
+
+Reqly converts the `wss://` URL to a presigned `wss://...?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...&X-Amz-Date=...&X-Amz-Signature=...` URL before connecting. The scheme is always preserved (`wss://` in, `wss://` out).
+
+### Using environment variables for credentials
+
+Store keys as environment variables and reference them with `{{env.VAR_NAME}}` - credentials are never hardcoded in collection YAML:
+```yaml
+auth:
+  type: awsv4
+  credentials:
+    accessKey: "{{env.AWS_ACCESS_KEY_ID}}"
+    secretKey: "{{env.AWS_SECRET_ACCESS_KEY}}"
+    region: "{{env.AWS_REGION}}"
+    service: execute-api
+    sessionToken: "{{env.AWS_SESSION_TOKEN}}"
+```
+
+
 
 - Collections: YAML files in `.reqly/`, git-native, shared with the team
 - Environments: named variable sets (dev/staging/prod), switch instantly
@@ -152,9 +249,10 @@ Response shape for streaming: `{ messages: [{ data, timestamp, direction: 'sent'
 - Outbound proxy: capture HTTP calls your app makes to external APIs
 - Inbound middleware: capture requests coming INTO your app (`reqly-middleware`)
 - GraphQL: dedicated workspace, schema introspection, autocomplete, saved request browser, multi-operation picker, and `queryFile` support for external `.graphql` files
-- Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI
+- Flows: SoapUI-style multi-step automation (run/extract/assert/poll/conditional), separate YAML in `.reqly/flows/`, full MCP tool parity, `reqly run-flow <name>` for CI. Flows support REST, GraphQL, and gRPC steps in the same flow.
 - Flow CI export: `reqly export-flow <name> --format github-actions` writes `.github/workflows/<name>.yml`. Full MCP parity via `export_flow_ci`.
 - Mock server: `reqly mock <collection> [--port <n>]` serves saved example responses on a real HTTP port. `X-Reqly-Example: <name>` header selects a specific example; falls back to first. Full MCP parity via `start_mock`/`stop_mock`/`get_mock_status`.
+- AWS Signature V4 auth (`awsv4`): computes and injects `Authorization` + `X-Amz-Date` headers for REST and GraphQL requests; presigns WebSocket connection URLs for AWS AppSync, IoT Core, and API Gateway WebSocket endpoints. Supports temporary STS credentials via `sessionToken` (`X-Amz-Security-Token`). Available at collection level, per-request, and via the `run_realtime` MCP tool's `awsAuth` parameter.
 - CLI: `reqly run`, `reqly run-flow`, `reqly export`, `reqly export-flow`, `reqly mock`, `reqly exec`, `reqly use`, `reqly status`, `reqly stop`, `reqly setup`, `reqly init`, `reqly app`
 
 ## TERTIARY: Capture inbound traffic (calls coming into your app)
