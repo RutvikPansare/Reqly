@@ -2,6 +2,12 @@
 
 ## 2026-07-02
 
+- [x] **T-235** Landing page redesign: blue-only flat palette + interactive graphics
+  - Removed all color gradients (blue-purple text/button/logo gradients gone); palette is now shades of blue on dark, flat 1px-border design. Green/red/amber retained only as pass/fail/status semantics.
+  - Replaced emoji feature icons with inline SVG line icons.
+  - New graphics: animated architecture SVG (agent -> MCP -> engine -> API, moving dots + dashed flows), animated flow-engine diagram (run/extract/assert/branch/poll).
+  - New interactivity: terminal types the agent prompt and streams tool calls on scroll-into-view (with replay button), tabbed code showcase (request YAML / flow YAML / exported CI workflow), count-up stats. Respects prefers-reduced-motion.
+
 - [x] **T-234** Deploy landing page to GitHub Pages
   - Added `.github/workflows/pages.yml`: deploys `website/` via actions/deploy-pages on push to main (path-filtered) or manual dispatch.
   - Enabled Pages on the repo with `build_type: workflow`. Live at https://rutvikpansare.github.io/Reqly/.
