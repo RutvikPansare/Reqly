@@ -2,6 +2,14 @@
 
 ## 2026-07-02
 
+- [x] **T-234** Deploy landing page to GitHub Pages
+  - Added `.github/workflows/pages.yml`: deploys `website/` via actions/deploy-pages on push to main (path-filtered) or manual dispatch.
+  - Enabled Pages on the repo with `build_type: workflow`. Live at https://rutvikpansare.github.io/Reqly/.
+
+- [x] **T-233** Marketing landing page (`website/index.html`)
+  - Single self-contained static page: dark theme, hero with install command + copy buttons, feature grid (9 capabilities), zero-human pipeline steps, YAML collection/flow code showcase, Postman/Insomnia/Bruno comparison table, time-savings stats, download section (npm, Homebrew CLI, Homebrew cask + GitHub releases link for desktop app), GitHub buttons throughout.
+  - No build step, no dependencies beyond Google Fonts. Deployable to any static host (GitHub Pages, Netlify, Vercel).
+
 - [x] **T-232** Disable 'Switch Project' button when agent is connected
   - Modified `useCollectionState.ts` to fetch `hasEverConnectedAgent` from `/api/project`.
   - Added `isAgentActive` logic to `ProjectPathWidget.tsx` using `hasEverConnectedAgent || window.location.port === '4242'`.

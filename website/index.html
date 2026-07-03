@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reqly - API testing built for AI agents</title>
+<meta name="description" content="Reqly is a prompt-first, agent-native API client. Plain YAML collections, local-first, MCP server, CLI and Web UI. Your agent builds the tests, CI runs them forever.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090d;
+    --bg-soft: #0c0f15;
+    --panel: #10141c;
+    --panel-2: #141926;
+    --border: #1e2532;
+    --border-bright: #2c3648;
+    --text: #e6eaf2;
+    --text-dim: #9aa4b8;
+    --text-faint: #5c6678;
+    --accent: #4f8ff7;
+    --accent-2: #8b5cf6;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection { background: rgba(79,143,247,.35); }
+
+  /* ---------- shared ---------- */
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; text-decoration: none; }
+  section { position: relative; }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h2.title { font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+  .sub { color: var(--text-dim); font-size: 17px; line-height: 1.65; margin-top: 14px; max-width: 640px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 15px; font-weight: 600;
+    padding: 12px 22px; border-radius: 10px;
+    border: 1px solid var(--border-bright);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .btn.primary {
+    background: linear-gradient(135deg, #3b82f6, #7c3aed);
+    border: 1px solid transparent;
+    box-shadow: 0 0 24px rgba(79,143,247,.35);
+  }
+  .btn.primary:hover { box-shadow: 0 0 36px rgba(124,58,237,.5); }
+  .btn svg { flex-shrink: 0; }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    backdrop-filter: blur(14px);
+    background: rgba(7,9,13,.75);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+  .logo-mark {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 15px; font-weight: 600; color: #fff;
+    box-shadow: 0 0 18px rgba(99,102,241,.45);
+  }
+  .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14.5px; color: var(--text-dim); }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { display: flex; align-items: center; gap: 12px; }
+  .btn.sm { padding: 8px 16px; font-size: 14px; border-radius: 8px; }
+  @media (max-width: 820px) { .nav-links { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: 150px 0 90px;
+    text-align: center;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% -10%, rgba(79,143,247,.16), transparent),
+      radial-gradient(ellipse 40% 35% at 80% 10%, rgba(139,92,246,.10), transparent);
+    pointer-events: none;
+  }
+  .grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(120,140,180,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,140,180,.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 75% 60% at 50% 20%, black, transparent);
+    pointer-events: none;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dim);
+    border: 1px solid var(--border-bright);
+    background: rgba(20,25,38,.6);
+    padding: 6px 14px; border-radius: 100px;
+    margin-bottom: 28px;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  h1 {
+    font-size: clamp(40px, 6.4vw, 72px);
+    font-weight: 800; letter-spacing: -.035em; line-height: 1.05;
+  }
+  h1 .grad {
+    background: linear-gradient(100deg, #60a5fa 0%, #a78bfa 55%, #f472b6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.lede {
+    margin: 22px auto 0; max-width: 620px;
+    font-size: 19px; color: var(--text-dim); line-height: 1.6;
+  }
+  .hero-ctas { margin-top: 38px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+  .install-box {
+    margin: 26px auto 0;
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--mono); font-size: 14.5px;
+    background: var(--panel);
+    border: 1px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: var(--text-dim);
+  }
+  .install-box .dollar { color: var(--accent); }
+  .install-box .cmd { color: var(--text); }
+  .copy-btn {
+    background: none; border: none; cursor: pointer; color: var(--text-faint);
+    display: grid; place-items: center; padding: 2px;
+    color: var(--text-dim);
+    transition: color .15s;
+  }
+  .copy-btn:hover { color: var(--text); }
+
+  .works-with {
+    margin-top: 54px;
+    font-size: 13px; color: var(--text-faint);
+    display: flex; align-items: center; justify-content: center; gap: 26px; flex-wrap: wrap;
+  }
+  .works-with span.label { text-transform: uppercase; letter-spacing: .14em; font-family: var(--mono); font-size: 11px; }
+  .works-with .tool { color: var(--text-dim); font-weight: 600; font-size: 14.5px; }
+
+  /* terminal */
+  .terminal {
+    margin: 70px auto 0;
+    max-width: 860px;
+    text-align: left;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 60px rgba(79,143,247,.07);
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .term-bar .b { width: 11px; height: 11px; border-radius: 50%; }
+  .term-bar .r { background: #ff5f57; } .term-bar .y { background: #febc2e; } .term-bar .g { background: #28c840; }
+  .term-bar .title { margin-left: 10px; font-family: var(--mono); font-size: 12px; color: var(--text-faint); }
+  .term-body { padding: 22px 24px 26px; font-family: var(--mono); font-size: 13.5px; line-height: 2.05; overflow-x: auto; }
+  .t-prompt { color: var(--accent); }
+  .t-user { color: var(--text); }
+  .t-dim { color: var(--text-faint); }
+  .t-tool { color: var(--accent-2); }
+  .t-green { color: var(--green); }
+  .t-amber { color: var(--amber); }
+
+  /* ---------- sections ---------- */
+  .section { padding: 100px 0; }
+  .section.alt { background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+  /* features */
+  .feat-grid {
+    margin-top: 54px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  @media (max-width: 900px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .feat-grid { grid-template-columns: 1fr; } }
+  .feat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 24px;
+    transition: border-color .2s, transform .2s;
+  }
+  .feat:hover { border-color: var(--border-bright); transform: translateY(-3px); }
+  .feat .icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center;
+    background: rgba(79,143,247,.1);
+    border: 1px solid rgba(79,143,247,.25);
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+  .feat h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.01em; }
+  .feat p { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+
+  /* pipeline */
+  .pipeline { margin-top: 54px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 820px) { .pipeline { grid-template-columns: 1fr; } }
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+    position: relative;
+  }
+  .step .num {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    border: 1px solid rgba(79,143,247,.35);
+    background: rgba(79,143,247,.08);
+    border-radius: 6px; padding: 3px 9px;
+    display: inline-block; margin-bottom: 16px;
+  }
+  .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+  .step p { font-size: 14px; color: var(--text-dim); line-height: 1.65; }
+  .step code {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent-2); background: rgba(139,92,246,.09);
+    padding: 1px 6px; border-radius: 5px;
+  }
+
+  /* code showcase */
+  .code-cols { margin-top: 54px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .code-cols { grid-template-columns: 1fr; } }
+  .code-card {
+    background: var(--bg);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .code-card .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    font-family: var(--mono); font-size: 12.5px; color: var(--text-dim);
+  }
+  .code-card .head .lang { color: var(--accent); }
+  .code-card pre {
+    padding: 20px 22px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.75;
+    color: var(--text-dim);
+  }
+  .y-key { color: #7dd3fc; }
+  .y-str { color: #86efac; }
+  .y-num { color: #fca5a5; }
+  .y-cmt { color: #4b5563; }
+  .y-var { color: #c4b5fd; }
+
+  /* comparison */
+  .compare { margin-top: 54px; overflow-x: auto; border: 1px solid var(--border-bright); border-radius: 14px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); font-size: 14.5px; min-width: 640px; }
+  th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { color: var(--text); font-weight: 600; }
+  td { color: var(--text-dim); }
+  .yes { color: var(--green); font-weight: 700; }
+  .no { color: #f87171; }
+  .meh { color: var(--amber); }
+  th.hl, td.hl { background: rgba(79,143,247,.06); }
+  th.hl { color: var(--accent); }
+
+  /* stats */
+  .stats { margin-top: 54px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 24px;
+    text-align: center;
+  }
+  .stat .big {
+    font-size: 40px; font-weight: 800; letter-spacing: -.03em;
+    background: linear-gradient(120deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .stat .lbl { margin-top: 8px; font-size: 13.5px; color: var(--text-dim); line-height: 1.5; }
+
+  /* download */
+  .dl-grid { margin-top: 54px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .dl-grid { grid-template-columns: 1fr; } }
+  .dl-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 26px;
+    display: flex; flex-direction: column; gap: 14px;
+    transition: border-color .2s, transform .2s;
+  }
+  .dl-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .dl-card.featured { border-color: rgba(124,58,237,.5); box-shadow: 0 0 40px rgba(124,58,237,.12); }
+  .dl-card h3 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .dl-card p { font-size: 14px; color: var(--text-dim); line-height: 1.6; flex: 1; }
+  .dl-cmd {
+    font-family: var(--mono); font-size: 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    overflow-x: auto; white-space: nowrap;
+  }
+  .dl-cmd .dollar { color: var(--accent); margin-right: 8px; }
+  .tag {
+    font-family: var(--mono); font-size: 11px;
+    padding: 3px 9px; border-radius: 100px;
+    background: rgba(52,211,153,.1); color: var(--green);
+    border: 1px solid rgba(52,211,153,.3);
+  }
+  .tag.purple { background: rgba(139,92,246,.12); color: #c4b5fd; border-color: rgba(139,92,246,.35); }
+
+  /* cta */
+  .final-cta {
+    padding: 110px 0;
+    text-align: center;
+    position: relative;
+  }
+  .final-cta::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 55% 60% at 50% 100%, rgba(124,58,237,.14), transparent);
+    pointer-events: none;
+  }
+
+  /* footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 36px 0;
+    font-size: 13.5px;
+    color: var(--text-faint);
+  }
+  .foot-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .foot-links { display: flex; gap: 22px; }
+  .foot-links a { color: var(--text-dim); }
+  .foot-links a:hover { color: var(--text); }
+
+  /* reveal animation */
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="#">
+      <span class="logo-mark">R</span> Reqly
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#pipeline">How it works</a>
+      <a href="#code">Collections</a>
+      <a href="#compare">Compare</a>
+      <a href="#download">Download</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn sm" href="https://github.com/RutvikPansare/Reqly" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+      <a class="btn sm primary" href="#download">Download</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="grid-bg"></div>
+  <div class="wrap" style="position:relative">
+    <div class="pill"><span class="dot"></span> open source · local-first · zero cloud</div>
+    <h1>API testing built<br>for <span class="grad">AI agents</span></h1>
+    <p class="lede">Your agent reads your codebase, builds the collection, writes the assertions, and ships tests to CI. From collections to green pipeline in one agent session.</p>
+    <div class="hero-ctas">
+      <a class="btn primary" href="#download">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Reqly
+      </a>
+      <a class="btn" href="https://github.com/RutvikPansare/Reqly" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        Star on GitHub
+      </a>
+    </div>
+    <div class="install-box">
+      <span><span class="dollar">$</span> <span class="cmd" id="install-cmd">npm install -g getreqly</span></span>
+      <button class="copy-btn" onclick="copyCmd(this, 'npm install -g getreqly')" title="Copy">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+    </div>
+
+    <div class="works-with">
+      <span class="label">Works with</span>
+      <span class="tool">Cursor</span>
+      <span class="tool">Claude Code</span>
+      <span class="tool">Gemini CLI</span>
+      <span class="tool">VS Code</span>
+      <span class="tool">Claude Desktop</span>
+    </div>
+
+    <div class="terminal reveal">
+      <div class="term-bar">
+        <span class="b r"></span><span class="b y"></span><span class="b g"></span>
+        <span class="title">agent session - claude code</span>
+      </div>
+      <div class="term-body">
+<div><span class="t-prompt">&gt;</span> <span class="t-user">Read my Express routes, build a collection with assertions, write an e2e flow for login → checkout, and export it to CI</span></div>
+<div><span class="t-dim">⏺</span> <span class="t-tool">create_collection</span><span class="t-dim">(name: "shop-api")</span></div>
+<div><span class="t-dim">⏺</span> <span class="t-tool">create_request</span><span class="t-dim">(POST /auth/login, assertions: [status eq 200])</span> <span class="t-dim">× 14 endpoints</span></div>
+<div><span class="t-dim">⏺</span> <span class="t-tool">create_flow</span><span class="t-dim">(name: "login-checkout")</span> <span class="t-dim">→</span> <span class="t-tool">add_flow_step</span> <span class="t-dim">× 6</span></div>
+<div><span class="t-dim">⏺</span> <span class="t-tool">run_flow</span><span class="t-dim">("login-checkout")</span> <span class="t-green">✓ 6/6 steps passed · 412ms</span></div>
+<div><span class="t-dim">⏺</span> <span class="t-tool">export_flow_ci</span> <span class="t-dim">→</span> <span class="t-amber">.github/workflows/login-checkout.yml</span></div>
+<div><span class="t-green">✓ Done.</span> <span class="t-dim">14 requests, 32 assertions, 1 e2e flow, CI wired. You never touched YAML.</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="kicker">Capabilities</div>
+    <h2 class="title">One engine. Thirty-plus tools.<br>Your agent drives.</h2>
+    <p class="sub">Reqly is not an AI. It is an execution engine your AI connects to via MCP. Connect once, and your agent gets the full toolkit.</p>
+    <div class="feat-grid">
+      <div class="feat reveal"><div class="icon">🗂️</div><h3>Build collections</h3><p>Agent reads your routes and scaffolds requests automatically. No YAML by hand, no clicking through forms.</p></div>
+      <div class="feat reveal"><div class="icon">⚡</div><h3>Fire and assert</h3><p>Runs requests, checks status, body, and latency. Returns pass/fail per assertion in a structured shape agents can parse.</p></div>
+      <div class="feat reveal"><div class="icon">🔗</div><h3>Chain flows</h3><p>Multi-step e2e sequences with extract, poll, and conditional branching. Chains REST, GraphQL, and gRPC in the same flow.</p></div>
+      <div class="feat reveal"><div class="icon">📋</div><h3>Validate contracts</h3><p>Point a collection at an OpenAPI spec. Every response is checked against it automatically on every run.</p></div>
+      <div class="feat reveal"><div class="icon">🎭</div><h3>Serve mocks</h3><p>Fake a backend from saved examples. Frontend dev and agent testing without a live server.</p></div>
+      <div class="feat reveal"><div class="icon">🕵️</div><h3>Capture traffic</h3><p>Proxy for outbound, one-line middleware for inbound, public tunnel for webhooks. Collections build themselves.</p></div>
+      <div class="feat reveal"><div class="icon">📤</div><h3>Export anywhere</h3><p>Generate OpenAPI specs, Postman files, or Markdown API docs. You are never locked in.</p></div>
+      <div class="feat reveal"><div class="icon">🔐</div><h3>Real auth support</h3><p>Bearer, API Key, Basic, OAuth 2.0 with PKCE, mTLS, and AWS SigV4 signing for API Gateway, Bedrock, AppSync, and S3.</p></div>
+      <div class="feat reveal"><div class="icon">🌐</div><h3>Every protocol</h3><p>REST, GraphQL with schema introspection, gRPC with server reflection, WebSocket, SSE, Socket.IO, and MQTT.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt" id="pipeline">
+  <div class="wrap">
+    <div class="kicker">The zero-human pipeline</div>
+    <h2 class="title">One prompt. Tests running<br>in CI forever.</h2>
+    <p class="sub">No manual Actions YAML. No environment wiring. Your agent chains Reqly's MCP tools end to end in a single session.</p>
+    <div class="pipeline">
+      <div class="step reveal">
+        <div class="num">STEP 01</div>
+        <h3>Agent builds the collection</h3>
+        <p>"Read my Express routes and build a collection with assertions." The agent calls <code>create_collection</code> and <code>create_request</code> for every endpoint it finds in your code.</p>
+      </div>
+      <div class="step reveal">
+        <div class="num">STEP 02</div>
+        <h3>Agent writes the e2e flow</h3>
+        <p>"Write a flow for the login → checkout path." The agent calls <code>create_flow</code> and <code>add_flow_step</code>, runs it, and iterates until every step is green.</p>
+      </div>
+      <div class="step reveal">
+        <div class="num">STEP 03</div>
+        <h3>Agent ships it to CI</h3>
+        <p>"Export it to CI." One call to <code>export_flow_ci</code> writes a GitHub Actions workflow that installs Reqly, runs the flow, and uploads JUnit results.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="code">
+  <div class="wrap">
+    <div class="kicker">Git-native by design</div>
+    <h2 class="title">Collections are plain YAML.<br>In your repo. Diffable.</h2>
+    <p class="sub">No proprietary formats, no cloud account, no binary database. Collections live in <code style="font-family:var(--mono);font-size:15px;color:var(--accent)">.reqly/</code> and travel with your code via git. Your git provider is your RBAC.</p>
+    <div class="code-cols">
+      <div class="code-card reveal">
+        <div class="head"><span>.reqly/users/create-user.yaml</span><span class="lang">yaml</span></div>
+        <pre><span class="y-key">name</span>: <span class="y-str">create-user</span>
+<span class="y-key">method</span>: <span class="y-str">POST</span>
+<span class="y-key">url</span>: <span class="y-str">"<span class="y-var">{{baseUrl}}</span>/api/users"</span>
+<span class="y-key">headers</span>:
+  <span class="y-key">Content-Type</span>: <span class="y-str">application/json</span>
+<span class="y-key">body</span>:
+  <span class="y-key">email</span>: <span class="y-str">test@example.com</span>
+<span class="y-key">assertions</span>:
+  - <span class="y-key">field</span>: <span class="y-str">status</span>
+    <span class="y-key">operator</span>: <span class="y-str">eq</span>
+    <span class="y-key">value</span>: <span class="y-num">201</span>
+  - <span class="y-key">field</span>: <span class="y-str">body</span>
+    <span class="y-key">path</span>: <span class="y-str">user.id</span>
+    <span class="y-key">operator</span>: <span class="y-str">neq</span>
+    <span class="y-key">value</span>: <span class="y-str">""</span></pre>
+      </div>
+      <div class="code-card reveal">
+        <div class="head"><span>.reqly/flows/e2e-post.yaml</span><span class="lang">yaml</span></div>
+        <pre><span class="y-key">steps</span>:
+  - <span class="y-key">type</span>: <span class="y-str">run</span>
+    <span class="y-key">request</span>: <span class="y-str">auth/login</span>
+
+  - <span class="y-key">type</span>: <span class="y-str">extract</span>
+    <span class="y-key">from</span>: <span class="y-str">response.body.token</span>
+    <span class="y-key">into</span>: <span class="y-str">authToken</span>   <span class="y-cmt"># now {{authToken}}</span>
+
+  - <span class="y-key">type</span>: <span class="y-str">run</span>
+    <span class="y-key">request</span>: <span class="y-str">posts/create-post</span>
+
+  - <span class="y-key">type</span>: <span class="y-str">assert</span>
+    <span class="y-key">field</span>: <span class="y-str">status</span>
+    <span class="y-key">operator</span>: <span class="y-str">eq</span>
+    <span class="y-key">value</span>: <span class="y-num">201</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt" id="compare">
+  <div class="wrap">
+    <div class="kicker">Why Reqly</div>
+    <h2 class="title">Agent-first, not UI-first.</h2>
+    <p class="sub">Postman and Insomnia bolted AI onto a GUI. Reqly was headless from day one: the desktop app and web UI are windows into the same engine your agent drives.</p>
+    <div class="compare reveal">
+      <table>
+        <thead>
+          <tr><th>Capability</th><th class="hl">Reqly</th><th>Postman</th><th>Insomnia</th><th>Bruno</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>MCP server for AI agents</td><td class="hl"><span class="yes">✓ Native</span></td><td><span class="no">✗</span></td><td><span class="meh">Client only</span></td><td><span class="no">✗</span></td></tr>
+          <tr><td>Collections in your git repo</td><td class="hl"><span class="yes">✓ Plain YAML</span></td><td><span class="no">Cloud account</span></td><td><span class="no">NeDB binary</span></td><td><span class="yes">✓ .bru files</span></td></tr>
+          <tr><td>Cloud dependency</td><td class="hl"><span class="yes">None, ever</span></td><td><span class="no">Required</span></td><td><span class="meh">Optional</span></td><td><span class="yes">None</span></td></tr>
+          <tr><td>Auto-capture traffic (proxy, middleware, tunnel)</td><td class="hl"><span class="yes">✓ All three</span></td><td><span class="meh">Proxy only</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td></tr>
+          <tr><td>OpenAPI contract validation on every run</td><td class="hl"><span class="yes">✓</span></td><td><span class="meh">Paid</span></td><td><span class="meh">Partial</span></td><td><span class="no">✗</span></td></tr>
+          <tr><td>Agent exports CI workflow itself</td><td class="hl"><span class="yes">✓ One tool call</span></td><td><span class="no">✗</span></td><td><span class="no">✗</span></td><td><span class="no">Manual wiring</span></td></tr>
+          <tr><td>Price</td><td class="hl"><span class="yes">Free, MIT</span></td><td><span class="no">Per-seat</span></td><td><span class="meh">Freemium</span></td><td><span class="yes">Free</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="stats">
+      <div class="stat reveal"><div class="big">95%</div><div class="lbl">faster scaffolding 20 REST endpoints</div></div>
+      <div class="stat reveal"><div class="big">88%</div><div class="lbl">faster writing auth and validation tests</div></div>
+      <div class="stat reveal"><div class="big">86%</div><div class="lbl">faster chaining login → checkout flows</div></div>
+      <div class="stat reveal"><div class="big">10 min</div><div class="lbl">total onboarding vs 120 min manual</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="download">
+  <div class="wrap">
+    <div class="kicker">Get Reqly</div>
+    <h2 class="title">Install in seconds.<br>Runs on macOS, Linux, Windows.</h2>
+    <p class="sub">No account. No telemetry. No sync. Collections stay in your repo, secrets stay on your machine.</p>
+    <div class="dl-grid">
+      <div class="dl-card featured reveal">
+        <h3>🖥️ Desktop App <span class="tag purple">macOS</span></h3>
+        <p>Native desktop shell around the same headless engine. The MCP connection stays alive whether the window is open or closed.</p>
+        <div class="dl-cmd"><span><span class="dollar">$</span>brew install --cask reqly</span>
+          <button class="copy-btn" onclick="copyCmd(this, 'brew install --cask reqly')" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        </div>
+        <a class="btn primary" href="https://github.com/RutvikPansare/Reqly/releases/latest" target="_blank" rel="noopener" style="justify-content:center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download latest release
+        </a>
+      </div>
+      <div class="dl-card reveal">
+        <h3>📦 npm <span class="tag">all platforms</span></h3>
+        <p>CLI, MCP server, and localhost web UI in one global install. The fastest way to get your agent connected.</p>
+        <div class="dl-cmd"><span><span class="dollar">$</span>npm install -g getreqly</span>
+          <button class="copy-btn" onclick="copyCmd(this, 'npm install -g getreqly')" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        </div>
+        <div class="dl-cmd"><span><span class="dollar">$</span>reqly setup</span>
+          <button class="copy-btn" onclick="copyCmd(this, 'reqly setup')" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        </div>
+      </div>
+      <div class="dl-card reveal">
+        <h3>🍺 Homebrew <span class="tag">macOS CLI</span></h3>
+        <p>Prefer brew for everything? Tap and install the CLI directly. One command wires up Cursor, Claude Code, Gemini CLI, and Codex.</p>
+        <div class="dl-cmd"><span><span class="dollar">$</span>brew tap RutvikPansare/reqly</span>
+          <button class="copy-btn" onclick="copyCmd(this, 'brew tap RutvikPansare/reqly')" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        </div>
+        <div class="dl-cmd"><span><span class="dollar">$</span>brew install reqly</span>
+          <button class="copy-btn" onclick="copyCmd(this, 'brew install reqly')" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="wrap">
+    <h2 class="title">Stop clicking through API clients.<br><span style="background:linear-gradient(100deg,#60a5fa,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent">Let your agent do it.</span></h2>
+    <div class="hero-ctas">
+      <a class="btn primary" href="#download">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Get started free
+      </a>
+      <a class="btn" href="https://github.com/RutvikPansare/Reqly" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        View source
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>Reqly · MIT licensed · No cloud, no account, no telemetry</div>
+    <div class="foot-links">
+      <a href="https://github.com/RutvikPansare/Reqly" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.npmjs.com/package/getreqly" target="_blank" rel="noopener">npm</a>
+      <a href="https://github.com/RutvikPansare/Reqly/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/RutvikPansare/Reqly/issues" target="_blank" rel="noopener">Issues</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function copyCmd(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      setTimeout(() => { btn.innerHTML = orig; }, 1200);
+    });
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
