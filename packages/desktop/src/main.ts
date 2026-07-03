@@ -1,10 +1,13 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { spawn, spawnSync, ChildProcess } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { resolveReqly, bundledServerEntry, ResolvedReqly } from './reqly-resolver';
+import { openSetupWizard } from './SetupWizard';
+import { isSetupComplete } from './agent-config';
 
 // ---------------------------------------------------------------------------
 // Reqly Desktop - thin Electron launcher around the existing `reqly start`
@@ -81,6 +84,8 @@ function buildTrayMenu(): Menu {
     { label: 'Open Reqly', click: showAndFocus },
     { label: readActiveProjectLabel(), enabled: false },
     { type: 'separator' },
+    { label: 'AI Agent Connections...', click: () => openSetupWizard() },
+    { type: 'separator' },
     {
       label: 'Launch at login',
       type: 'checkbox',
@@ -122,17 +127,12 @@ function loadingHtml(message: string): string {
     </html>`)}`;
 }
 
-// Detects the `reqly` CLI on PATH without spawning the real server. We don't
-// bundle Node/the server into the Electron app (T-124) - the user is expected
-// to have installed the CLI globally (`npm install -g reqly-app`), so we need
-// to tell the difference between "not running yet" and "not installed at all"
-// before attempting to spawn it.
-function reqlyCliIsInstalled(): boolean {
-  const probe = process.platform === 'win32' ? spawnSync('where', ['reqly']) : spawnSync('which', ['reqly']);
-  return probe.status === 0;
-}
-
-let cliMissing = false;
+// T-233: the server command is resolved with a priority chain instead of
+// requiring a pre-installed CLI: Homebrew CLI > npm CLI on PATH > the binary
+// bundled inside this app. Non-technical users who only downloaded the DMG
+// get the bundled fallback; developers with the CLI keep using it so
+// `brew upgrade` / `npm update -g` keeps their agents current.
+let serverMissing = false;
 
 async function spawnServerIfNeeded(): Promise<void> {
   const alreadyRunning = lockFilePointsToLiveServer() || (await probeServer());
@@ -141,30 +141,42 @@ async function spawnServerIfNeeded(): Promise<void> {
     return;
   }
 
-  if (!reqlyCliIsInstalled()) {
-    console.error('[reqly-desktop] `reqly` CLI not found on PATH - cannot spawn the server.');
-    cliMissing = true;
+  const resolved: ResolvedReqly | null = resolveReqly();
+  if (!resolved) {
+    console.error('[reqly-desktop] No reqly server found: no CLI on PATH, no bundled binary.');
+    serverMissing = true;
     return;
   }
 
-  console.log('[reqly-desktop] No server detected - spawning `reqly start`.');
-  spawnedServer = spawn('reqly', ['start'], {
-    stdio: 'pipe',
-    detached: false,
-    env: { ...process.env, REQLY_DESKTOP: '1' },
-  });
+  console.log(`[reqly-desktop] No server detected - starting via ${resolved.display}.`);
+  if (resolved.kind === 'bundled') {
+    // Run the bundled server with this Electron binary in Node mode. Spawning
+    // process.execPath directly (instead of the bin/ shim) keeps stdio wiring
+    // identical across platforms; the shim exists for AI agent configs.
+    spawnedServer = spawn(process.execPath, [bundledServerEntry()], {
+      stdio: 'pipe',
+      detached: false,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', REQLY_DESKTOP: '1' },
+    });
+  } else {
+    spawnedServer = spawn(resolved.command, ['start'], {
+      stdio: 'pipe',
+      detached: false,
+      env: { ...process.env, REQLY_DESKTOP: '1' },
+    });
+  }
   spawnedServer.stdout?.on('data', d => console.log(`[reqly] ${d.toString().trim()}`));
   spawnedServer.stderr?.on('data', d => console.error(`[reqly] ${d.toString().trim()}`));
   spawnedServer.on('error', err => {
-    console.error('[reqly-desktop] Failed to spawn `reqly start`:', err.message);
+    console.error('[reqly-desktop] Failed to spawn the reqly server:', err.message);
   });
 }
 
 // Polls the server every 200ms for up to 10s, then loads the UI. If the server
 // never comes up the window stays on the loading screen with an error note.
 async function waitForServerAndLoad(win: BrowserWindow): Promise<void> {
-  if (cliMissing) {
-    await win.loadURL(loadingHtml('Reqly CLI not found. Install it first: npm install -g reqly-app, then reopen this app.'));
+  if (serverMissing) {
+    await win.loadURL(loadingHtml('No Reqly server found (bundled binary missing and no CLI installed). Reinstall the app, or run: npm install -g getreqly'));
     return;
   }
 
@@ -234,6 +246,11 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   if (process.platform === 'darwin') app.dock?.hide();
+
+  // First launch: walk the user through connecting their AI agents (T-233).
+  // Suppressed once the wizard is completed or skipped (setupComplete flag);
+  // reachable again from the tray menu at any time.
+  if (!isSetupComplete()) openSetupWizard();
 
   // Checks GitHub Releases for a newer DMG/EXE build and downloads it in the
   // background. Never restarts without explicit consent - 'update-downloaded'

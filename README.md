@@ -125,21 +125,26 @@ Reqly shifts API testing from a tedious manual chore to a rapid, agent-driven wo
 
 ## Installation (45 seconds)
 
-Reqly runs on macOS, Linux, and Windows.
+Reqly runs on macOS, Linux, and Windows. Three ways in:
 
 ```bash
-# On any platform via npm
+# 1. On any platform via npm (CLI + MCP server + web UI)
 npm install -g getreqly
 
-# On macOS via Homebrew (CLI only)
+# 2. On macOS via Homebrew (CLI only)
 brew tap RutvikPansare/reqly
 brew install reqly
 
-# On macOS via Homebrew (Desktop App + CLI)
+# 3. On macOS via Homebrew (Desktop App + CLI)
 brew install --cask reqly
 ```
 
-Then wire it up to your AI tool:
+Or **download the DMG directly** from [GitHub Releases](https://github.com/RutvikPansare/Reqly/releases/latest) - no npm, no Homebrew, no terminal required. The desktop app bundles its own copy of the Reqly server, so it is fully self-contained.
+
+**Connecting your AI agent:**
+
+- **Desktop app users:** on first launch a setup wizard appears ("Connect your AI Agent") with one-click buttons for Claude Desktop, Cursor, Windsurf, and VS Code. Each button writes that agent's MCP config for you - no JSON editing. Reachable again any time from the tray menu ("AI Agent Connections..."). If you have the CLI installed (Homebrew or npm), the wizard points agents at your CLI so `brew upgrade` keeps them current; otherwise it points them at the bundled server.
+- **CLI users:** run
 
 ```bash
 reqly setup
@@ -705,9 +710,9 @@ Yes. The installer is unsigned for now (no EV certificate yet) - this is SmartSc
 </details>
 
 <details>
-<summary><strong>I installed the desktop app but it says "Reqly CLI not found" - what do I do?</strong></summary>
+<summary><strong>Does the desktop app need the CLI installed?</strong></summary>
 <br>
-The desktop app is a launcher and window around the same <code>reqly</code> CLI server - it doesn't bundle Node or the server itself. Install the CLI globally first: <code>npm install -g reqly-app</code>, then reopen the desktop app.
+No. Since T-233 the desktop app bundles its own copy of the Reqly server and runs it with the app's own runtime - no Node, npm, or Homebrew required. If you <em>do</em> have the CLI installed (Homebrew or npm), the app prefers it automatically (priority: Homebrew CLI, then npm CLI on PATH, then the bundled server), so your agents stay on whatever version <code>brew upgrade</code> / <code>npm update -g</code> installs. The optional "Install CLI" button in the setup wizard symlinks the bundled server to <code>/usr/local/bin/reqly</code> for terminal use.
 </details>
 
 <details>

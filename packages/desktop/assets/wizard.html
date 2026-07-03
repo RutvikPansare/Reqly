@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reqly Setup</title>
+<style>
+  :root {
+    --bg: #06090f; --panel: #0d1420; --panel-2: #111a2a;
+    --border: #1b2637; --border-bright: #27364e;
+    --text: #e7ecf5; --dim: #97a3b8; --faint: #5b6880;
+    --blue: #2563eb; --blue-mid: #3b82f6; --blue-soft: #60a5fa; --blue-pale: #93c5fd;
+    --green: #34d399; --red: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 34px 32px 26px;
+    user-select: none;
+  }
+  h1 { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+  .sub { color: var(--dim); font-size: 13px; line-height: 1.55; margin-top: 8px; }
+  .source {
+    margin-top: 14px; font-family: ui-monospace, monospace; font-size: 11.5px;
+    color: var(--blue-pale); background: var(--panel); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 12px;
+  }
+  .source.warn { color: var(--red); }
+  .agents { margin-top: 20px; display: grid; gap: 10px; }
+  .agent {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 13px 16px; cursor: pointer; width: 100%; text-align: left;
+    color: var(--text); font-size: 14px; font-weight: 600;
+    transition: border-color .15s;
+  }
+  .agent:hover { border-color: var(--blue-mid); }
+  .agent .mark {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    background: var(--panel-2); border: 1px solid var(--border-bright);
+    display: grid; place-items: center; color: var(--blue-soft);
+    font-size: 13px; font-weight: 700;
+  }
+  .agent .meta { flex: 1; min-width: 0; }
+  .agent .hint { display: block; font-size: 11px; font-weight: 400; color: var(--faint); margin-top: 2px; }
+  .agent .status { font-size: 12px; color: var(--faint); flex-shrink: 0; }
+  .agent .status.ok { color: var(--green); }
+  .agent .status.err { color: var(--red); }
+  .msg { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--dim); min-height: 34px; }
+  .msg.ok { color: var(--green); }
+  .msg.err { color: var(--red); }
+  .footer { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  button.flat {
+    background: none; border: none; color: var(--faint); font-size: 13px; cursor: pointer;
+  }
+  button.flat:hover { color: var(--dim); }
+  .btn {
+    background: var(--blue); border: 1px solid var(--blue-mid); color: #fff;
+    font-size: 13.5px; font-weight: 600; border-radius: 8px; padding: 9px 18px; cursor: pointer;
+  }
+  .btn:hover { background: var(--blue-mid); }
+  .btn.secondary { background: var(--panel); border-color: var(--border-bright); color: var(--text); }
+  .btn.secondary:hover { border-color: var(--blue-mid); }
+  #path-row { margin-top: 16px; display: none; align-items: center; gap: 10px; }
+  #path-row .note { font-size: 11.5px; color: var(--faint); line-height: 1.45; flex: 1; }
+</style>
+</head>
+<body>
+  <h1>Connect your AI agent</h1>
+  <p class="sub">Reqly runs as an MCP server your agent calls to fire requests, build collections, and run flows. Pick your tools - Reqly writes their config for you. No terminal needed.</p>
+
+  <div class="source" id="source">Detecting Reqly server...</div>
+
+  <div class="agents" id="agents"></div>
+
+  <div id="path-row">
+    <span class="note">Want <code>reqly</code> in your terminal too? Adds a link in /usr/local/bin (asks for your password once).</span>
+    <button class="btn secondary" id="install-path">Install CLI</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="footer">
+    <button class="flat" id="skip">Skip for now</button>
+    <button class="btn" id="done">Done</button>
+  </div>
+
+<script>
+  const api = window.reqlyWizard;
+  const $ = id => document.getElementById(id);
+
+  function agentButton(agent) {
+    const btn = document.createElement('button');
+    btn.className = 'agent';
+    btn.innerHTML =
+      '<span class="mark">' + agent.name.slice(0, 1) + '</span>' +
+      '<span class="meta">' + agent.name +
+      '<span class="hint">' + agent.configPath + '</span></span>' +
+      '<span class="status">' + (agent.detected ? 'detected' : 'not detected') + '</span>';
+    const status = btn.querySelector('.status');
+    btn.addEventListener('click', async () => {
+      status.textContent = 'connecting...';
+      status.className = 'status';
+      const res = await api.connect(agent.id);
+      status.textContent = res.ok ? '✓ connected' : 'failed';
+      status.className = 'status ' + (res.ok ? 'ok' : 'err');
+      const msg = $('msg');
+      msg.textContent = res.message;
+      msg.className = 'msg ' + (res.ok ? 'ok' : 'err');
+    });
+    return btn;
+  }
+
+  (async () => {
+    const state = await api.state();
+    const source = $('source');
+    if (state.source) {
+      source.textContent = 'Server: ' + state.source.display;
+    } else {
+      source.textContent = 'No Reqly server found. Install the CLI: npm install -g getreqly';
+      source.className = 'source warn';
+    }
+    const list = $('agents');
+    state.agents.forEach(a => list.appendChild(agentButton(a)));
+    if (state.offerPathInstall) $('path-row').style.display = 'flex';
+  })();
+
+  $('install-path').addEventListener('click', async () => {
+    const res = await api.installPath();
+    const msg = $('msg');
+    msg.textContent = res.message;
+    msg.className = 'msg ' + (res.ok ? 'ok' : 'err');
+  });
+
+  $('skip').addEventListener('click', () => api.done());
+  $('done').addEventListener('click', () => api.done());
+</script>
+</body>
+</html>

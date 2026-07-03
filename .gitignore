@@ -112,3 +112,4 @@ example/insomnia/
 test-spec.yaml
 packages/desktop/release/
 packages/desktop/packages/
+packages/desktop/resources/server/

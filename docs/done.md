@@ -1,5 +1,15 @@
 # Reqly - Done
 
+## 2026-07-03
+
+- [x] **T-239** Bundle server binary + 1-click AI agent setup wizard (queued in todo.md as "T-233"; renumbered - T-233 was already used by the landing page task)
+  - **Bundled server:** the Electron app now ships a full copy of the server. `scripts/build-desktop-resources.sh` stages root `dist/` + production-only `node_modules` (native modules rebuilt for Electron's ABI by electron-builder's @electron/rebuild step) into `packages/desktop/resources/server/` (gitignored); `electron-builder.yml` packs it via `extraResources` along with `resources/bin/` shims. The shims (`bin/reqly`, `bin/reqly.cmd`) run the bundled server through the app's own Electron executable in `ELECTRON_RUN_AS_NODE` mode - no pkg/ncc compile step, no system Node required, and the bundled server is always version-matched to the app. Electron bumped 33 -> 37 (Node 22.21) to satisfy the server's `engines: >=22.19` (undici 8 requires it).
+  - **PATH detection** (`src/reqly-resolver.ts`): Homebrew CLI (`/opt/homebrew/bin/reqly`, `/usr/local/bin/reqly`) > npm CLI via `which`/`where` > bundled shim. Used at launch (spawn) and at Connect time (agent configs). Developers with a CLI keep it; DMG-only users transparently get the bundled server.
+  - **Setup wizard** (`src/SetupWizard.ts` + `assets/wizard.html` + `wizard-preload.ts`): shown on first launch (suppressed by `setupComplete: true` in `~/.reqly/config.json`), reachable from tray ("AI Agent Connections..."). One-click MCP config injection (`src/agent-config.ts`) for Claude Desktop, Cursor, Windsurf, VS Code - merges into existing configs, never clobbers other entries, same shapes as `reqly setup` (`--project-dir ${workspaceFolder}` for macro editors, plain `start` for Claude Desktop). Implemented as plain Electron HTML+preload rather than the spec's React `.tsx` (desktop package has no React toolchain; not worth adding one for one screen).
+  - **"Install CLI" button:** symlinks the bundled shim to `/usr/local/bin/reqly`; plain symlink first, macOS admin prompt (osascript) on permission failure; only offered when the bundled server is the active source.
+  - **Smoke-tested:** desktop tsc build green; config injection verified against a fake `$HOME` (merge preserves existing servers; per-agent args correct; `setupComplete` round-trips); staged bundle boots under Electron-as-Node; full electron-builder package built and `Reqly.app/Contents/Resources/bin/reqly status` runs the bundled server end to end. DMG imaging step itself failed only on this machine's broken `python` shim (`xcode-select` error in dmgbuild) - the .app and .zip artifacts built fine; CI/another machine will produce the DMG.
+  - **Docs:** README installation section (3 install paths + wizard), stale "CLI not found" FAQ replaced, llms.txt "Desktop App and Server Resolution" section (two-server model, PATH priority, `responses.json` bridge), knowledge.md desktop entries rewritten.
+
 ## 2026-07-02
 
 - [x] **T-238** Persist MCP-executed responses to `responses.json` synchronously

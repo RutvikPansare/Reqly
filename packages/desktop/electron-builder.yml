@@ -1,11 +1,25 @@
 appId: com.reqly.app
 productName: Reqly
-electronVersion: 33.4.11
+electronVersion: 37.10.3
 directories:
   output: release
 files:
   - dist/**
+  - assets/**
+  # electron-updater and friends are hoisted to the workspace root.
   - ../../node_modules/**
+# T-233: the standalone server ships inside the app so the DMG works with no
+# npm/Homebrew install. Staged by scripts/build-desktop-resources.sh:
+#   resources/server/  - root dist/ + production node_modules (natives built
+#                        against Electron's ABI)
+#   resources/bin/     - reqly / reqly.cmd shims that run the bundled server
+#                        via the Electron executable in ELECTRON_RUN_AS_NODE
+#                        mode. AI agent MCP configs point at these.
+extraResources:
+  - from: resources/server
+    to: server
+  - from: resources/bin
+    to: bin
 mac:
   category: public.app-category.developer-tools
   target: [dmg, zip]

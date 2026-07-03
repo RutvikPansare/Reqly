@@ -6,6 +6,12 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-03 - Bundled server runs via ELECTRON_RUN_AS_NODE shim, not a pkg/ncc-compiled binary
+
+**Decision:** The desktop app's bundled server (T-239, queued as T-233) is not compiled with `pkg` or `@vercel/ncc`. Instead we ship the plain server `dist/` plus production `node_modules` as `extraResources`, and a tiny `bin/reqly` shell shim that executes the app's own Electron binary with `ELECTRON_RUN_AS_NODE=1` pointing at the bundled entry. AI agent MCP configs point at the shim.
+
+**Why:** (1) `pkg` is archived and fights ESM - the server is `type: module`; (2) `ncc` produces a JS bundle, not an executable, so it solves nothing without a runtime; (3) Electron already ships a full Node runtime - reusing it guarantees the server always runs on the exact Node version the app was tested with, with zero extra download or compile step; (4) native modules (node-pty) get rebuilt for Electron's ABI once by electron-builder's standard @electron/rebuild pass and work for both the GUI and the shim; (5) this is the same pattern VS Code uses for its `code` CLI. Cost: the shim requires the app bundle to stay intact (agents break if the user deletes the app), which is equally true of any bundled binary. Electron was bumped 33 -> 37 so its Node (22.21) satisfies the server's `engines >= 22.19`.
+
 ## 2026-07-02 - Electron app to bundle server binary + add 1-click AI agent setup wizard
 
 **Decision:** Reverse the 2026-06-29 decision to not bundle the server. The Electron app will bundle a pre-compiled standalone server binary and ship a setup wizard that injects MCP config for AI agents without any terminal interaction.

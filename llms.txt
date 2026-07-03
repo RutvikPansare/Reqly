@@ -305,6 +305,13 @@ requests:
         value: 201
 ```
 
+## Desktop App and Server Resolution
+
+- **The desktop app is self-contained (T-233).** The Electron app ships a bundled copy of the Reqly server (root `dist/` + production `node_modules` inside the app's resources) plus a `bin/reqly` shim that runs it via the Electron executable in `ELECTRON_RUN_AS_NODE` mode. No system Node, npm, or Homebrew is required to use the DMG.
+- **Server binary resolution priority** (used by the desktop app at launch and by the setup wizard when writing agent configs): 1. Homebrew CLI (`/opt/homebrew/bin/reqly`, `/usr/local/bin/reqly`), 2. npm/global CLI found on PATH (`which reqly` / `where reqly`), 3. bundled shim at `<app resources>/bin/reqly` (`reqly.cmd` on Windows). The first found is authoritative. Agents automating Reqly on a machine with the desktop app should assume MCP configs may point at any of these three; all speak the identical CLI/MCP surface because they are the same codebase.
+- **Setup wizard:** first launch of the desktop app opens "Connect your AI Agent" with one-click MCP config injection for Claude Desktop, Cursor, Windsurf, and VS Code. It writes the same config shapes as `reqly setup` (`--project-dir ${workspaceFolder}` for VS Code-based editors, plain `start` for standalone hosts). Suppressed after completion via `setupComplete: true` in `~/.reqly/config.json`; reachable again from the tray menu.
+- **Two-server model:** the Electron app may run its own engine instance while an agent-launched `reqly start` owns port 4242 (Electron falls back to an OS-assigned port). Both processes read and write the same on-disk state in `<projectDir>/.reqly/` - collections (YAML), `history.ndjson`, and `responses.json`. `responses.json` is the sync bridge: responses executed via MCP are persisted there synchronously, so the UI (either server) can render the latest response without in-process coupling.
+
 ## UI and CLI
 
 - **UI:** The visual UI is available at `http://localhost:4242`.

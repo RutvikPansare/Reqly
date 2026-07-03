@@ -1,0 +1,26 @@
+#!/bin/bash
+# Reqly bundled-server shim. Shipped inside the Electron app at
+# <Resources>/bin/reqly. Runs the bundled Reqly server using the Electron
+# executable in Node mode (ELECTRON_RUN_AS_NODE), so no system Node or npm
+# install is required. AI agent MCP configs written by the setup wizard point
+# their `command` at this file.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENTRY="$DIR/../server/dist/server/index.js"
+
+if [ "$(uname)" = "Darwin" ]; then
+  # macOS: Reqly.app/Contents/Resources/bin -> Reqly.app/Contents/MacOS/Reqly
+  ELECTRON="$DIR/../../MacOS/Reqly"
+else
+  # Linux: <install-root>/resources/bin -> <install-root>/reqly
+  ELECTRON="$DIR/../../reqly"
+fi
+
+if [ ! -x "$ELECTRON" ]; then
+  echo "reqly shim: Electron executable not found at $ELECTRON" >&2
+  exit 1
+fi
+
+export ELECTRON_RUN_AS_NODE=1
+exec "$ELECTRON" "$ENTRY" "$@"
