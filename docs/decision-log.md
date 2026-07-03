@@ -6,6 +6,23 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-02 - Electron app to bundle server binary + add 1-click AI agent setup wizard
+
+**Decision:** Reverse the 2026-06-29 decision to not bundle the server. The Electron app will bundle a pre-compiled standalone server binary and ship a setup wizard that injects MCP config for AI agents without any terminal interaction.
+
+**Why:** The original decision prioritised developer convenience (keep the CLI and the GUI on the same npm version). But non-technical users (PMs, QAs) who download the DMG hit an immediate dead end - they need npm or Homebrew just to get past the loading screen. Since Reqly's value proposition now extends to non-technical users who want to use AI agents, the "install CLI first" requirement is an adoption blocker.
+
+**Architecture:**
+- Electron app bundles a standalone server binary in `packages/desktop/resources/bin/reqly` (compiled for each platform via `pkg` or `@vercel/ncc`)
+- On first launch, a setup wizard appears: "Connect your AI Agent" with buttons for Claude Desktop, Cursor, Windsurf
+- Each button writes the MCP config file for that agent. Path priority: Homebrew CLI > npm CLI (detected via `which reqly`) > bundled binary absolute path. This ensures developers who already have the CLI use it (so `brew upgrade` keeps agents current), while non-technical users transparently get the bundled path
+- Optional "Install `reqly` in PATH" button for developers who want terminal access - creates a symlink from `/usr/local/bin/reqly` to the bundled binary (one-time permission prompt)
+- Versioning is preserved: the bundled binary and the Electron app ship together as one artefact, so they are always the same version
+
+**Supersedes:** 2026-06-29 decision "Desktop app requires the `reqly` CLI pre-installed, doesn't bundle it"
+
+---
+
 ## 2026-07-02 - Multi-project workspace storage: separate root vs. inside repo
 
 **Decision:** Cross-repo workspace files and flows live in `~/.reqly/workspaces/<name>/`. Individual repo collections stay in `<repoDir>/.reqly/` as today.

@@ -48,6 +48,7 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
 
     // Store in cache and history
     context.responseStore.set(req.name, res);
+    context.responseStore.saveSync();
     context.historyStore.append(req, res, { collectionName: args.collectionName });
 
     // Compute diff against the previous run (the entry we just appended is [0],

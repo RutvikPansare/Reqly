@@ -2,6 +2,22 @@
 
 ## 2026-07-02
 
+- [x] **T-238** Persist MCP-executed responses to `responses.json` synchronously
+  - After every `run_request` and `run_collection` call handled by the MCP server, we now write the response(s) to `.reqly/responses.json` synchronously.
+  - This ensures that the Electron UI (which runs on a separate ephemeral port and relies on file watchers) instantly picks up MCP-executed responses.
+  - Added `saveSync()` method to `ResponseStore`.
+  - Updated `express.ts` watcher to listen for `responses.json` changes.
+  - Added TDD tests in `response-store.test.ts`.
+
+
+- [x] **T-237** Bug: JUnit reporter reported errored requests as passing (false green in CI)
+  - `toTestCases` in `reporters/junit.ts`: a request that threw (network failure, script error) arrives with `assertions: []` and `response: null`, so it hit the implicit-testcase branch where `status 0 >= 500` is false and was emitted as a *passing* testcase. `result.error` was ignored. CI would go green on a connection failure.
+  - Fix: if `result.error` is set, emit a single failing testcase carrying the error message. TDD test added to `junit.test.ts`.
+
+- [x] **T-236** Bug: multipart requests dropped auth headers
+  - `http-executor.ts`: the multipart branch fires `fetch` before the auth-injection block (Bearer/Basic/API Key/OAuth2/AWS SigV4), which lived after the multipart early-return. Multipart uploads to authenticated endpoints silently sent no `Authorization` / `x-api-key` (mTLS was unaffected - its dispatcher is resolved earlier).
+  - Fix: extracted auth injection into `applyAuthHeaders()` and call it in both the multipart path (before its fetch) and the generic path; deduped the generic path to reuse the already-resolved `effectiveAuthEarly`. Two TDD tests added (request-level Bearer, collection-level API key on multipart).
+
 - [x] **T-235** Landing page redesign: blue-only flat palette + interactive graphics
   - Removed all color gradients (blue-purple text/button/logo gradients gone); palette is now shades of blue on dark, flat 1px-border design. Green/red/amber retained only as pass/fail/status semantics.
   - Replaced emoji feature icons with inline SVG line icons.

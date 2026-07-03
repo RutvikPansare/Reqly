@@ -38,6 +38,54 @@ function resolveScriptFile(scriptFile: string, baseDir: string): { script?: stri
   return { script: fs.readFileSync(resolved, 'utf8') };
 }
 
+// Inject auth into the outgoing headers in place. Shared by the multipart and
+// the generic (JSON/GraphQL/string) request paths so both honour request-level
+// and inherited collection auth. AWS SigV4 body-hash signing only applies when
+// the body is a string; multipart bodies (FormData) are signed header-only.
+function applyAuthHeaders(
+  effectiveAuth: AuthProfile | undefined,
+  headers: Record<string, string>,
+  url: string,
+  method: string,
+  body: unknown,
+): void {
+  if (!effectiveAuth) return;
+  const auth: AuthProfile = { ...effectiveAuth, credentials: effectiveAuth.credentials || {} };
+  if (auth.type === AuthType.BEARER && auth.credentials.token) {
+    headers['Authorization'] = `Bearer ${auth.credentials.token}`;
+  } else if (auth.type === AuthType.BASIC && auth.credentials.username) {
+    const { username, password = '' } = auth.credentials;
+    headers['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+  } else if (auth.type === AuthType.API_KEY && auth.credentials.key) {
+    headers['x-api-key'] = auth.credentials.key;
+  } else if (auth.type === AuthType.OAUTH2) {
+    const { accessToken } = auth.credentials;
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+  } else if (auth.type === AuthType.AWS_V4) {
+    const { accessKey, secretKey, region, service, sessionToken } = auth.credentials;
+    if (accessKey && secretKey) {
+      const parsed = new URL(url);
+      const signingOpts: Record<string, any> = {
+        host: parsed.host,
+        method,
+        path: parsed.pathname + (parsed.search || ''),
+        service: service || 'execute-api',
+        region: region || 'us-east-1',
+        headers: { ...headers },
+      };
+      if (body && typeof body === 'string') {
+        signingOpts.body = body;
+      }
+      const awsCreds: Record<string, string> = { accessKeyId: accessKey, secretAccessKey: secretKey };
+      if (sessionToken) awsCreds.sessionToken = sessionToken;
+      aws4.sign(signingOpts, awsCreds);
+      Object.assign(headers, signingOpts.headers);
+    }
+  }
+}
+
 
 export async function execute(
   config: RequestConfig,
@@ -213,6 +261,10 @@ export async function execute(
     // undici/fetch sets multipart/form-data with the correct boundary automatically.
     body = formData as unknown as string;
 
+    // Inject auth before firing. effectiveAuthEarly is the resolved profile with
+    // the same precedence used by the generic path below.
+    applyAuthHeaders(effectiveAuthEarly, headers, url, reqMut._method, body);
+
     const startTime = Date.now();
     let response;
     try {
@@ -323,65 +375,15 @@ export async function execute(
     }
   }
 
-  // Resolve effective auth with precedence:
+  // Inject auth with precedence:
   //   request-level auth (resolved profile OR inline, including explicit none) > collection auth > none.
-  // An explicit `type: 'none'` on the request opts out of inherited collection auth entirely.
-  // The caller is responsible for resolving any profileId (request or collection) into a
-  // concrete {type, credentials} object before passing it here - the executor holds no AuthManager.
-  let effectiveAuth: AuthProfile | undefined;
-  if (config.auth?.type === 'none') {
-    effectiveAuth = undefined;
-  } else if (auth) {
-    effectiveAuth = auth;
-  } else if (config.auth) {
-    effectiveAuth = config.auth as AuthProfile;
-  } else if (config.authProfileId) {
-    // Request specified a profile but the caller did not resolve it; do not inherit.
-    effectiveAuth = undefined;
-  } else if (collectionAuth && collectionAuth.type !== ('none' as AuthType)) {
-    effectiveAuth = collectionAuth;
-  }
-
-  if (effectiveAuth) {
-    const auth: AuthProfile = { ...effectiveAuth, credentials: effectiveAuth.credentials || {} };
-    if (auth.type === AuthType.BEARER && auth.credentials.token) {
-      headers['Authorization'] = `Bearer ${auth.credentials.token}`;
-    } else if (auth.type === AuthType.BASIC && auth.credentials.username) {
-      const { username, password = '' } = auth.credentials;
-      headers['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-    } else if (auth.type === AuthType.API_KEY && auth.credentials.key) {
-      headers['x-api-key'] = auth.credentials.key;
-    } else if (auth.type === AuthType.OAUTH2) {
-      const { accessToken, expiresAt } = auth.credentials;
-      // Only inject if we have a token; the executor does not refresh here -
-      // callers (express route / MCP tool) should call AuthManager.refreshOAuth2Token
-      // before execute() when the token is expired. Callers can detect expiry via:
-      //   expiresAt && Date.now() > Number(expiresAt) - 60_000
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
-    } else if (auth.type === AuthType.AWS_V4) {
-      const { accessKey, secretKey, region, service, sessionToken } = auth.credentials;
-      if (accessKey && secretKey) {
-        const parsed = new URL(url);
-        const signingOpts: Record<string, any> = {
-          host: parsed.host,
-          method: reqMut._method,
-          path: parsed.pathname + (parsed.search || ''),
-          service: service || 'execute-api',
-          region: region || 'us-east-1',
-          headers: { ...headers },
-        };
-        if (body && typeof body === 'string') {
-          signingOpts.body = body;
-        }
-        const awsCreds: Record<string, string> = { accessKeyId: accessKey, secretAccessKey: secretKey };
-        if (sessionToken) awsCreds.sessionToken = sessionToken;
-        aws4.sign(signingOpts, awsCreds);
-        Object.assign(headers, signingOpts.headers);
-      }
-    }
-  }
+  // effectiveAuthEarly (resolved above for the mTLS dispatcher) already encodes this
+  // precedence. An explicit `type: 'none'` on the request opts out of inherited
+  // collection auth entirely. The caller is responsible for resolving any profileId
+  // (request or collection) into a concrete {type, credentials} object before passing
+  // it here - the executor holds no AuthManager. OAuth2 tokens are injected as-is;
+  // callers must call AuthManager.refreshOAuth2Token before execute() when expired.
+  applyAuthHeaders(effectiveAuthEarly, headers, url, reqMut._method, body);
 
   const startTime = Date.now();
   let response;

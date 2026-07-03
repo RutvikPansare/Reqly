@@ -20,6 +20,13 @@ function toTestCases(result: RequestRunResult, classname: string): TestCase[] {
   const time = result.duration / 1000;
   const cases: TestCase[] = [];
 
+  // A request that threw (network failure, script error) has no assertions and no
+  // response. Report it as a single failing testcase so CI does not go green on a
+  // request that never completed.
+  if (result.error) {
+    return [{ name: result.requestName, classname, time, failureMessage: result.error }];
+  }
+
   if (result.assertions.length === 0 && !result.response?.testResults?.length) {
     const status = result.response?.status ?? 0;
     const implicitFailed = status >= 500;

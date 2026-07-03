@@ -6,7 +6,7 @@ function makeContext(overrides: any = {}) {
     environmentManager: { getActiveEnvironment: async () => null },
     authManager: { getProfile: async () => null },
     executeRequest: async () => ({ status: 200 }),
-    responseStore: { set: vi.fn(), get: () => undefined },
+    responseStore: { set: vi.fn(), get: () => undefined, saveSync: vi.fn() },
     historyStore: { append: vi.fn(), getLastTwo: () => [] },
     specLoader: { load: async () => ({}) },
     ...overrides,

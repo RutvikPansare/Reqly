@@ -51,5 +51,34 @@ describe('ResponseStore', () => {
       expect(loadedRes?.status).toBe(201);
       expect(loadedRes?.body).toEqual({ ok: true });
     });
+
+    it('should save synchronously with saveSync', () => {
+      const store1 = new ResponseStore(tempDir);
+      const res: HttpResponse = { status: 202, latency: 5, headers: {}, body: { sync: true }, timestamp: new Date().toISOString() };
+      store1.set('reqSync', res);
+      store1.saveSync();
+
+      const store2 = new ResponseStore(tempDir);
+      const loadedRes = store2.get('reqSync');
+      expect(loadedRes).toBeDefined();
+      expect(loadedRes?.status).toBe(202);
+      expect(loadedRes?.body).toEqual({ sync: true });
+    });
+
+    it('should reload from disk', () => {
+      const store1 = new ResponseStore(tempDir);
+      const store2 = new ResponseStore(tempDir);
+
+      const res: HttpResponse = { status: 203, latency: 5, headers: {}, body: { reloaded: true }, timestamp: new Date().toISOString() };
+      store1.set('reqReload', res);
+      store1.saveSync();
+
+      expect(store2.get('reqReload')).toBeUndefined();
+      store2.reloadFromDisk();
+      
+      const loadedRes = store2.get('reqReload');
+      expect(loadedRes).toBeDefined();
+      expect(loadedRes?.status).toBe(203);
+    });
   });
 });

@@ -508,6 +508,30 @@ describe('http-executor', () => {
       expect(headers['Content-Type']).toBeUndefined();
       expect(headers['content-type']).toBeUndefined();
     });
+
+    it('injects request-level Bearer auth on multipart requests', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        auth: { type: AuthType.BEARER, credentials: { token: 'multi-token' } },
+        body: { type: 'multipart', parts: [{ name: 'username', type: 'text', value: 'alice' }] },
+      };
+      await execute(config);
+      expect(headersOf().Authorization).toBe('Bearer multi-token');
+    });
+
+    it('inherits collection-level API key auth on multipart requests', async () => {
+      mockOkResponse();
+      const collAuth: AuthProfile = { id: 'c1', name: 'col', type: AuthType.API_KEY, credentials: { key: 'secret-key' } };
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'http://example.com',
+        body: { type: 'multipart', parts: [{ name: 'username', type: 'text', value: 'alice' }] },
+      };
+      await execute(config, undefined, undefined, true, undefined, undefined, collAuth);
+      expect(headersOf()['x-api-key']).toBe('secret-key');
+    });
   });
 
   describe('mTLS auth', () => {

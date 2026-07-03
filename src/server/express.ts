@@ -102,6 +102,9 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       } else if (p.endsWith('history.ndjson')) {
         context.historyStore.reloadFromDisk();
         watcherPendingEvents.add('history');
+      } else if (p.endsWith('responses.json')) {
+        context.responseStore.reloadFromDisk();
+        watcherPendingEvents.add('responses');
       } else if (p.endsWith('.reqly')) {
         watcherPendingEvents.add('collections');
       }

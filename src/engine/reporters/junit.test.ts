@@ -121,6 +121,30 @@ describe('toJUnit', () => {
     expect(xml).toContain('<failure message="status 503 &gt;= 500">status 503 &gt;= 500</failure>');
   });
 
+  it('emits a failure for a request that errored (no response) with no assertions', () => {
+    const result = baseResult({
+      total: 1,
+      passed: 0,
+      failed: 1,
+      results: [
+        {
+          requestName: 'get-todo',
+          response: null,
+          assertions: [],
+          passed: false,
+          duration: 3,
+          error: 'RequestError: fetch failed (ECONNREFUSED)'
+        }
+      ]
+    });
+
+    const xml = toJUnit(result);
+
+    expect(xml).toContain('<testsuite name="my-collection" tests="1" failures="1"');
+    expect(xml).toContain('ECONNREFUSED');
+    expect(xml).toContain('<failure');
+  });
+
   it('reports the total suite time as the sum of request durations in seconds', () => {
     const result = baseResult({
       total: 2,

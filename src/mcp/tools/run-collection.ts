@@ -22,6 +22,7 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
       const { DataRunner } = await import('../../engine/data-runner.js');
       const dataRunner = new DataRunner(context);
       const dataResult = await dataRunner.run(args.collectionName, args.dataFile, { environment: env || undefined });
+      context.responseStore.saveSync();
       const normalized = {
         ...dataResult,
         runs: dataResult.runs.map((run: any) => ({
@@ -37,6 +38,7 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
 
     const runner = new CollectionRunner(context);
     const result = await runner.run(args.collectionName, { environment: env || undefined });
+    context.responseStore.saveSync();
     const normalized = {
       ...result,
       results: result.results.map(r => ({ ...r, testResults: r.response?.testResults ?? [] })),

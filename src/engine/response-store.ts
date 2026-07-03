@@ -32,17 +32,29 @@ export class ResponseStore {
     if (!this.filePath) return;
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
-      this.saveTimeout = null;
-      try {
-        const dir = path.dirname(this.filePath!);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        
-        const data = Object.fromEntries(this.store.entries());
-        fs.writeFileSync(this.filePath!, JSON.stringify(data, null, 2), 'utf8');
-      } catch (e) {
-        // ignore
-      }
+      this.saveSync();
     }, 100);
+  }
+
+  public saveSync() {
+    if (!this.filePath) return;
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    try {
+      const dir = path.dirname(this.filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      
+      const data = Object.fromEntries(this.store.entries());
+      fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  public reloadFromDisk() {
+    this.load();
   }
 
   public set(requestName: string, response: HttpResponse) {
