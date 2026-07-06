@@ -55,5 +55,7 @@ export async function createDefaultSecretRegistry(loadConfig: () => Promise<any>
   registry.register(new OnePasswordProvider({ loadConfig }));
   const { AwsSecretsProvider } = await import('./aws.js');
   registry.register(new AwsSecretsProvider({ loadConfig }));
+  const { HashiCorpVaultProvider } = await import('./vault.js');
+  registry.register(new HashiCorpVaultProvider({ loadConfig }));
   return registry;
 }

@@ -2,6 +2,14 @@
 
 ## 2026-07-06
 
+- [x] **T-248** HashiCorp Vault integration: `vault://` URIs in `.env`
+  - `HashiCorpVaultProvider` in `src/engine/secret-providers/vault.ts`: direct HTTP to the KV v2 API, zero new dependencies. `vault://secret/data/myapp/db_password` maps to `GET {addr}/v1/secret/data/myapp` with the last URI segment selecting the field from the secret's data
+  - Config: `VAULT_ADDR` + `VAULT_TOKEN` env vars (standard Vault conventions) win over `secretProviders.vault.{address,token}` in `~/.reqly/config.json`. Token auth only for V1 (AppRole/Kubernetes auth deferred per spec)
+  - Errors: 403 -> "check your VAULT_TOKEN (expired, or missing read policy)", 404 -> missing path with the URI echoed, missing field -> lists available field names
+  - Registered in `createDefaultSecretRegistry`; Settings -> Secrets gains a Vault section (address + masked token inputs). This completes the Team Secrets provider set: bw://, op://, aws://, vault:// all resolve
+  - TDD: 12 new tests (URI parsing incl. nested paths, endpoint + token header shape, trailing-slash address, env-over-config precedence, 403/404/missing-field errors). Suite 1007 green
+  - Verified live end to end: MCP stdio against a real local mock Vault server - `get_secret` returned `{ resolved: true, preview: "hunt..." }`, `get_secret_status` green, `run_request` fired with the full resolved value substituted into the URL, wrong token surfaced the 403 guidance. Chrome UI: all four provider sections render, console clean
+
 - [x] **T-247** AWS Secrets Manager integration: `aws://` URIs in `.env`
   - `AwsSecretsProvider` in `src/engine/secret-providers/aws.ts` via `@aws-sdk/client-secrets-manager` (SDK v3, lazy-imported behind an injectable client abstraction)
   - URI formats: `aws://my-secret-name` and `aws://arn:aws:secretsmanager:...` - the ARN form's embedded region is used automatically

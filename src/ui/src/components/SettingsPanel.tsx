@@ -23,6 +23,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [bwToken, setBwToken] = useState('');
   const [bwOrgId, setBwOrgId] = useState('');
   const [opToken, setOpToken] = useState('');
+  const [vaultAddr, setVaultAddr] = useState('');
+  const [vaultToken, setVaultToken] = useState('');
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerSaved, setProviderSaved] = useState(false);
   const [workspaces, setWorkspaces] = useState<{name: string, path: string}[]>([]);
@@ -77,6 +79,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     const config: Record<string, string> = {};
     if (opToken.trim()) config.serviceAccountToken = opToken.trim();
     return saveProvider('onepassword', config, () => setOpToken(''));
+  };
+
+  const handleSaveVault = () => {
+    const config: Record<string, string> = {};
+    if (vaultAddr.trim()) config.address = vaultAddr.trim();
+    if (vaultToken.trim()) config.token = vaultToken.trim();
+    return saveProvider('vault', config, () => { setVaultAddr(''); setVaultToken(''); });
   };
 
   const toggleLaunchAtLogin = async () => {
@@ -398,9 +407,33 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </p>
           </div>
 
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            HashiCorp Vault (vault://) integration is coming next.
-          </p>
+          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              HashiCorp Vault
+              {secretProviders.vault && (
+                <span className="ml-2 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
+              )}
+            </label>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+              KV v2 token auth, stored in ~/.reqly/config.json. VAULT_ADDR and VAULT_TOKEN env vars take precedence.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Input
+                value={vaultAddr}
+                onChange={e => setVaultAddr(e.target.value)}
+                placeholder="Vault address (https://vault.example.com:8200)"
+              />
+              <Input
+                type="password"
+                value={vaultToken}
+                onChange={e => setVaultToken(e.target.value)}
+                placeholder="Vault token"
+              />
+              <Button variant="secondary" onClick={handleSaveVault} disabled={savingProvider}>
+                {savingProvider ? 'Saving...' : 'Save Vault config'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
