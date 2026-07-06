@@ -486,6 +486,33 @@ export async function updateDotenvFiles(files: string[]) {
   return res.json();
 }
 
+export interface SecretStatusEntry {
+  key: string;
+  uri: string;
+  source: string;
+  status: 'resolved' | 'error';
+  error?: string;
+}
+
+export async function fetchSecretStatus(): Promise<{ secrets: SecretStatusEntry[]; providers: Record<string, { configuredKeys: string[] }> }> {
+  const res = await fetch('/api/secrets/status');
+  if (!res.ok) throw new Error('Failed to fetch secret status');
+  return res.json();
+}
+
+export async function configureSecretProvider(provider: string, config: Record<string, string>): Promise<{ provider: string; configured: boolean; secrets: SecretStatusEntry[] }> {
+  const res = await fetch(`/api/secrets/providers/${encodeURIComponent(provider)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Failed to configure secret provider');
+  }
+  return res.json();
+}
+
 export async function fetchLoginItem(): Promise<{ enabled: boolean; supported: boolean }> {
   const res = await fetch('/api/app/login-item');
   if (!res.ok) throw new Error('Failed to fetch login item setting');

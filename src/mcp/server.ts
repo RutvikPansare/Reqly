@@ -68,6 +68,8 @@ import * as listWorkspaceProjects from './tools/list-workspace-projects.js';
 import * as addWorkspaceProject from './tools/add-workspace-project.js';
 import * as removeWorkspaceProject from './tools/remove-workspace-project.js';
 import * as getSecret from './tools/get-secret.js';
+import * as getSecretStatus from './tools/get-secret-status.js';
+import * as configureSecretProvider from './tools/configure-secret-provider.js';
 
 const tools = [
   runRequest,
@@ -132,6 +134,8 @@ const tools = [
   addWorkspaceProject,
   removeWorkspaceProject,
   getSecret,
+  getSecretStatus,
+  configureSecretProvider,
 ];
 
 import { z } from 'zod';

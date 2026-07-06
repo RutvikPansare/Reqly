@@ -1,5 +1,17 @@
 # Reqly - Done
 
+## 2026-07-06
+
+- [x] **T-245** Secret provider infrastructure: vault URI resolution in `.env`, inline `{{secret:...}}` refs, `reqly secrets resolve` CLI, Settings -> Secrets UI
+  - `.env` loader (`dotenv-loader.ts`) takes the `SecretProviderRegistry`; values matching known vault prefixes resolve at load time (each distinct URI once per load). Failed resolutions are excluded from the variable record (never an empty string), surfaced via `getSecretErrors()`/`getSecretStatus()`, re-checked on every reload. Resolved secrets are masked (4 chars + "...") in `getVariables()` listings; full values only flow into request execution
+  - Loud failure at request time: `execute()` gained a `secrets` context param; a request referencing a `.env` key whose vault resolution failed throws with the provider's error, and inline `{{secret:<vault-uri>}}` refs (URL, headers, params, body, GraphQL) resolve through the registry pre-substitution and throw clearly when unresolvable. Requests not touching broken keys are unaffected
+  - `reqly secrets resolve` CLI: resolves vault URIs from the configured .env files into `.env.local` (merges, preserves unrelated keys), exit 1 with per-key errors when any resolution fails, never modifies `.env`
+  - New MCP tools: `get_secret_status` (detected URIs + resolution state, values never included) and `configure_secret_provider` (persists `secretProviders.<name>` in `~/.reqly/config.json`, re-resolves .env live, never echoes config values back)
+  - Express `GET /api/secrets/status` + `PUT /api/secrets/providers/:provider`; Settings -> Secrets tab lists detected URIs (green tick / red error with message) and a Bitwarden config form (masked token input)
+  - Wired through every entry point: server start, `reqly run`, `reqly run-flow`, `switch_project` MCP tool, express project switch
+  - TDD: 30 new tests (loader resolution/masking/exclusion/status/dedupe, executor inline + loud-failure paths, CLI command, both MCP tools, auth-manager provider config). Full suite 974 green
+  - Verified live: MCP stdio (URI detection, configure -> instant re-resolve through the real Bitwarden SDK, loud run_request failures for both broken .env keys and inline refs, plain requests unaffected), CLI (failure/usage/no-URIs paths), Chrome UI (Secrets tab rows with exact provider errors, config form, zero console errors)
+
 ## 2026-07-05
 
 - [x] **T-249** Bitwarden Secrets Manager integration: `bw://` URIs

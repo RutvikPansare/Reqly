@@ -6,6 +6,7 @@ import { execute as executeRequest } from '../engine/http-executor.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { FlowRunner } from '../engine/flow-runner.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { createDefaultSecretRegistry } from '../engine/secret-providers/index.js';
 import { SpecLoader } from '../engine/spec-loader.js';
 import { ScriptVariableStore } from '../engine/script-variables.js';
 import * as path from 'path';
@@ -85,10 +86,14 @@ export async function handleRunFlowCommand(
     const flow = await flowManager.getFlow(flowName);
 
     const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
+    const secretRegistry = await createDefaultSecretRegistry(() => authManager.loadConfig());
     // .reqly/ is a subfolder of the project root - .env files live one level up.
-    const dotEnvLoader = new DotEnvLoader(path.dirname(collectionManager.getBaseDir()), dotenvFiles);
+    const dotEnvLoader = new DotEnvLoader(path.dirname(collectionManager.getBaseDir()), dotenvFiles, secretRegistry);
     await dotEnvLoader.load();
     const dotEnvVars = dotEnvLoader.getVariablesRecord();
+    const dotEnvErrors: Record<string, string> = {};
+    for (const err of dotEnvLoader.getSecretErrors()) dotEnvErrors[err.key] = err.error;
+    const secrets = { registry: secretRegistry, dotEnvErrors };
 
     const responseStore = new ResponseStore(path.dirname(collectionManager.getBaseDir()));
     const historyStore = new HistoryStore(path.dirname(collectionManager.getBaseDir()));
@@ -108,7 +113,7 @@ export async function handleRunFlowCommand(
       specLoader: new SpecLoader(),
       scriptVariableStore: new ScriptVariableStore(),
       executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
-        executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
+        executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()), undefined, {}, undefined, undefined, secrets)
     };
 
     const runner = new FlowRunner(context);

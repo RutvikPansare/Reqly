@@ -12,8 +12,7 @@ import { MockServer } from '../engine/mock-server.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { SpecLoader } from '../engine/spec-loader.js';
 import { ScriptVariableStore } from '../engine/script-variables.js';
-import { SecretProviderRegistry } from '../engine/secret-providers/index.js';
-import { BitwardenSecretsProvider } from '../engine/secret-providers/bitwarden.js';
+import { createDefaultSecretRegistry } from '../engine/secret-providers/index.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -95,6 +94,14 @@ async function main() {
     process.exit(exitCode);
   }
 
+  if (parsed.command === 'secrets') {
+    const { handleSecretsCommand } = await import('./secrets-command.js');
+    const registry = await createDefaultSecretRegistry(() => authManager.loadConfig());
+    const files = parsed.flags.envFiles || await authManager.getDotenvFiles();
+    const exitCode = await handleSecretsCommand(parsed.args[0], cwd, files, registry);
+    process.exit(exitCode);
+  }
+
   const collectionsDir = projectReqlyDir;
   const environmentsPath = path.join(projectReqlyDir, 'environments.yaml');
 
@@ -147,16 +154,16 @@ async function main() {
   const mockServer = new MockServer(collectionManager);
   const scriptVariableStore = new ScriptVariableStore();
 
+  // Vault secret resolution (bw:// today; op://, vault://, aws:// as their
+  // integrations land). Registry is shared engine-wide via EngineContext and
+  // attached to the .env loader so vault URIs resolve into the variable chain.
+  const secretRegistry = await createDefaultSecretRegistry(() => authManager.loadConfig());
+
   // --env-file overrides the persisted file list for this session only (not saved to config).
   const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
-  const dotEnvLoader = new DotEnvLoader(cwd, dotenvFiles);
+  const dotEnvLoader = new DotEnvLoader(cwd, dotenvFiles, secretRegistry);
   await dotEnvLoader.load();
   dotEnvLoader.watch();
-
-  // Vault secret resolution (bw:// today; op://, vault://, aws:// as their
-  // integrations land). Registry is shared engine-wide via EngineContext.
-  const secretRegistry = new SecretProviderRegistry();
-  secretRegistry.register(new BitwardenSecretsProvider({ loadConfig: () => authManager.loadConfig() }));
 
   const context: EngineContext = {
     collectionManager,
@@ -183,7 +190,9 @@ async function main() {
       const scriptBaseDir = collectionName
         ? path.join(context.collectionManager.getBaseDir(), collectionName)
         : cwd;
-      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), scriptBaseDir, undefined, scriptVars, onScriptVarSet, runnerContext);
+      const dotEnvErrors: Record<string, string> = {};
+      for (const err of context.dotEnvLoader.getSecretErrors()) dotEnvErrors[err.key] = err.error;
+      return executeRequest(req, env, auth, truncate, maxBytes, collectionVars, collectionAuth, context.dotEnvLoader.getVariablesRecord(), scriptBaseDir, undefined, scriptVars, onScriptVarSet, runnerContext, { registry: context.secretRegistry, dotEnvErrors });
     }
   };
 

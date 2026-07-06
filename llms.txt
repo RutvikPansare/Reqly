@@ -85,6 +85,8 @@ Reqly exposes the following MCP tools for AI agents:
 - `get_variables`: List variables for an environment. Pass an optional `collectionName` to also include runtime variables set by scripts in that collection (with `source: "script"`).
 - `delete_variable`: Remove a variable from an environment.
 - `get_secret`: Resolve a vault secret URI and return `{ resolved: true, preview }` where `preview` is only the first 4 characters of the value followed by `...` - the full secret is never returned. Supported today: `bw://project-name/secret-name` (Bitwarden Secrets Manager; auth via `BITWARDENSM_ACCESS_TOKEN` + `BITWARDENSM_ORGANIZATION_ID` env vars or `secretProviders.bitwarden.{accessToken,organizationId}` in `~/.reqly/config.json`). `op://`, `vault://`, and `aws://` prefixes are recognized but their providers are not shipped yet - resolving them returns a "provider not configured" error. Use this to verify a secret is reachable before running a collection.
+- `get_secret_status`: List every vault URI detected in the project's .env files with `{ key, uri, source, status: "resolved" | "error", error? }`. Values are never included. Call before running collections that depend on .env vault secrets.
+- `configure_secret_provider`: Store provider credentials as `secretProviders.<provider>` in `~/.reqly/config.json` (never the project repo) and re-resolve the .env vault URIs immediately. `{ provider: "bitwarden" | "onepassword" | "aws" | "vault", config: { ...provider-specific keys } }`. For bitwarden: `{ accessToken, organizationId }`. Config values are never echoed back; the response includes the refreshed secret status list.
 - `start_proxy`: Start the auto-capture proxy server.
 - `stop_proxy`: Stop the auto-capture proxy server.
 - `exec_with_proxy`: Start the proxy and run a dev command with it injected.
@@ -107,6 +109,16 @@ Reqly exposes the following MCP tools for AI agents:
 - `set_collection_auth`: Set collection-level auth inherited by all requests. Supported types: `bearer` (`credentials.token`), `basic` (`credentials.username` + `credentials.password`), `apiKey` (`credentials.key`), `oauth2`, `mtls` (`credentials.certPath` + `credentials.keyPath` - absolute paths to PEM files, store in `~/.reqly/certs/`), `awsv4` (`credentials.accessKey` + `credentials.secretKey` + `credentials.region` + `credentials.service`; optionally `credentials.sessionToken` for temporary STS credentials), `none`. The executor attaches the right headers or TLS client certificate at request time. For `awsv4`, it computes AWS Signature Version 4 and injects `Authorization`, `X-Amz-Date`, and (when `sessionToken` is set) `X-Amz-Security-Token` headers before every request.
 - `introspect_graphql`: Run full GraphQL schema introspection against a URL, cache the schema for autocomplete.
 - `list_grpc_services`: Discover gRPC services from a running server via server reflection (server must have `grpc.reflection.v1alpha.ServerReflection` enabled). Returns `{ services: [{ name }], fileDescriptorCount }`. Use this when no `.proto` file is available. Call with `{ serverUrl: "localhost:50051" }`.
+
+## Vault secrets in .env
+
+Reqly resolves vault URIs placed as values in the project's .env files: `bw://project-name/secret-name` (Bitwarden Secrets Manager, shipped) plus `op://`, `vault://`, `aws://` (recognized; their providers land next). Resolution happens when the .env file loads and re-runs on every file change. A key whose URI fails to resolve is excluded from the variable chain, and any request referencing `{{THAT_KEY}}` fails with the provider's error - a request never fires with a silently missing secret. Plain .env values behave exactly as before.
+
+One-off inline references work in any request field without defining a variable: `{{secret:bw://project/secret}}` in a URL, header, param, or body resolves at request time and fails loudly if the provider is not configured.
+
+`reqly secrets resolve` (CLI) writes the resolved plaintext values into `.env.local` (gitignored; merged, unrelated keys preserved) for tools that don't understand vault URIs. It never modifies `.env`.
+
+Configure providers with the `configure_secret_provider` tool or the UI's Settings -> Secrets tab; credentials live in `~/.reqly/config.json`, never in the repo. Resolved secret values are masked to a 4-character preview in `get_variables`, `get_secret`, and the UI - full values only flow into outgoing requests.
 
 ## gRPC Request Format
 

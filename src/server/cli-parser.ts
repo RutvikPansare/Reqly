@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export interface ParsedArgs {
-  command: 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app' | 'workspace';
+  command: 'start' | 'run' | 'run-flow' | 'mock' | 'setup' | 'use' | 'status' | 'stop' | 'exec' | 'import' | 'export' | 'export-flow' | 'init' | 'app' | 'workspace' | 'secrets';
   args: string[];
   collection?: string;
   flags: {
@@ -83,7 +83,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let i = 0;
 
   // check if first non-flag argument is a command
-  const validCommands = ['start', 'run', 'run-flow', 'mock', 'setup', 'use', 'status', 'stop', 'exec', 'import', 'export', 'export-flow', 'init', 'app', 'workspace'];
+  const validCommands = ['start', 'run', 'run-flow', 'mock', 'setup', 'use', 'status', 'stop', 'exec', 'import', 'export', 'export-flow', 'init', 'app', 'workspace', 'secrets'];
   let commandFound = false;
   // once `exec`'s child command starts, everything after it (including its own
   // dashed flags) is passed through verbatim rather than parsed as reqly flags

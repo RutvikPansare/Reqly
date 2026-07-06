@@ -7,6 +7,7 @@ import { runAssertions } from '../engine/assertion-runner.js';
 import { CollectionRunner } from '../engine/collection-runner.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { createDefaultSecretRegistry } from '../engine/secret-providers/index.js';
 import { SpecLoader } from '../engine/spec-loader.js';
 import { ScriptVariableStore } from '../engine/script-variables.js';
 import * as path from 'path';
@@ -32,10 +33,14 @@ export async function handleRunCommand(
   }
 
   const dotenvFiles = parsed.flags.envFiles || await authManager.getDotenvFiles();
+  const secretRegistry = await createDefaultSecretRegistry(() => authManager.loadConfig());
   // .reqly/ is a subfolder of the project root - .env files live one level up.
-  const dotEnvLoader = new DotEnvLoader(path.dirname(collectionManager.getBaseDir()), dotenvFiles);
+  const dotEnvLoader = new DotEnvLoader(path.dirname(collectionManager.getBaseDir()), dotenvFiles, secretRegistry);
   await dotEnvLoader.load();
   const dotEnvVars = dotEnvLoader.getVariablesRecord();
+  const dotEnvErrors: Record<string, string> = {};
+  for (const err of dotEnvLoader.getSecretErrors()) dotEnvErrors[err.key] = err.error;
+  const secrets = { registry: secretRegistry, dotEnvErrors };
 
   // Load environment
   let env = await environmentManager.getActiveEnvironment();
@@ -56,7 +61,7 @@ export async function handleRunCommand(
         auth = await authManager.getProfile(req.authProfileId);
       }
 
-      const res = await executeRequest(req, env || undefined, auth, undefined, undefined, undefined, undefined, dotEnvVars, path.dirname(collectionManager.getBaseDir()));
+      const res = await executeRequest(req, env || undefined, auth, undefined, undefined, undefined, undefined, dotEnvVars, path.dirname(collectionManager.getBaseDir()), undefined, {}, undefined, undefined, secrets);
       let assertionsResult: AssertionResult[] | undefined = undefined;
       let passed = true;
 
@@ -141,7 +146,7 @@ export async function handleRunCommand(
         specLoader: new SpecLoader(),
         scriptVariableStore: new ScriptVariableStore(),
         executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>
-          executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()))
+          executeRequest(req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth, dotEnvVars, path.dirname(collectionManager.getBaseDir()), undefined, {}, undefined, undefined, secrets)
       };
 
       let runs: { rowNumber?: number, data?: any, result: import('../engine/collection-runner.js').CollectionRunResult }[] = [];

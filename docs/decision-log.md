@@ -6,6 +6,12 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-06 - .env vault resolution fails soft at load, loud at request time (T-245)
+
+**Decision:** When a vault URI in `.env` cannot resolve, the loader records the error and excludes the key from the variable record instead of throwing. The executor throws only when a request actually references the failed key, or when an inline `{{secret:...}}` reference fails. Resolved secrets are masked in every listing path (`getVariables`, UI Variables tab, MCP `get_variables`) and flow full-value only into request execution.
+
+**Why:** Throwing at load would crash server boot on any misconfigured provider, making the Settings -> Secrets tab (the fix-it path) unreachable, and would break requests that never use the broken key. Excluding the key rather than keeping the raw URI keeps vault paths out of outgoing requests. The request-time throw preserves the spec's "fail loudly, never silently inject an empty string" guarantee exactly where it matters: a request cannot fire with a missing secret. Masking in listings keeps plaintext secrets out of agent transcripts and screenshots; agents that need proof of reachability use get_secret's 4-char preview.
+
 ## 2026-07-05 - Bitwarden provider uses @bitwarden/sdk-napi; T-249 ships the T-245 registry core early (T-249)
 
 **Decision:** The Bitwarden Secrets Manager provider depends on `@bitwarden/sdk-napi` instead of the `@bitwarden/sdk-secrets-manager` package named in the T-249 spec, and T-249 ships a minimal subset of T-245's infrastructure: the `SecretProvider` interface, `SecretProviderRegistry`, and the `get_secret` MCP tool.

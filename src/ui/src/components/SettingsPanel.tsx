@@ -3,7 +3,7 @@ import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
 import { Modal, ModalFooter } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { updateDotenvFiles, updateLoginItem, fetchWorkspaceProjects, addWorkspaceProject, removeWorkspaceProject } from '../api';
+import { updateDotenvFiles, updateLoginItem, fetchWorkspaceProjects, addWorkspaceProject, removeWorkspaceProject, fetchSecretStatus, configureSecretProvider, type SecretStatusEntry } from '../api';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -17,7 +17,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [loginItemSupported, setLoginItemSupported] = useState(false);
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
   const [missingGitignores, setMissingGitignores] = useState<string[]>([]);
-  const [tab, setTab] = useState<'general' | 'workspace'>('general');
+  const [tab, setTab] = useState<'general' | 'workspace' | 'secrets'>('general');
+  const [secretStatus, setSecretStatus] = useState<SecretStatusEntry[]>([]);
+  const [secretProviders, setSecretProviders] = useState<Record<string, { configuredKeys: string[] }>>({});
+  const [bwToken, setBwToken] = useState('');
+  const [bwOrgId, setBwOrgId] = useState('');
+  const [savingProvider, setSavingProvider] = useState(false);
+  const [providerSaved, setProviderSaved] = useState(false);
   const [workspaces, setWorkspaces] = useState<{name: string, path: string}[]>([]);
   const [newWorkspace, setNewWorkspace] = useState('');
   const [fixingGitignore, setFixingGitignore] = useState(false);
@@ -34,7 +40,34 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       }).catch(console.error);
       fetchWorkspaceProjects().then(data => setWorkspaces(data.projects)).catch(console.error);
     });
+    fetchSecretStatus().then(data => {
+      setSecretStatus(data.secrets);
+      setSecretProviders(data.providers);
+    }).catch(console.error);
   }, []);
+
+  const handleSaveBitwarden = async () => {
+    const config: Record<string, string> = {};
+    if (bwToken.trim()) config.accessToken = bwToken.trim();
+    if (bwOrgId.trim()) config.organizationId = bwOrgId.trim();
+    if (Object.keys(config).length === 0) return;
+    setSavingProvider(true);
+    setProviderSaved(false);
+    try {
+      const result = await configureSecretProvider('bitwarden', config);
+      setSecretStatus(result.secrets);
+      const refreshed = await fetchSecretStatus();
+      setSecretProviders(refreshed.providers);
+      setBwToken('');
+      setBwOrgId('');
+      setProviderSaved(true);
+      setTimeout(() => setProviderSaved(false), 2000);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSavingProvider(false);
+    }
+  };
 
   const toggleLaunchAtLogin = async () => {
     const next = !launchAtLogin;
@@ -132,12 +165,19 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         >
           General
         </button>
-        <button 
+        <button
           className={`pb-2 text-sm ${tab === 'workspace' ? 'border-b-2 font-medium' : ''}`}
           style={{ borderColor: tab === 'workspace' ? 'var(--accent)' : 'transparent', color: tab === 'workspace' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
           onClick={() => setTab('workspace')}
         >
           Workspace
+        </button>
+        <button
+          className={`pb-2 text-sm ${tab === 'secrets' ? 'border-b-2 font-medium' : ''}`}
+          style={{ borderColor: tab === 'secrets' ? 'var(--accent)' : 'transparent', color: tab === 'secrets' ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+          onClick={() => setTab('secrets')}
+        >
+          Secrets
         </button>
       </div>
 
@@ -249,6 +289,76 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             />
             <Button variant="secondary" onClick={handleAddWorkspace}><Plus size={13} /> Add</Button>
           </div>
+        </div>
+      )}
+
+      {tab === 'secrets' && (
+        <div className="flex flex-col gap-4 min-h-[250px]">
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              Vault URIs in .env
+            </label>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+              Values in your .env files that reference a secret manager (bw://, op://, vault://, aws://) and whether they resolve.
+            </p>
+            {secretStatus.length === 0 ? (
+              <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
+                No vault URIs detected. Put e.g. <span className="font-mono">STRIPE_KEY=bw://project/secret</span> in your .env to pull it from your vault.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {secretStatus.map(s => (
+                  <div key={s.key} className="flex items-start gap-2 p-2 rounded" style={{ background: 'var(--surface-3)' }} data-testid={`secret-row-${s.key}`}>
+                    {s.status === 'resolved' ? (
+                      <span className="mt-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-green-500/20 text-green-500 text-[10px] shrink-0">✓</span>
+                    ) : (
+                      <span className="mt-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-red-500/20 text-red-500 text-[10px] shrink-0">✗</span>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-mono truncate" style={{ color: 'var(--text-primary)' }}>{s.key}</span>
+                      <span className="text-xs font-mono truncate" style={{ color: 'var(--text-muted)' }}>{s.uri} · {s.source}</span>
+                      {s.error && <span className="text-xs mt-0.5" style={{ color: 'var(--error, #f87171)' }}>{s.error}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              Bitwarden Secrets Manager
+              {secretProviders.bitwarden && (
+                <span className="ml-2 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
+              )}
+            </label>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+              Stored in ~/.reqly/config.json (never in the repo). BITWARDENSM_ACCESS_TOKEN and BITWARDENSM_ORGANIZATION_ID env vars take precedence.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Input
+                type="password"
+                value={bwToken}
+                onChange={e => setBwToken(e.target.value)}
+                placeholder="Machine account access token"
+              />
+              <Input
+                value={bwOrgId}
+                onChange={e => setBwOrgId(e.target.value)}
+                placeholder="Organization ID"
+              />
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" onClick={handleSaveBitwarden} disabled={savingProvider}>
+                  {savingProvider ? 'Saving...' : 'Save Bitwarden config'}
+                </Button>
+                {providerSaved && <span className="text-xs" style={{ color: 'var(--accent)' }}>Saved - .env re-resolved</span>}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            1Password (op://), AWS Secrets Manager (aws://), and HashiCorp Vault (vault://) integrations are coming next.
+          </p>
         </div>
       )}
 

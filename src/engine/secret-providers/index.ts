@@ -43,3 +43,13 @@ export class SecretProviderRegistry {
     return provider.resolve(uri);
   }
 }
+
+// Builds the registry with every shipped provider. Integration tasks
+// (T-246 1Password, T-247 AWS, T-248 Vault) add their registration here so
+// all entry points (server, CLI runs) get the same provider set.
+export async function createDefaultSecretRegistry(loadConfig: () => Promise<any>): Promise<SecretProviderRegistry> {
+  const registry = new SecretProviderRegistry();
+  const { BitwardenSecretsProvider } = await import('./bitwarden.js');
+  registry.register(new BitwardenSecretsProvider({ loadConfig }));
+  return registry;
+}

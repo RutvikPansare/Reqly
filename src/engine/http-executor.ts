@@ -23,6 +23,34 @@ function formatNetworkError(err: any): string {
 }
 
 import { resolveVariables } from './variable-substitutor.js';
+import { SecretProviderRegistry } from './secret-providers/index.js';
+
+// Secret handling context for T-245: `registry` resolves inline
+// {{secret:<vault-uri>}} references; `dotEnvErrors` maps .env keys whose vault
+// resolution failed to their error message so a request that references one
+// fails loudly instead of firing with a missing value.
+export interface ExecuteSecrets {
+  registry?: SecretProviderRegistry;
+  dotEnvErrors?: Record<string, string>;
+}
+
+const INLINE_SECRET_PREFIX = 'secret:';
+
+// Scan every {{...}} placeholder in the request's templates. Returns inline
+// secret refs (full trimmed key, e.g. "secret:bw://p/s") and plain var names.
+function collectPlaceholders(templates: Array<string | undefined>): { inline: Set<string>; plain: Set<string> } {
+  const inline = new Set<string>();
+  const plain = new Set<string>();
+  for (const template of templates) {
+    if (!template) continue;
+    for (const match of template.matchAll(/\{\{([^}]+)\}\}/g)) {
+      const key = match[1].trim();
+      if (key.startsWith(INLINE_SECRET_PREFIX)) inline.add(key);
+      else plain.add(key);
+    }
+  }
+  return { inline, plain };
+}
 
 // Resolve a scriptFile reference to its content, enforcing that the resolved
 // path stays within baseDir (no path traversal). Returns the script string on
@@ -100,7 +128,8 @@ export async function execute(
   resolvedFiles?: Record<string, Buffer>,
   scriptVars: Record<string, string> = {},
   onScriptVarSet?: (key: string, value: string) => void,
-  runnerContext?: RunnerContext
+  runnerContext?: RunnerContext,
+  secrets?: ExecuteSecrets
 ): Promise<HttpResponse> {
   const envVars = env?.variables || {};
   // Layered scope chain: script vars > collection vars > env vars > .env-file vars.
@@ -154,6 +183,51 @@ export async function execute(
         onScriptVarSet
       });
       consoleLogs.push(...pre);
+    }
+  }
+
+  // T-245 secret handling. Runs after preScript (scripts can rewrite the URL/
+  // headers/body) and before substitution so resolved secrets join the chain.
+  // Always scans: an inline {{secret:...}} ref with no registry must throw,
+  // never fire with the placeholder left literal in the outgoing request.
+  {
+    const bodyTemplate = typeof reqMut._body === 'string'
+      ? reqMut._body
+      : reqMut._body ? JSON.stringify(reqMut._body) : undefined;
+    const { inline, plain } = collectPlaceholders([
+      reqMut._url,
+      ...Object.values(reqMut._headers),
+      ...(config.params ? Object.values(config.params) : []),
+      bodyTemplate,
+      config.graphql ? JSON.stringify(config.graphql) : undefined,
+    ]);
+
+    // Referencing a .env key whose vault resolution failed is a hard error -
+    // never fire the request with the value silently missing.
+    if (secrets?.dotEnvErrors) {
+      for (const key of plain) {
+        if (secrets.dotEnvErrors[key] !== undefined) {
+          throw new RequestError(`Variable {{${key}}} comes from a vault URI in .env that failed to resolve: ${secrets.dotEnvErrors[key]}`);
+        }
+      }
+    }
+
+    // Inline {{secret:<uri>}} references resolve through the registry into a
+    // highest-priority layer keyed by the exact placeholder text.
+    if (inline.size > 0) {
+      if (!secrets?.registry) {
+        throw new RequestError('This request uses {{secret:...}} references but no secret provider registry is available.');
+      }
+      const inlineLayer: Record<string, string> = {};
+      for (const key of inline) {
+        const uri = key.slice(INLINE_SECRET_PREFIX.length).trim();
+        try {
+          inlineLayer[key] = await secrets.registry.resolve(uri);
+        } catch (e: any) {
+          throw new RequestError(`Inline secret {{${key}}} failed to resolve: ${e.message}`);
+        }
+      }
+      layers.unshift(inlineLayer);
     }
   }
 
@@ -361,7 +435,10 @@ export async function execute(
     if (config.graphql.operationName !== undefined) {
       gqlBody.operationName = config.graphql.operationName;
     }
-    body = JSON.stringify(gqlBody);
+    // Resolve {{variables}} in the query and GraphQL variables the same way
+    // string/object bodies are resolved below. Safe on the serialized form:
+    // valid GraphQL never produces a `{{name}}` sequence of its own.
+    body = resolveVariables(JSON.stringify(gqlBody), layers);
     if (!headers['Content-Type'] && !headers['content-type']) {
       headers['Content-Type'] = 'application/json';
     }

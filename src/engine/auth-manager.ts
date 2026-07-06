@@ -16,6 +16,7 @@ interface ConfigFile {
   activeProject?: string;
   dotenvFiles?: string[];
   workspaceProjects?: string[];
+  secretProviders?: Record<string, Record<string, string>>;
   [key: string]: any;
 }
 
@@ -120,6 +121,27 @@ export class AuthManager {
     const config = await this.loadConfig();
     config.dotenvFiles = files;
     await this.saveConfig(config);
+  }
+
+  // Secret provider config lives under secretProviders in the GLOBAL
+  // ~/.reqly/config.json - never in the project's .reqly/ so tokens never
+  // touch git. Merges per provider so partial updates keep existing keys.
+  async setSecretProviderConfig(provider: string, providerConfig: Record<string, string>): Promise<void> {
+    const config = await this.loadConfig();
+    config.secretProviders = config.secretProviders || {};
+    config.secretProviders[provider] = { ...config.secretProviders[provider], ...providerConfig };
+    await this.saveConfig(config);
+  }
+
+  // Listing for UI/MCP: which providers have config and which keys are set.
+  // Values are intentionally omitted - tokens must never round-trip out.
+  async getSecretProviders(): Promise<Record<string, { configuredKeys: string[] }>> {
+    const config = await this.loadConfig();
+    const result: Record<string, { configuredKeys: string[] }> = {};
+    for (const [name, providerConfig] of Object.entries(config.secretProviders || {})) {
+      result[name] = { configuredKeys: Object.keys(providerConfig as Record<string, string>) };
+    }
+    return result;
   }
 
   /**

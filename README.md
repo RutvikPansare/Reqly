@@ -247,6 +247,8 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 | `set_dotenv_files` | Configures which `.env` files are auto-loaded |
 | `get_dotenv_files` | Lists the configured dotenv files |
 | `get_secret` | Resolves a vault secret URI (`bw://project/secret`) and returns a truncated preview, never the full value |
+| `get_secret_status` | Lists vault URIs detected in `.env` with per-key resolution status |
+| `configure_secret_provider` | Stores provider credentials in `~/.reqly/config.json` and re-resolves `.env` |
 
 **🔐 Auth**
 

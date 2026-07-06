@@ -219,4 +219,25 @@ describe('AuthManager', () => {
       expect(reloaded.credentials.accessToken).toBe('persisted-new');
     });
   });
+
+  describe('secret provider config (T-245)', () => {
+    it('persists provider config under secretProviders and merges per provider', async () => {
+      await manager.setSecretProviderConfig('bitwarden', { accessToken: 't1' });
+      await manager.setSecretProviderConfig('bitwarden', { organizationId: 'o1' });
+      await manager.setSecretProviderConfig('vault', { address: 'http://v:8200' });
+
+      const config = await manager.loadConfig();
+      expect(config.secretProviders).toEqual({
+        bitwarden: { accessToken: 't1', organizationId: 'o1' },
+        vault: { address: 'http://v:8200' },
+      });
+    });
+
+    it('getSecretProviders returns configured provider names with masked flag only', async () => {
+      await manager.setSecretProviderConfig('bitwarden', { accessToken: 'secret-tok' });
+      const providers = await manager.getSecretProviders();
+      expect(providers).toEqual({ bitwarden: { configuredKeys: ['accessToken'] } });
+      expect(JSON.stringify(providers)).not.toContain('secret-tok');
+    });
+  });
 });

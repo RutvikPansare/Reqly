@@ -1217,7 +1217,7 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
       context.dotEnvLoader.stopWatching();
       const dotenvFiles = await context.authManager.getDotenvFiles();
-      context.dotEnvLoader = new DotEnvLoader(projectDir, dotenvFiles);
+      context.dotEnvLoader = new DotEnvLoader(projectDir, dotenvFiles, context.secretRegistry);
       await context.dotEnvLoader.load();
       context.dotEnvLoader.watch();
       startReqlyWatcher(projectDir);
@@ -1468,9 +1468,12 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         if (cfg.maxBodyBytes) maxBodyBytes = cfg.maxBodyBytes;
       } catch { /* use default */ }
 
+      const dotEnvSecretErrors: Record<string, string> = {};
+      for (const secretErr of context.dotEnvLoader.getSecretErrors()) dotEnvSecretErrors[secretErr.key] = secretErr.error;
       const response = await executeHttp(
         config, env, auth, undefined, maxBodyBytes,
-        collectionVars, collectionAuth, dotEnvVars, scriptBaseDir, resolvedFiles
+        collectionVars, collectionAuth, dotEnvVars, scriptBaseDir, resolvedFiles,
+        {}, undefined, undefined, { registry: context.secretRegistry, dotEnvErrors: dotEnvSecretErrors }
       );
       context.responseStore.set(requestConfig.name, response);
       context.historyStore.append(requestConfig, response);
@@ -1546,6 +1549,41 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       const newConfig = { ...currentConfig, ...req.body };
       await fs.writeFile(globalConfigPath, JSON.stringify(newConfig, null, 2));
       res.json(newConfig);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Settings -> Secrets tab: vault URIs detected in .env with resolution
+  // status, plus which providers have config (key names only, never values).
+  app.get('/api/secrets/status', async (req, res) => {
+    try {
+      const secrets = typeof (context.dotEnvLoader as any).getSecretStatus === 'function'
+        ? context.dotEnvLoader.getSecretStatus()
+        : [];
+      const providers = await context.authManager.getSecretProviders();
+      res.json({ secrets, providers });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/secrets/providers/:provider', async (req, res) => {
+    try {
+      const { KNOWN_PROVIDER_NAMES } = await import('../mcp/tools/configure-secret-provider.js');
+      const provider = req.params.provider;
+      if (!KNOWN_PROVIDER_NAMES.includes(provider)) {
+        return res.status(400).json({ error: `Unknown provider "${provider}". Supported: ${KNOWN_PROVIDER_NAMES.join(', ')}` });
+      }
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Body must be an object of provider config keys' });
+      }
+      await context.authManager.setSecretProviderConfig(provider, req.body);
+      await context.dotEnvLoader.load();
+      const secrets = typeof (context.dotEnvLoader as any).getSecretStatus === 'function'
+        ? context.dotEnvLoader.getSecretStatus()
+        : [];
+      res.json({ provider, configured: true, secrets });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

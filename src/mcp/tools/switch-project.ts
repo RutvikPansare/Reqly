@@ -47,7 +47,7 @@ export async function handler(args: any, context: EngineContext): Promise<ToolHa
 
     context.dotEnvLoader.stopWatching();
     const dotenvFiles = await context.authManager.getDotenvFiles();
-    context.dotEnvLoader = new DotEnvLoader(projectDir, dotenvFiles);
+    context.dotEnvLoader = new DotEnvLoader(projectDir, dotenvFiles, context.secretRegistry);
     await context.dotEnvLoader.load();
     context.dotEnvLoader.watch();
 
