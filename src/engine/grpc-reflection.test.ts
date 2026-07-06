@@ -103,6 +103,9 @@ vi.mock('@grpc/proto-loader', () => ({
 }));
 
 import { discoverServicesViaReflection, ReflectionResult } from './grpc-reflection.js';
+import * as grpcLoader from '@grpc/proto-loader';
+import * as grpcJs from '@grpc/grpc-js';
+import { existsSync } from 'fs';
 
 // ---------------------------------------------------------------------------
 // Helper to build a minimal serialised FileDescriptorProto binary.
@@ -160,6 +163,20 @@ describe('grpc-reflection (T-167)', () => {
 
     expect(result.isError).toBeFalsy();
     expect(Array.isArray(result.rawFileDescriptors)).toBe(true);
+  });
+
+  it('loads the real reflection proto and feeds it to loadPackageDefinition (T-243)', async () => {
+    // Regression: production used to call loadPackageDefinition({}) - an empty
+    // definition that only worked because tests mock loadPackageDefinition.
+    // The real proto must be loaded via proto-loader and its result passed on.
+    await discoverServicesViaReflection('localhost:50051', { insecure: true });
+
+    expect(grpcLoader.loadSync).toHaveBeenCalledTimes(1);
+    const [protoPath] = vi.mocked(grpcLoader.loadSync).mock.calls[0];
+    expect(existsSync(protoPath as string)).toBe(true);
+
+    const loadedDef = vi.mocked(grpcLoader.loadSync).mock.results[0].value;
+    expect(vi.mocked(grpcJs.loadPackageDefinition)).toHaveBeenCalledWith(loadedDef);
   });
 
   it('returns error with useful message when server URL is unreachable', async () => {

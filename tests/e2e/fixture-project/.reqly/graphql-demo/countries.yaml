@@ -1,0 +1,14 @@
+id: req-fixture-countries
+name: countries
+method: POST
+url: https://countries.trevorblades.com/
+type: graphql
+graphql:
+  query: |
+    query FixtureCountry {
+      country(code: "US") {
+        name
+        capital
+      }
+    }
+  operationName: FixtureCountry

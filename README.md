@@ -141,6 +141,8 @@ brew install --cask reqly
 
 Or **download the DMG directly** from [GitHub Releases](https://github.com/RutvikPansare/Reqly/releases/latest) - no npm, no Homebrew, no terminal required. The desktop app bundles its own copy of the Reqly server, so it is fully self-contained.
 
+**VS Code extension:** install `reqly.reqly` from the VS Code Marketplace (works in Cursor, Windsurf, and every VS Code-compatible editor). It gives you a collection tree in the activity bar, a status bar environment switcher, `Reqly:` command palette commands, a "▶ Run with Reqly" CodeLens above `fetch`/`axios`/`got` calls in JS/TS, and schema validation with autocomplete for all `.reqly/` YAML files. It talks to the same local server, so install Reqly itself first (any of the three ways above).
+
 **Connecting your AI agent:**
 
 - **Desktop app users:** on first launch a setup wizard appears ("Connect your AI Agent") with one-click buttons for Claude Desktop, Cursor, Windsurf, and VS Code. Each button writes that agent's MCP config for you - no JSON editing. Reachable again any time from the tray menu ("AI Agent Connections..."). If you have the CLI installed (Homebrew or npm), the wizard points agents at your CLI so `brew upgrade` keeps them current; otherwise it points them at the bundled server.
@@ -215,6 +217,10 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 | `list_workspace_projects` | Lists all project directories in the multi-project workspace |
 | `add_workspace_project` | Adds a project directory to the multi-project workspace |
 | `remove_workspace_project` | Removes a project directory from the workspace |
+| `create_workspace` | Creates a named workspace at `~/.reqly/workspaces/<name>/workspace.yaml` |
+| `link_workspace_repo` | Links a local repo into a named workspace under a stable alias |
+| `use_workspace` | Sets the active named workspace (persisted in `~/.reqly/config.json`) |
+| `list_workspaces` | Lists all named workspaces and which one is active |
 
 **🗂️ Collections and Requests**
 | Tool | What it does |
@@ -626,8 +632,19 @@ You can configure Reqly to load collections from multiple project directories at
 ```bash
 reqly workspace add <absolute_path>    # Adds a project to your workspace
 reqly workspace remove <absolute_path> # Removes it
-reqly workspace list                   # Lists all configured projects
+reqly workspace list                   # Lists all configured projects and named workspaces
 ```
+
+For microservices teams there is also a **named workspace model**: a workspace maps stable repo aliases (shared across teammates) to machine-local paths, stored at `~/.reqly/workspaces/<name>/workspace.yaml` (never committed to any repo).
+
+```bash
+reqly workspace create checkout-team                       # scaffold the workspace
+reqly workspace link checkout-team auth /repos/auth-svc    # alias "auth" -> local path
+reqly workspace link checkout-team payments /repos/pay-svc
+reqly workspace use checkout-team                          # set active workspace
+```
+
+Agents can do the same via the `create_workspace`, `link_workspace_repo`, `use_workspace`, and `list_workspaces` MCP tools, and the UI has a workspace dropdown above the project list. Aliases are the foundation for cross-repo flows (`repo: auth` on a flow step - coming next).
 
 On start, Reqly prints a table of all active routes (method, path, example count). Press Ctrl+C to stop.
 
@@ -710,6 +727,12 @@ Yes. The Reqly desktop app ships unsigned for now (no Apple Developer account ye
 <summary><strong>Windows SmartScreen says "Unknown publisher" when I run the installer - is this safe?</strong></summary>
 <br>
 Yes. The installer is unsigned for now (no EV certificate yet) - this is SmartScreen's standard warning for any new, low-download installer. Click <strong>More info</strong>, then <strong>Run anyway</strong>. The warning disappears automatically once the installer accumulates enough download reputation. Binaries are still signed with Sigstore/cosign for tamper-evidence even without SmartScreen trust.
+</details>
+
+<details>
+<summary><strong>The desktop window went blank / black. What happened?</strong></summary>
+<br>
+The app self-recovers: a crashed renderer reloads automatically, a lost server connection shows a "Starting Reqly..." screen and reconnects the moment the server answers, and a dead server process is respawned by a built-in watchdog. If you ever see a persistent error screen, check <code>~/.reqly/desktop.log</code> - every crash, failed load, and server restart is logged there with a timestamp. Attach that file when filing an issue.
 </details>
 
 <details>

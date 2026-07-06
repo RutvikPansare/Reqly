@@ -15,12 +15,17 @@ const _sMock = {
   serverStreamError: null as any,
   clientStreamResponse: null as any,
   clientStreamError: null as any,
+  clientStreamNeverReplies: false,
   delay: 0,
+  cancelSpy: vi.fn(),
+  closeClientSpy: vi.fn(),
 };
 
 // ---- Fake server-streaming call ----
 class FakeServerStream {
   private _listeners: Record<string, Function[]> = {};
+
+  cancel() { _sMock.cancelSpy(); }
 
   on(event: string, fn: Function) {
     if (!this._listeners[event]) this._listeners[event] = [];
@@ -54,6 +59,8 @@ class FakeClientStream {
   public written: any[] = [];
   private _callback: ((err: any, res: any) => void) | null = null;
 
+  cancel() { _sMock.cancelSpy(); }
+
   setCallback(cb: (err: any, res: any) => void) { this._callback = cb; }
 
   on(event: string, fn: Function) {
@@ -65,6 +72,7 @@ class FakeClientStream {
   write(msg: any) { this.written.push(msg); }
 
   end() {
+    if (_sMock.clientStreamNeverReplies) return; // simulate a server that never answers
     const self = this;
     setTimeout(() => {
       if (_sMock.clientStreamError) {
@@ -86,6 +94,8 @@ class FakeBidiStream {
   private _listeners: Record<string, Function[]> = {};
   public written: any[] = [];
   private _msgIdx = 0;
+
+  cancel() { _sMock.cancelSpy(); }
 
   on(event: string, fn: Function) {
     if (!this._listeners[event]) this._listeners[event] = [];
@@ -124,7 +134,9 @@ function FakeStreamingStub(this: any, _url: string, _creds: any) {
     s.start();
     return s;
   };
-  this.ClientStream = (_meta: any, callback?: (err: any, res: any) => void) => {
+  this.ClientStream = (_meta: any, optsOrCb?: any, maybeCb?: (err: any, res: any) => void) => {
+    // Accept (meta, cb) and (meta, options, cb).
+    const callback = typeof optsOrCb === 'function' ? optsOrCb : maybeCb;
     const s = new FakeClientStream();
     if (callback) s.setCallback(callback);
     return s;
@@ -142,6 +154,7 @@ vi.mock('@grpc/grpc-js', () => {
       createInsecure: vi.fn(() => 'insecure-creds'),
       createSsl: vi.fn(() => 'ssl-creds'),
     },
+    closeClient: vi.fn((client: any) => _sMock.closeClientSpy(client)),
     Metadata: function FakeMeta(this: any) { this.add = vi.fn(); },
     status: { OK: 0 },
   };

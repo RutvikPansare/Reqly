@@ -73,6 +73,7 @@ describe.skipIf(process.platform === 'win32' && !!process.env.CI)('/terminal Web
       historyStore: new HistoryStore(),
       flowManager: new FlowManager(PROJECT_DIR),
       dotEnvLoader: new DotEnvLoader(PROJECT_DIR),
+      workspaceManager: {} as any,
       specLoader: new SpecLoader(),
       mockServer: new MockServer(collectionManager),
       executeRequest: async () => ({ status: 200, body: '', headers: {}, latency: 0, timestamp: new Date().toISOString() }),

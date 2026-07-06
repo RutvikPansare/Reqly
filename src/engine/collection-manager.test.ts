@@ -172,6 +172,56 @@ describe('CollectionManager', () => {
     expect(copy.method).toBe('GET');
   });
 
+  it('should suffix the copy name instead of overwriting an existing request when duplicating', async () => {
+    await manager.createCollection('TestCol');
+    await manager.addRequest('TestCol', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://original.com' });
+    await manager.addRequest('TestCol', { id: 'r2', name: 'GetUser Copy', method: 'POST', url: 'http://existing.com' });
+
+    const finalName = await manager.duplicateRequest('TestCol', 'GetUser', 'GetUser Copy');
+
+    // The pre-existing "GetUser Copy" must be preserved, not clobbered.
+    const existing = await manager.getRequest('TestCol', 'GetUser Copy');
+    expect(existing.url).toBe('http://existing.com');
+    // The duplicate lands under a suffixed name.
+    expect(finalName).toBe('GetUser Copy (1)');
+    const copy = await manager.getRequest('TestCol', 'GetUser Copy (1)');
+    expect(copy.url).toBe('http://original.com');
+  });
+
+  describe('path-safety of names', () => {
+    it('rejects a collection name that escapes the base dir', async () => {
+      await expect(manager.createCollection('../evil')).rejects.toThrow(/invalid/i);
+      expect(fs.existsSync(path.join(tmpDir, '..', 'evil'))).toBe(false);
+    });
+
+    it('rejects a request name containing a path separator', async () => {
+      await manager.createCollection('TestCol');
+      await expect(
+        manager.addRequest('TestCol', { id: 'r1', name: '../escaped', method: 'GET', url: 'http://x.com' }),
+      ).rejects.toThrow(/invalid/i);
+      expect(fs.existsSync(path.join(tmpDir, 'escaped.yaml'))).toBe(false);
+    });
+
+    it('rejects renaming a collection to an escaping name', async () => {
+      await manager.createCollection('TestCol');
+      await expect(manager.renameCollection('TestCol', '../evil')).rejects.toThrow(/invalid/i);
+    });
+
+    // Reserved dirs (flows/, protos/, .schema-cache/) are shared with other
+    // managers and excluded from listCollections - creating a collection with
+    // one of these names would silently produce an invisible collection.
+    it('rejects reserved directory names as collection names', async () => {
+      await expect(manager.createCollection('flows')).rejects.toThrow(/reserved/i);
+      await expect(manager.createCollection('protos')).rejects.toThrow(/reserved/i);
+      await expect(manager.createCollection('.schema-cache')).rejects.toThrow(/reserved/i);
+    });
+
+    it('rejects renaming a collection to a reserved name', async () => {
+      await manager.createCollection('TestCol');
+      await expect(manager.renameCollection('TestCol', 'flows')).rejects.toThrow(/reserved/i);
+    });
+  });
+
   describe('moveRequest', () => {
     it('should move a request to another collection, removing it from the source', async () => {
       await manager.createCollection('Source');

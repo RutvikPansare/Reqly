@@ -33,11 +33,16 @@ export function runAssertions(response: HttpResponse, assertions: Assertion[]): 
     let passed = false;
     
     switch (assertion.operator) {
+      // eq/neq compare by string form: status/latency actuals are numbers, but
+      // the UI and YAML persist assertion values as strings, so a strict ===
+      // would never match (200 vs "200"). String coercion keeps numeric,
+      // boolean, and string values comparable and matches the flow runner's
+      // expression evaluator.
       case 'eq':
-        passed = actual === assertion.value;
+        passed = String(actual) === String(assertion.value);
         break;
       case 'neq':
-        passed = actual !== assertion.value;
+        passed = String(actual) !== String(assertion.value);
         break;
       case 'contains':
         passed = typeof actual === 'string' && actual.includes(String(assertion.value));

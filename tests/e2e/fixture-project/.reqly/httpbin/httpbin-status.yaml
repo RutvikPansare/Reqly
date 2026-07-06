@@ -1,0 +1,8 @@
+id: req-fixture-httpbin-status
+name: httpbin-status
+method: GET
+url: '{{baseUrl}}/status/200'
+postScript: |
+  test('status is 200', () => {
+    expect(res.getStatus()).to.equal(200);
+  });

@@ -42,6 +42,7 @@ describe('POST /api/run/adhoc - collection variable resolution', () => {
       historyStore: new HistoryStore(),
       flowManager: new FlowManager(PROJECT_DIR),
       dotEnvLoader: new DotEnvLoader(PROJECT_DIR),
+      workspaceManager: {} as any,
       specLoader: new SpecLoader(),
       executeRequest: executeRequest as unknown as EngineContext['executeRequest'],
     };

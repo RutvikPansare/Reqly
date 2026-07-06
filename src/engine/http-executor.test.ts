@@ -205,6 +205,30 @@ describe('http-executor', () => {
       expect(calledBody.variables).toBeUndefined();
     });
 
+    // Regression: the graphql branch built the body AFTER the string/object
+    // substitution branches and never resolved {{variables}}, so env vars in
+    // the query or GraphQL variables were sent literally.
+    it('should substitute {{env vars}} inside the graphql query and variables', async () => {
+      mockOkResponse();
+      const config: RequestConfig = {
+        method: 'POST',
+        url: 'https://api.example.com/graphql',
+        type: 'graphql',
+        graphql: {
+          query: 'query { country(code: "{{countryCode}}") { name } }',
+          variables: { token: '{{apiToken}}' },
+        },
+      };
+      const env: Environment = {
+        id: '1', name: 'dev',
+        variables: { countryCode: 'US', apiToken: 'secret-123' },
+      };
+      await execute(config, env);
+      const calledBody = JSON.parse((vi.mocked(fetch).mock.lastCall![1] as any).body);
+      expect(calledBody.query).toBe('query { country(code: "US") { name } }');
+      expect(calledBody.variables).toEqual({ token: 'secret-123' });
+    });
+
     it('should set Content-Type application/json automatically for graphql requests', async () => {
       mockOkResponse();
       const config: RequestConfig = {

@@ -1,5 +1,6 @@
 import * as grpcLoader from '@grpc/proto-loader';
 import * as grpcJs from '@grpc/grpc-js';
+import * as fs from 'fs';
 import * as path from 'path';
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,23 @@ function statusName(code: number): string {
   return GRPC_STATUS_NAMES[code] ?? `UNKNOWN_${code}`;
 }
 
+/**
+ * Resolves a proto file path and rejects anything that escapes the protos
+ * dir - protoFile comes from user YAML / MCP args and is joined into a
+ * filesystem path. Returns null when the path is unsafe.
+ */
+export function resolveProtoPath(protosDir: string, protoFile: string): string | null {
+  const resolved = path.resolve(protosDir, protoFile);
+  const base = path.resolve(protosDir);
+  if (resolved !== base && !resolved.startsWith(base + path.sep)) return null;
+  return resolved;
+}
+
+/** Closes a client channel, ignoring errors - cleanup must never mask the call result. */
+function closeQuietly(stub: unknown): void {
+  try { grpcJs.closeClient(stub as Parameters<typeof grpcJs.closeClient>[0]); } catch { /* ignore */ }
+}
+
 /** Options passed to runGrpcRequest by the MCP layer / collection runner. */
 export interface GrpcRequest {
   /** gRPC server address, e.g. "localhost:50051" */
@@ -58,10 +76,12 @@ export interface GrpcRequest {
    * Keys are lowercase header names (e.g. "authorization", "x-api-key").
    */
   metadata?: Record<string, string>;
-  /** Use insecure (plaintext) channel. Default: true for localhost, false otherwise. */
+  /** Use insecure (plaintext) channel. Default: true. */
   insecure?: boolean;
   /** TLS root cert PEM path (optional, for TLS channels). */
   tlsCertPath?: string;
+  /** Call deadline in milliseconds (default: 30000). */
+  timeoutMs?: number;
 }
 
 export interface GrpcResponse {
@@ -90,7 +110,17 @@ export async function runGrpcRequest(
   req: GrpcRequest,
   protosDir: string,
 ): Promise<GrpcResponse> {
-  const protoPath = path.join(protosDir, req.protoFile);
+  const protoPath = resolveProtoPath(protosDir, req.protoFile);
+  if (!protoPath) {
+    return {
+      grpcStatus: 'INVALID_ARGUMENT',
+      grpcStatusCode: 3,
+      body: null,
+      latency: 0,
+      isError: true,
+      errorMessage: `protoFile '${req.protoFile}' resolves outside the protos directory`,
+    };
+  }
 
   let packageDef: grpcLoader.PackageDefinition;
   try {
@@ -134,14 +164,33 @@ export async function runGrpcRequest(
     };
   }
 
-  // Build channel credentials
-  const creds = (req.insecure !== false)
-    ? grpcJs.credentials.createInsecure()
-    : grpcJs.credentials.createSsl();
+  // Build channel credentials. tlsCertPath supplies the root CA for TLS
+  // channels (self-signed / private CAs) - it was previously accepted but
+  // silently ignored.
+  let creds: grpcJs.ChannelCredentials;
+  if (req.insecure !== false) {
+    creds = grpcJs.credentials.createInsecure();
+  } else if (req.tlsCertPath) {
+    try {
+      creds = grpcJs.credentials.createSsl(fs.readFileSync(req.tlsCertPath));
+    } catch (err: any) {
+      return {
+        grpcStatus: 'INVALID_ARGUMENT',
+        grpcStatusCode: 3,
+        body: null,
+        latency: 0,
+        isError: true,
+        errorMessage: `Failed to read TLS cert '${req.tlsCertPath}': ${err?.message ?? String(err)}`,
+      };
+    }
+  } else {
+    creds = grpcJs.credentials.createSsl();
+  }
 
   const stub = new serviceConstructor(req.serverUrl, creds);
 
   if (typeof stub[req.method] !== 'function') {
+    closeQuietly(stub);
     return {
       grpcStatus: 'UNIMPLEMENTED',
       grpcStatusCode: 12,
@@ -160,11 +209,15 @@ export async function runGrpcRequest(
     }
   }
 
-  // Execute the call and measure latency.
+  // Execute the call with a deadline and measure latency. Without a deadline,
+  // grpc-js waits for the channel to become ready indefinitely, so a call to
+  // an unreachable server would hang forever.
+  const timeoutMs = req.timeoutMs ?? 30_000;
   const start = Date.now();
   return new Promise<GrpcResponse>(resolve => {
-    stub[req.method](req.message, meta, (err: any, response: any) => {
+    stub[req.method](req.message, meta, { deadline: new Date(Date.now() + timeoutMs) }, (err: any, response: any) => {
       const latency = Date.now() - start;
+      closeQuietly(stub);
 
       if (err) {
         const code: number = err.code ?? 2;

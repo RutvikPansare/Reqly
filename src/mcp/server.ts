@@ -67,6 +67,10 @@ import * as runRealtime from './tools/run-realtime.js';
 import * as listWorkspaceProjects from './tools/list-workspace-projects.js';
 import * as addWorkspaceProject from './tools/add-workspace-project.js';
 import * as removeWorkspaceProject from './tools/remove-workspace-project.js';
+import * as createWorkspace from './tools/create-workspace.js';
+import * as linkWorkspaceRepo from './tools/link-workspace-repo.js';
+import * as useWorkspace from './tools/use-workspace.js';
+import * as listWorkspaces from './tools/list-workspaces.js';
 import * as getSecret from './tools/get-secret.js';
 import * as getSecretStatus from './tools/get-secret-status.js';
 import * as configureSecretProvider from './tools/configure-secret-provider.js';
@@ -133,6 +137,10 @@ const tools = [
   listWorkspaceProjects,
   addWorkspaceProject,
   removeWorkspaceProject,
+  createWorkspace,
+  linkWorkspaceRepo,
+  useWorkspace,
+  listWorkspaces,
   getSecret,
   getSecretStatus,
   configureSecretProvider,
@@ -163,7 +171,8 @@ export function convertSchemaToZodShape(schema: any) {
       );
     }
     
-    if (schema.required && !schema.required.includes(k)) {
+    // No `required` array means every property is optional (JSON Schema semantics).
+    if (!schema.required || !schema.required.includes(k)) {
       zType = zType.optional();
     }
     shape[k] = zType;

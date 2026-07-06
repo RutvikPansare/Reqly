@@ -1,0 +1,12 @@
+environments:
+  - id: env-fixture-development
+    name: development
+    variables:
+      baseUrl: https://httpbin.org
+      apiLabel: dev
+  - id: env-fixture-staging
+    name: staging
+    variables:
+      baseUrl: https://httpbin.org
+      apiLabel: staging
+active: development

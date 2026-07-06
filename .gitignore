@@ -113,3 +113,7 @@ test-spec.yaml
 packages/desktop/release/
 packages/desktop/packages/
 packages/desktop/resources/server/
+
+# T-243 e2e artifacts
+tests/e2e/screenshots/
+tests/e2e/.ui-server-state.json

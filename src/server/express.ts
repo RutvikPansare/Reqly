@@ -314,6 +314,65 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     }
   });
 
+  // T-226: named workspace model (aliases -> local repo paths)
+  app.get('/api/workspaces', async (_req, res) => {
+    try {
+      const workspaces = await context.workspaceManager.listWorkspaces();
+      const active = await context.workspaceManager.getActiveWorkspace();
+      res.json({ workspaces, active: active?.name ?? null });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/workspaces', express.json(), async (req, res) => {
+    try {
+      if (!req.body.name) throw new Error('name is required');
+      const workspace = await context.workspaceManager.createWorkspace(req.body.name);
+      res.json(workspace);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/workspaces/active', express.json(), async (req, res) => {
+    try {
+      if (!req.body.name) throw new Error('name is required');
+      const workspace = await context.workspaceManager.useWorkspace(req.body.name);
+      res.json({ active: req.body.name, workspace });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/workspaces/active', async (_req, res) => {
+    try {
+      await context.workspaceManager.clearActiveWorkspace();
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/workspaces/:name/repos', express.json(), async (req, res) => {
+    try {
+      if (!req.body.alias || !req.body.path) throw new Error('alias and path are required');
+      const workspace = await context.workspaceManager.linkRepo(req.params.name, req.body.alias, req.body.path);
+      res.json(workspace);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/workspaces/:name/repos/:alias', async (req, res) => {
+    try {
+      const workspace = await context.workspaceManager.unlinkRepo(req.params.name, req.params.alias);
+      res.json(workspace);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/project', async (_req, res) => {
     const projectRoot = path.dirname(context.collectionManager.getBaseDir());
     const framework = await detectFramework(projectRoot);
@@ -550,16 +609,22 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       const col = await context.collectionManager.createCollection(req.body.name);
       res.json(col);
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      // Invalid/reserved-name errors are client errors, not server faults.
+      const status = /^invalid collection name|is a reserved directory name/i.test(e.message) ? 400 : 500;
+      res.status(status).json({ error: e.message });
     }
   });
 
   app.put('/api/collections/:name', async (req, res) => {
     try {
+      if (typeof req.body?.name !== 'string' || req.body.name.trim() === '') {
+        return res.status(400).json({ error: 'A new collection name is required.' });
+      }
       await context.collectionManager.renameCollection(req.params.name, req.body.name);
       res.json({ success: true });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      const status = e instanceof CollectionNotFoundError ? 404 : 400;
+      res.status(status).json({ error: e.message });
     }
   });
 
@@ -574,12 +639,12 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
   app.post('/api/collections/:name/duplicate', async (req, res) => {
     try {
-      await context.collectionManager.duplicateRequest(
+      const finalName = await context.collectionManager.duplicateRequest(
         req.params.name,
         req.body.requestName,
         req.body.newName
       );
-      res.json({ success: true });
+      res.json({ success: true, name: finalName });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -621,14 +686,21 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       await context.collectionManager.addRequest(req.params.name, req.body);
       res.json({ success: true });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      const status = /^invalid request name/i.test(e.message) ? 400 : 500;
+      res.status(status).json({ error: e.message });
     }
   });
 
   app.put('/api/collections/:name/requests/:requestName', async (req, res) => {
     try {
       if (req.params.requestName !== req.body.name) {
-        // Handle rename: delete old, add new
+        // Handle rename: delete old, add new. Validate the new name BEFORE
+        // deleting the old file, or an invalid name would destroy the request.
+        if (typeof req.body?.name !== 'string' || req.body.name.trim() === '' ||
+            req.body.name === '.' || req.body.name === '..' ||
+            req.body.name.includes('/') || req.body.name.includes('\\') || req.body.name.includes('\0')) {
+          return res.status(400).json({ error: `invalid request name "${req.body?.name}": names cannot contain path separators or "..".` });
+        }
         const exists = fsSync.existsSync(path.join(context.collectionManager.getBaseDir(), req.params.name, `${req.body.name}.yaml`));
         if (exists) {
            return res.status(409).json({ error: `A request named "${req.body.name}" already exists. Please choose a different name.` });
@@ -638,7 +710,8 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
       await context.collectionManager.addRequest(req.params.name, req.body);
       res.json({ success: true });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      const status = /^invalid request name/i.test(e.message) ? 400 : 500;
+      res.status(status).json({ error: e.message });
     }
   });
 

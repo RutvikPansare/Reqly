@@ -7,6 +7,7 @@ import { FlowManager } from '../engine/flow-manager.js';
 import { FlowRunner } from '../engine/flow-runner.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { createDefaultSecretRegistry } from '../engine/secret-providers/index.js';
+import { createDefaultWorkspaceManager } from '../engine/workspace-manager.js';
 import { SpecLoader } from '../engine/spec-loader.js';
 import { ScriptVariableStore } from '../engine/script-variables.js';
 import * as path from 'path';
@@ -110,6 +111,7 @@ export async function handleRunFlowCommand(
       historyStore,
       flowManager,
       dotEnvLoader,
+      workspaceManager: createDefaultWorkspaceManager(),
       specLoader: new SpecLoader(),
       scriptVariableStore: new ScriptVariableStore(),
       executeRequest: (req, env2, auth, truncate, maxBodyBytes, collectionVars, collectionAuth) =>

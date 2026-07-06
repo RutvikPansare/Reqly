@@ -13,6 +13,30 @@ const META_FILE = 'collection.yaml';
 // base dir (e.g. FlowManager's `flows/`, proto files for gRPC) - never treated as collections.
 const RESERVED_DIRS = new Set(['flows', 'protos', '.schema-cache']);
 
+// Collection and request names become path segments (`<base>/<col>/<req>.yaml`).
+// Reject anything that could escape the base dir or traverse the filesystem:
+// path separators, `..`, `.`, empty, or names with NUL bytes. Callers surface
+// this as a 4xx, not a 500.
+function assertSafeName(kind: 'collection' | 'request', name: string): void {
+  if (typeof name !== 'string' || name.trim() === '') {
+    throw new Error(`invalid ${kind} name: name must be a non-empty string`);
+  }
+  if (
+    name === '.' ||
+    name === '..' ||
+    name.includes('/') ||
+    name.includes('\\') ||
+    name.includes('\0')
+  ) {
+    throw new Error(`invalid ${kind} name "${name}": names cannot contain path separators or "..".`);
+  }
+  // Reserved dirs are owned by other managers and hidden from listCollections;
+  // a collection with one of these names would exist on disk but be invisible.
+  if (kind === 'collection' && RESERVED_DIRS.has(name)) {
+    throw new Error(`"${name}" is a reserved directory name; choose a different collection name`);
+  }
+}
+
 export class CollectionNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -41,6 +65,7 @@ export class CollectionManager {
   }
 
   async createCollection(name: string): Promise<Collection> {
+    assertSafeName('collection', name);
     await this.ensureBaseDir();
     const colPath = path.join(this.baseDir, name);
     if (!existsSync(colPath)) {
@@ -187,6 +212,7 @@ export class CollectionManager {
   }
 
   async addRequest(collectionName: string, req: CollectionRequest): Promise<void> {
+    assertSafeName('request', req.name);
     const colPath = path.join(this.baseDir, collectionName);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${collectionName} not found`);
@@ -239,11 +265,15 @@ export class CollectionManager {
   }
 
   async renameCollection(oldName: string, newName: string): Promise<void> {
+    assertSafeName('collection', newName);
     const oldPath = path.join(this.baseDir, oldName);
     if (!existsSync(oldPath)) {
       throw new CollectionNotFoundError(`Collection ${oldName} not found`);
     }
     const newPath = path.join(this.baseDir, newName);
+    if (newName !== oldName && existsSync(newPath)) {
+      throw new Error(`A collection named "${newName}" already exists.`);
+    }
     // A single atomic rename moves the folder and all its request files.
     await fs.rename(oldPath, newPath);
   }
@@ -265,10 +295,22 @@ export class CollectionManager {
     return this.getCollection(copyName);
   }
 
-  async duplicateRequest(collectionName: string, requestName: string, newName: string): Promise<void> {
+  async duplicateRequest(collectionName: string, requestName: string, newName: string): Promise<string> {
     const original = await this.getRequest(collectionName, requestName);
-    const copy: CollectionRequest = { ...original, name: newName };
+
+    // Never clobber an existing request: if the requested copy name is taken,
+    // append a numeric suffix (same convention as moveRequest / duplicateCollection).
+    const colPath = path.join(this.baseDir, collectionName);
+    let finalName = newName;
+    let suffix = 0;
+    while (existsSync(path.join(colPath, `${finalName}.yaml`))) {
+      suffix += 1;
+      finalName = `${newName} (${suffix})`;
+    }
+
+    const copy: CollectionRequest = { ...original, name: finalName };
     await this.addRequest(collectionName, copy);
+    return finalName;
   }
 
   async moveRequest(collectionName: string, requestName: string, targetCollection: string): Promise<{ name: string; collection: string }> {

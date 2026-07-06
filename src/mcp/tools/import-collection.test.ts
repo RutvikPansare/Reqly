@@ -26,6 +26,7 @@ function makeContext(collectionManager: CollectionManager): EngineContext {
     historyStore: new HistoryStore(),
     flowManager: new FlowManager(collectionManager.getBaseDir()),
     dotEnvLoader: new DotEnvLoader(collectionManager.getBaseDir()),
+    workspaceManager: {} as any,
     specLoader: new SpecLoader(),
     executeRequest: async () => ({ status: 200, body: '', headers: {}, latency: 0, timestamp: new Date().toISOString() }),
   };

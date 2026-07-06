@@ -13,6 +13,23 @@ function bodyString(body: string | Record<string, unknown> | undefined): string 
   return JSON.stringify(body);
 }
 
+// POSIX shell single-quote escaping: close the quote, emit an escaped quote,
+// reopen. `O'Brien` -> `O'\''Brien`. Without this, quotes in the value break
+// out of the snippet's quoting entirely.
+function shq(value: string): string {
+  return value.replace(/'/g, String.raw`'\''`);
+}
+
+// JS single-quoted string literal escaping for generated fetch/axios code.
+function jsq(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
+}
+
 export function generateCode(request: CodeGenRequest, target: CodeTarget): string {
   switch (target) {
     case 'curl':  return generateCurl(request);
@@ -27,16 +44,16 @@ function generateCurl(req: CodeGenRequest): string {
   const body = bodyString(req.body);
 
   const firstLine = method === 'GET'
-    ? `curl '${req.url}'`
-    : `curl -X ${method} '${req.url}'`;
+    ? `curl '${shq(req.url)}'`
+    : `curl -X ${method} '${shq(req.url)}'`;
   lines.push(firstLine);
 
   for (const [k, v] of Object.entries(req.headers ?? {})) {
-    lines.push(`  -H '${k}: ${v}'`);
+    lines.push(`  -H '${shq(`${k}: ${v}`)}'`);
   }
 
   if (body !== undefined) {
-    lines.push(`  --data-raw '${body}'`);
+    lines.push(`  --data-raw '${shq(body)}'`);
   }
 
   return lines.join(' \\\n');
@@ -51,7 +68,7 @@ function generateFetch(req: CodeGenRequest): string {
 
   if (!hasOptions) {
     return [
-      `const response = await fetch('${req.url}');`,
+      `const response = await fetch('${jsq(req.url)}');`,
       `const data = await response.json();`,
       `console.log(data);`,
     ].join('\n');
@@ -62,18 +79,18 @@ function generateFetch(req: CodeGenRequest): string {
 
   if (hasHeaders) {
     const headerLines = Object.entries(headers)
-      .map(([k, v]) => `    '${k}': '${v}'`)
+      .map(([k, v]) => `    '${jsq(k)}': '${jsq(v)}'`)
       .join(',\n');
     opts.push(`  headers: {\n${headerLines}\n  }`);
   }
 
   if (body !== undefined) {
-    const bodyExpr = isJsonString(body) ? `JSON.stringify(${body})` : `'${body}'`;
+    const bodyExpr = isJsonString(body) ? `JSON.stringify(${body})` : `'${jsq(body)}'`;
     opts.push(`  body: ${bodyExpr}`);
   }
 
   return [
-    `const response = await fetch('${req.url}', {`,
+    `const response = await fetch('${jsq(req.url)}', {`,
     opts.join(',\n'),
     `});`,
     `const data = await response.json();`,
@@ -89,18 +106,18 @@ function generateAxios(req: CodeGenRequest): string {
 
   const opts: string[] = [
     `  method: '${method}'`,
-    `  url: '${req.url}'`,
+    `  url: '${jsq(req.url)}'`,
   ];
 
   if (hasHeaders) {
     const headerLines = Object.entries(headers)
-      .map(([k, v]) => `    '${k}': '${v}'`)
+      .map(([k, v]) => `    '${jsq(k)}': '${jsq(v)}'`)
       .join(',\n');
     opts.push(`  headers: {\n${headerLines}\n  }`);
   }
 
   if (body !== undefined) {
-    const dataExpr = isJsonString(body) ? body : `'${body}'`;
+    const dataExpr = isJsonString(body) ? body : `'${jsq(body)}'`;
     opts.push(`  data: ${dataExpr}`);
   }
 

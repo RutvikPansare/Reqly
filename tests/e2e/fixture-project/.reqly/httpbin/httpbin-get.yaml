@@ -1,0 +1,14 @@
+id: req-fixture-httpbin-get
+name: httpbin-get
+method: GET
+url: '{{baseUrl}}/get'
+headers:
+  X-Reqly-Fixture: e2e
+postScript: |
+  test('status is 200', () => {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test('echoes fixture header', () => {
+    const body = res.getBody();
+    expect(body.headers['X-Reqly-Fixture']).to.equal('e2e');
+  });

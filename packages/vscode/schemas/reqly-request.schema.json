@@ -1,0 +1,503 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/CollectionRequest",
+  "definitions": {
+    "CollectionRequest": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "$ref": "#/definitions/HttpMethod"
+        },
+        "url": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "body": {
+          "$ref": "#/definitions/RequestBody"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "disabledParams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "disabledHeaders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "authProfileId": {
+          "type": "string"
+        },
+        "auth": {
+          "$ref": "#/definitions/InlineAuth"
+        },
+        "environmentId": {
+          "type": "string"
+        },
+        "assertions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Assertion"
+          }
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "rest",
+            "graphql",
+            "graphql-subscription",
+            "grpc",
+            "websocket",
+            "sse",
+            "socketio",
+            "mqtt"
+          ]
+        },
+        "graphql": {
+          "$ref": "#/definitions/GraphQLConfig"
+        },
+        "grpc": {
+          "$ref": "#/definitions/GrpcConfig"
+        },
+        "realtime": {
+          "$ref": "#/definitions/RealtimeConfig"
+        },
+        "preScript": {
+          "type": "string"
+        },
+        "postScript": {
+          "type": "string"
+        },
+        "preScriptFile": {
+          "type": "string"
+        },
+        "postScriptFile": {
+          "type": "string"
+        },
+        "mockPath": {
+          "type": "string"
+        },
+        "specOperationId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExampleResponse"
+          }
+        }
+      },
+      "required": [
+        "method",
+        "name",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "HttpMethod": {
+      "type": "string",
+      "enum": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
+    },
+    "RequestBody": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        {
+          "$ref": "#/definitions/MultipartBody"
+        }
+      ]
+    },
+    "MultipartBody": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "multipart"
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MultipartPart"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "parts"
+      ],
+      "additionalProperties": false
+    },
+    "MultipartPart": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "file"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "InlineAuth": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "Assertion": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "$ref": "#/definitions/AssertionField"
+        },
+        "path": {
+          "type": "string",
+          "description": "For body, dot-notation path like data.token"
+        },
+        "operator": {
+          "$ref": "#/definitions/AssertionOperator"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      },
+      "required": [
+        "field",
+        "operator",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "AssertionField": {
+      "type": "string",
+      "enum": [
+        "status",
+        "body",
+        "latency"
+      ]
+    },
+    "AssertionOperator": {
+      "type": "string",
+      "enum": [
+        "eq",
+        "neq",
+        "contains",
+        "lt",
+        "gt"
+      ]
+    },
+    "GraphQLConfig": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "queryFile": {
+          "type": "string"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "operationName": {
+          "type": "string"
+        },
+        "streamTimeout": {
+          "type": "number",
+          "description": "For graphql-subscription type: max seconds to buffer messages (default 5)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GrpcConfig": {
+      "type": "object",
+      "properties": {
+        "protoFile": {
+          "type": "string",
+          "description": "Path to the .proto file relative to .reqly/protos/"
+        },
+        "service": {
+          "type": "string",
+          "description": "Fully-qualified service name, e.g. \"helloworld.Greeter\""
+        },
+        "method": {
+          "type": "string",
+          "description": "Method name on the service, e.g. \"SayHello\""
+        },
+        "message": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "JSON message body to send"
+        },
+        "insecure": {
+          "type": "boolean",
+          "description": "Use insecure (plaintext) channel. Defaults to true."
+        },
+        "streaming": {
+          "type": "string",
+          "enum": [
+            "server",
+            "client",
+            "bidirectional"
+          ],
+          "description": "Streaming mode for T-168. Unset = unary."
+        },
+        "streamTimeout": {
+          "type": "number",
+          "description": "For streaming modes: max seconds to buffer (default 5)"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "description": "For client/bidirectional streaming: array of messages to send"
+        }
+      },
+      "required": [
+        "protoFile",
+        "service",
+        "method"
+      ],
+      "additionalProperties": false,
+      "description": "gRPC-specific configuration block on a request. `method` on the outer RequestConfig is unused for gRPC requests. `url` on the outer RequestConfig holds the server address (e.g. \"localhost:50051\"). `headers` on the outer RequestConfig map directly to gRPC Metadata entries."
+    },
+    "RealtimeConfig": {
+      "type": "object",
+      "properties": {
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "clientVersion": {
+          "type": "string",
+          "enum": [
+            "v2",
+            "v3",
+            "v4"
+          ]
+        },
+        "authType": {
+          "type": "string",
+          "enum": [
+            "none",
+            "bearer"
+          ]
+        },
+        "authToken": {
+          "type": "string"
+        },
+        "mqttClientId": {
+          "type": "string"
+        },
+        "mqttUsername": {
+          "type": "string"
+        },
+        "mqttPassword": {
+          "type": "string"
+        },
+        "mqttKeepalive": {
+          "type": "number"
+        },
+        "mqttCleanSession": {
+          "type": "boolean"
+        },
+        "mqttWillTopic": {
+          "type": "string"
+        },
+        "mqttWillMessage": {
+          "type": "string"
+        },
+        "mqttWillQos": {
+          "type": "number",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "mqttWillRetain": {
+          "type": "boolean"
+        },
+        "mqttTopics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "qos": {
+                "type": "number",
+                "enum": [
+                  0,
+                  1,
+                  2
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "qos"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "captureTimeout": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExampleResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "number"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "body": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latency": {
+          "type": "number"
+        },
+        "savedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status",
+        "headers",
+        "body",
+        "latency",
+        "savedAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "title": "Reqly request",
+  "description": "A saved Reqly request (.reqly/<collection>/<name>.yaml)"
+}

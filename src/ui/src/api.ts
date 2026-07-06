@@ -567,3 +567,59 @@ export async function removeWorkspaceProject(path: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+// T-226: named workspace model (aliases -> local repo paths)
+export interface WorkspaceRepo { alias: string; path: string }
+export interface NamedWorkspace { name: string; repos: WorkspaceRepo[]; sharedEnv?: Record<string, string> }
+
+export async function fetchWorkspaces(): Promise<{ workspaces: NamedWorkspace[]; active: string | null }> {
+  const res = await fetch('/api/workspaces');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function createNamedWorkspace(name: string): Promise<NamedWorkspace> {
+  const res = await fetch('/api/workspaces', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to create workspace');
+  return data;
+}
+
+export async function setActiveWorkspace(name: string | null): Promise<void> {
+  if (name === null) {
+    const res = await fetch('/api/workspaces/active', { method: 'DELETE' });
+    if (!res.ok) throw new Error(await res.text());
+    return;
+  }
+  const res = await fetch('/api/workspaces/active', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to set active workspace');
+}
+
+export async function linkWorkspaceRepo(workspace: string, alias: string, path: string): Promise<NamedWorkspace> {
+  const res = await fetch(`/api/workspaces/${encodeURIComponent(workspace)}/repos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alias, path })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to link repo');
+  return data;
+}
+
+export async function unlinkWorkspaceRepo(workspace: string, alias: string): Promise<NamedWorkspace> {
+  const res = await fetch(`/api/workspaces/${encodeURIComponent(workspace)}/repos/${encodeURIComponent(alias)}`, {
+    method: 'DELETE'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to unlink repo');
+  return data;
+}

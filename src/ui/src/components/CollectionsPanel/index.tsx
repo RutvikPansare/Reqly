@@ -8,6 +8,7 @@ import type { CollectionsPanelProps } from './types.js';
 import { useCollectionState } from './useCollectionState.js';
 import { SidebarEmptyHint } from './SidebarEmptyHint.js';
 import { ProjectPathWidget, formatProjectPath } from './ProjectPathWidget.js';
+import { WorkspaceSwitcher } from '../WorkspaceSwitcher.js';
 import { SearchResults } from './SearchResults.js';
 import { CollectionRow } from './CollectionRow.js';
 import { ContextMenu } from './ContextMenu.js';
@@ -31,6 +32,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
 
   return (
     <div className="p-3 flex flex-col gap-3 relative min-h-full">
+      <WorkspaceSwitcher />
       {s.projectPath && <ProjectPathWidget projectPath={s.projectPath} hasEverConnectedAgent={s.hasEverConnectedAgent} onSwitch={s.setProjectPath} />}
 
       <div className="-mx-3 -mt-1" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>

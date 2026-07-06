@@ -1,0 +1,21 @@
+name: smoke
+description: Fixture flow exercising run + extract + assert steps
+steps:
+  - type: run
+    id: fire-httpbin-get
+    collection: httpbin
+    request: httpbin-get
+  - type: extract
+    id: grab-fixture-header
+    from: body.headers.X-Reqly-Fixture
+    into: fixtureHeader
+  - type: assert
+    id: check-response
+    assertions:
+      - field: status
+        operator: eq
+        value: 200
+      - field: body
+        path: headers.X-Reqly-Fixture
+        operator: eq
+        value: e2e

@@ -1,5 +1,8 @@
 import * as grpcLoader from '@grpc/proto-loader';
 import * as grpcJs from '@grpc/grpc-js';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 // ---------------------------------------------------------------------------
 // grpc-reflection.ts  (T-167)
@@ -46,23 +49,45 @@ message ServerReflectionRequest {
   oneof message_request {
     string file_by_filename = 3;
     string file_containing_symbol = 4;
-    string list_services = 6;
+    ExtensionRequest file_containing_extension = 5;
+    string all_extension_numbers_of_type = 6;
+    string list_services = 7;
   }
 }
+message ExtensionRequest { string containing_type = 1; int32 extension_number = 2; }
 message ServerReflectionResponse {
   string valid_host = 1;
   ServerReflectionRequest original_request = 2;
   oneof message_response {
+    FileDescriptorResponse file_descriptor_response = 4;
+    ExtensionNumberResponse all_extension_numbers_response = 5;
     ListServiceResponse list_services_response = 6;
-    FileDescriptorResponse file_descriptor_response = 7;
-    ErrorResponse error_response = 9;
+    ErrorResponse error_response = 7;
   }
 }
+message FileDescriptorResponse { repeated bytes file_descriptor_proto = 1; }
+message ExtensionNumberResponse { string base_type_name = 1; repeated int32 extension_number = 2; }
 message ListServiceResponse { repeated ServiceResponse service = 1; }
 message ServiceResponse { string name = 1; }
-message FileDescriptorResponse { repeated bytes file_descriptor_proto = 1; }
 message ErrorResponse { int32 error_code = 1; string error_message = 2; }
 `;
+
+// proto-loader only loads from files, so the inline proto is materialised to a
+// temp file (once per process) and parsed on each discovery call - reflection
+// is a rare, user-triggered operation, so re-parsing is not a hot path.
+function loadReflectionPackageDefinition(): grpcLoader.PackageDefinition {
+  const protoPath = path.join(os.tmpdir(), `reqly-reflection-${process.pid}.proto`);
+  fs.writeFileSync(protoPath, REFLECTION_PROTO_INLINE, 'utf8');
+  // keepCase preserves the snake_case field names the stream handlers read
+  // (list_services_response, file_containing_symbol, ...).
+  return grpcLoader.loadSync(protoPath, {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  });
+}
 
 /**
  * Connects to a gRPC server via server reflection and returns the list of
@@ -106,16 +131,7 @@ export async function discoverServicesViaReflection(
         ? grpcJs.credentials.createInsecure()
         : grpcJs.credentials.createSsl();
 
-      // Use loadPackageDefinition with a minimal descriptor to get the stub.
-      // In production this resolves to the real grpc.reflection.v1alpha package.
-      const pkgDef = (() => {
-            try {
-              return {} as grpcLoader.PackageDefinition;
-            } catch {
-              return {} as grpcLoader.PackageDefinition;
-            }
-          })();
-
+      const pkgDef = loadReflectionPackageDefinition();
       const pkg = grpcJs.loadPackageDefinition(pkgDef as any) as any;
 
       const ReflectionService =

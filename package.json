@@ -31,6 +31,9 @@
     "build": "tsc && cd src/ui && npm install && npm run build && cd ../.. && rm -rf dist/ui && cp -R src/ui/dist dist/ui",
     "build:ui": "cd src/ui && npm run build && cd ../.. && rm -rf dist/ui && cp -R src/ui/dist dist/ui",
     "test": "vitest run",
+    "test:e2e:mcp": "tsx tests/e2e/mcp-regression.ts",
+    "test:e2e:ui": "playwright test --config tests/e2e/playwright.config.ts",
+    "test:e2e": "npm run test:e2e:mcp && npm run test:e2e:ui",
     "start": "node dist/server/index.js"
   },
   "repository": {
@@ -74,6 +77,7 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/aws4": "^1.11.6",
     "@types/chai": "^5.2.3",
     "@types/cors": "^2.8.19",

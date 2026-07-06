@@ -84,11 +84,25 @@ export class MockServer {
       });
     });
 
-    await new Promise<void>((resolve) => {
-      this.server = app.listen(port, () => resolve());
+    await new Promise<void>((resolve, reject) => {
+      const server = app.listen(port);
+      // A listen error (EADDRINUSE, EACCES, ...) must reject and leave no
+      // phantom state behind - otherwise stop() throws ERR_SERVER_NOT_RUNNING
+      // and every retry is rejected as "already running".
+      const onError = (err: Error) => {
+        this.server = null;
+        this.routes = [];
+        reject(err);
+      };
+      server.once('error', onError);
+      server.once('listening', () => {
+        server.removeListener('error', onError);
+        this.server = server;
+        this.collection = collectionName;
+        this.port = port;
+        resolve();
+      });
     });
-    this.collection = collectionName;
-    this.port = port;
   }
 
   async stop(): Promise<void> {

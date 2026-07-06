@@ -10,6 +10,7 @@ import { MockServer } from '../../engine/mock-server.js';
 import { DotEnvLoader } from '../../engine/dotenv-loader.js';
 import { SpecLoader } from '../../engine/spec-loader.js';
 import { ScriptVariableStore } from '../../engine/script-variables.js';
+import { WorkspaceManager } from '../../engine/workspace-manager.js';
 import { SecretProviderRegistry } from '../../engine/secret-providers/index.js';
 import { HttpResponse, CollectionRequest, Environment, AuthProfile } from '../../types/index.js';
 import { RunnerContext } from '../../engine/script-runner.js';
@@ -25,6 +26,7 @@ export interface EngineContext {
   flowManager: FlowManager;
   mockServer?: MockServer;
   dotEnvLoader: DotEnvLoader;
+  workspaceManager: WorkspaceManager;
   specLoader: SpecLoader;
   scriptVariableStore?: ScriptVariableStore;
   secretRegistry?: SecretProviderRegistry;

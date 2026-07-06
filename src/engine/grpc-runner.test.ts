@@ -13,6 +13,8 @@ const _mock = {
   callError: null as any,
   metadataAddSpy: vi.fn(),
   loadShouldFail: false,
+  lastCallOptions: undefined as any,
+  closeClientSpy: vi.fn(),
 };
 
 vi.mock('@grpc/proto-loader', () => ({
@@ -29,15 +31,19 @@ vi.mock('@grpc/proto-loader', () => ({
 // because they are used with `new`.
 vi.mock('@grpc/grpc-js', () => {
   // Fake stub constructor - exposes SayHello and GetUser as call methods.
+  // Accepts both (req, meta, cb) and (req, meta, options, cb) signatures and
+  // records the options object so tests can assert on the deadline.
+  function makeCallMethod() {
+    return function (_req: any, _meta: any, optsOrCb: any, maybeCb?: Function) {
+      const cb = typeof optsOrCb === 'function' ? optsOrCb : maybeCb!;
+      _mock.lastCallOptions = typeof optsOrCb === 'function' ? undefined : optsOrCb;
+      if (_mock.callError) { cb(_mock.callError, null); }
+      else { cb(null, _mock.callResult); }
+    };
+  }
   function FakeStub(this: any, _url: string, _creds: any) {
-    this.SayHello = function (_req: any, _meta: any, cb: Function) {
-      if (_mock.callError) { cb(_mock.callError, null); }
-      else { cb(null, _mock.callResult); }
-    };
-    this.GetUser = function (_req: any, _meta: any, cb: Function) {
-      if (_mock.callError) { cb(_mock.callError, null); }
-      else { cb(null, _mock.callResult); }
-    };
+    this.SayHello = makeCallMethod();
+    this.GetUser = makeCallMethod();
   }
 
   function FakeMetadata(this: any) {
@@ -55,6 +61,7 @@ vi.mock('@grpc/grpc-js', () => {
       createInsecure: vi.fn(() => 'insecure-creds'),
       createSsl: vi.fn(() => 'ssl-creds'),
     },
+    closeClient: vi.fn((client: any) => _mock.closeClientSpy(client)),
     Metadata: FakeMetadata,
     status: { OK: 0, NOT_FOUND: 5, UNIMPLEMENTED: 12, UNAVAILABLE: 14 },
   };
@@ -225,5 +232,61 @@ describe('grpc-runner auth + metadata (T-165)', () => {
 
     expect(_mock.metadataAddSpy).toHaveBeenCalledWith('authorization', 'Bearer explicit');
     expect(_mock.metadataAddSpy).toHaveBeenCalledWith('x-custom', 'value');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T-251: hardening - deadlines, channel cleanup, proto path safety
+// ---------------------------------------------------------------------------
+
+describe('grpc-runner hardening (T-251)', () => {
+  beforeEach(() => {
+    _mock.callResult = { ok: true };
+    _mock.callError = null;
+    _mock.loadShouldFail = false;
+    _mock.lastCallOptions = undefined;
+    _mock.metadataAddSpy = vi.fn();
+    _mock.closeClientSpy = vi.fn();
+    vi.clearAllMocks();
+  });
+
+  it('passes a default 30s deadline in the call options', async () => {
+    const before = Date.now();
+    await runGrpcRequest(BASIC_REQ, '/tmp/protos');
+    const deadline = _mock.lastCallOptions?.deadline;
+    expect(deadline).toBeInstanceOf(Date);
+    const delta = (deadline as Date).getTime() - before;
+    expect(delta).toBeGreaterThan(29_000);
+    expect(delta).toBeLessThan(31_000);
+  });
+
+  it('honors a custom timeoutMs for the deadline', async () => {
+    const before = Date.now();
+    await runGrpcRequest({ ...BASIC_REQ, timeoutMs: 5_000 }, '/tmp/protos');
+    const deadline = _mock.lastCallOptions?.deadline as Date;
+    const delta = deadline.getTime() - before;
+    expect(delta).toBeGreaterThan(4_000);
+    expect(delta).toBeLessThan(6_000);
+  });
+
+  it('closes the client channel after a successful call', async () => {
+    await runGrpcRequest(BASIC_REQ, '/tmp/protos');
+    expect(vi.mocked(grpcJs.closeClient)).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the client channel after a failed call', async () => {
+    setGrpcError(14, 'unavailable');
+    await runGrpcRequest(BASIC_REQ, '/tmp/protos');
+    expect(vi.mocked(grpcJs.closeClient)).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a protoFile that escapes the protos dir', async () => {
+    const result = await runGrpcRequest(
+      { ...BASIC_REQ, protoFile: '../../etc/passwd' },
+      '/tmp/protos',
+    );
+    expect(result.isError).toBe(true);
+    expect(result.errorMessage).toMatch(/protos/i);
+    expect(vi.mocked(grpcLoader.load)).not.toHaveBeenCalled();
   });
 });

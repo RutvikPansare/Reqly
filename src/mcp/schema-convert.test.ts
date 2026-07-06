@@ -51,6 +51,15 @@ describe('convertSchemaToZodShape', () => {
     expect(() => z.object(shape).parse({ name: 'foo' })).not.toThrow();
   });
 
+  it('makes all fields optional when the schema has no required array (T-243)', () => {
+    // get_variables declares { environment?, collectionName? } with no
+    // `required` key at all - calling it with {} must validate.
+    const shape = convertSchemaToZodShape({
+      properties: { environment: { type: 'string' }, collectionName: { type: 'string' } }
+    });
+    expect(() => z.object(shape).parse({})).not.toThrow();
+  });
+
   it('returns empty shape for schema with no properties', () => {
     expect(convertSchemaToZodShape(null)).toEqual({});
     expect(convertSchemaToZodShape({})).toEqual({});

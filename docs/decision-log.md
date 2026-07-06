@@ -16,7 +16,55 @@ Newest entries at the top.
 
 **Decision:** The Bitwarden Secrets Manager provider depends on `@bitwarden/sdk-napi` instead of the `@bitwarden/sdk-secrets-manager` package named in the T-249 spec, and T-249 ships a minimal subset of T-245's infrastructure: the `SecretProvider` interface, `SecretProviderRegistry`, and the `get_secret` MCP tool.
 
-**Why:** `@bitwarden/sdk-secrets-manager` does not exist on npm (404); `@bitwarden/sdk-napi` is Bitwarden's official Node-API binding for Secrets Manager and covers the needed surface (`loginAccessToken`, secrets list/get, projects list). The SDK is lazy-imported behind an injectable factory so tests mock it and the native binding never loads unless a `bw://` URI is resolved. T-249 was picked up before T-245: a provider with no registry to plug into and no MCP tool would be untestable and invisible to agents (MCP coverage rule), so the smallest forward-compatible core of T-245 shipped now. The rest of T-245 (.env loader resolution hook, `{{secret:...}}` inline references, `reqly secrets resolve` CLI, Settings -> Secrets UI) remains queued.
+**Why:** `@bitwarden/sdk-secrets-manager` does not exist on npm (404); `@bitwarden/sdk-napi` is Bitwarden's official Node-API binding for Secrets Manager and covers the needed surface (`loginAccessToken`, secrets list/get, projects list). The SDK is lazy-imported behind an injectable factory so tests mock it and the native binding never loads unless a `bw://` URI is resolved. T-249 was picked up before T-245: a provider with no registry to plug into and no MCP tool would be untestable and invisible to agents (MCP coverage rule), so the smallest forward-compatible core of T-245 shipped now. The rest of T-245 (.env loader resolution hook, `{{secret:...}}` inline references, `reqly secrets resolve` CLI, Settings -> Secrets UI) remains queued and is annotated on the todo item.
+
+## 2026-07-05 - Assertion eq/neq compare by string form; collection/request names are validated as single path segments (T-250)
+
+**Decision:** `runAssertions` compares `eq`/`neq` via `String(actual) === String(value)` rather than strict `===`. Collection and request names are validated by a shared `assertSafeName` guard (no path separators, `..`, `.`, empty, or NUL) at the CollectionManager boundary, with the HTTP routes translating those failures to 400.
+
+**Why:** Assertion values are persisted as strings by both the UI editor and YAML, but `status`/`latency` actuals are numbers - strict equality made every string-valued assertion wrong, and this is a core feature. String coercion is the same rule the flow runner's expression evaluator already uses, so the two engines now agree. For names: they become filesystem path segments (`<base>/<col>/<req>.yaml`), so an unvalidated `..` or `/` let a request escape its collection or a collection escape `.reqly/` entirely - validating at the manager (not just one route) closes every entry point at once, including the MCP tools.
+
+## 2026-07-05 - Mock server rejects a failed listen instead of leaving phantom state; name-collision operations never overwrite (T-250)
+
+**Decision:** `MockServer.start` attaches an `error` listener to `app.listen` and rejects (resetting `this.server`/`routes`) on EADDRINUSE and similar, rather than relying only on the `listening` callback. `duplicateRequest` auto-suffixes on name collision (matching `moveRequest`/`duplicateCollection`) instead of overwriting, and `renameCollection` refuses to rename onto an existing collection.
+
+**Why:** Without an error handler a failed listen left the mock reporting `running: true` while serving nothing, and the next `stop()` threw Node's `ERR_SERVER_NOT_RUNNING` - the mock was unrecoverable without restarting the whole Reqly process. The overwrite behaviours were silent data loss: duplicating or renaming onto an existing name destroyed the target with no warning. The suffix/refuse conventions were already established elsewhere in the codebase; these paths just weren't following them.
+
+## 2026-07-04 - E2E suites run against a temp copy of the fixture project with a fabricated $HOME (T-243)
+
+**Decision:** The committed `tests/e2e/fixture-project/` is never run directly. Each suite copies it into a temp dir and spawns the server with `HOME` pointed at a fresh fake home dir. The Playwright suite defaults to the real port 4242 but fails fast if something already answers there, with `REQLY_E2E_UI_PORT` as the escape hatch. The CI `e2e` job is `continue-on-error: true`.
+
+**Why:** The suites mutate project state (`create_request` writes YAML, `responses.json`, schema cache) - running against the committed fixture would dirty the working tree on every run and make the suite order-dependent. Workspace tools write to `~/.reqly/workspaces/` and `~/.reqly/config.json`; a fake `$HOME` keeps the developer's real global config, lock file, and workspaces untouched. The port fail-fast exists because the first real run silently tested a developer's live Reqly agent (wrong project, wrong data) - a hard error beats a confusing pass/fail against the wrong server. CI keeps the job non-blocking because both layers depend on public endpoints (httpbin.org, grpcb.in, echo.websocket.org) whose flakiness must not block merges.
+
+## 2026-07-04 - Missing `required` array in a tool schema means all params optional; gRPC reflection proto must match the real v1alpha field numbers (T-243)
+
+**Decision:** `convertSchemaToZodShape` now treats a schema without a `required` array as "every property optional" (JSON Schema semantics). `list_grpc_services` loads the real reflection proto by materialising the inline proto text to a temp file for `proto-loader`, with field numbers corrected to match `grpc.reflection.v1alpha` exactly; a unit test now pins that the loaded definition (not an empty stub) reaches `loadPackageDefinition`.
+
+**Why:** Both were production-only failures invisible to the existing unit tests: the schema bug rejected every call that omitted optional-only params (e.g. `get_variables {}` from any MCP client), and the reflection stub was constructed from an empty `{}` package definition that only "worked" because unit tests mock `loadPackageDefinition`. This is exactly the bug class the T-243 harness exists to catch - contract tests pass, live server fails.
+
+## 2026-07-04 - Desktop shell recovers from every renderer/server failure instead of surfacing errors and waiting (T-244)
+
+**Decision:** The Electron shell treats a blank window as a bug class, not an event: renderer crashes auto-reload (bounded at 3/min), failed page loads re-enter a never-ending reconnect poll (the old 10s give-up deadline is gone), and a 5s watchdog respawns the server (bounded at 5 respawns/10 min) when it stops answering. Every one of these paths writes to a new `~/.reqly/desktop.log`, and renderer `console.error` output is forwarded there too. The UI additionally gets a top-level React ErrorBoundary.
+
+**Why:** A user hit a fully black window with zero forensics available - no desktop log existed and no crash handler was registered, so the root cause is unrecoverable for that incident. A local API client's whole pitch is reliability; a dead blank window is worse than an error page, and an error page is worse than silent self-healing. Recovery is bounded (crash/respawn budgets) so a systematically broken build parks on a visible error page pointing at the log instead of hot-looping. Close-hide also now calls `app.hide()` on macOS: with the dock icon hidden, hiding the only window used to leave Reqly frontmost over an empty desktop, which reads as a freeze.
+
+## 2026-07-04 - VS Code YAML schemas generated from TS types, not Zod; delivered via redhat.vscode-yaml
+
+**Decision:** The extension's YAML validation schemas (T-242) are generated by `packages/vscode/scripts/generate-schemas.mjs` from the TypeScript interfaces in `src/types/` using `ts-json-schema-generator`, on every extension build. They are contributed through `contributes.yamlValidation` with `redhat.vscode-yaml` declared as an `extensionDependencies` entry.
+
+**Why:** The task spec said "generate from the existing Zod schemas in src/types/", but `src/types/` contains plain TS interfaces - the only Zod in the codebase is an inline JSON-schema-to-Zod conversion in the MCP server. Generating from the TS types hits the actual source of truth for the collection format and satisfies the same goal (schemas can never drift from the types; JSDoc comments become hover docs for free). VS Code's built-in `jsonValidation` does not apply to YAML files at all, so the Red Hat YAML extension is the standard delivery mechanism; declaring it as an extension dependency auto-installs it. A vitest suite validates the generated schemas against fixtures and every request YAML in `example/reqly-starter/` so a type change that breaks the schema fails CI.
+
+## 2026-07-04 - Named workspaces live in ~/.reqly/workspaces/, active pointer in config.json; list_workspaces added beyond spec
+
+**Decision:** T-226 workspace files are stored at `~/.reqly/workspaces/<name>/workspace.yaml` (machine-local, never in any repo), and the active workspace is a single `activeWorkspace` key in the existing `~/.reqly/config.json` rather than a separate state file. The MCP surface is `create_workspace`, `link_workspace_repo`, `use_workspace` (as specced) plus `list_workspaces`, which the spec did not list.
+
+**Why:** Paths inside a workspace are developer-specific, so the file must never travel with a repo - only alias names are the shared contract. Reusing `config.json` for the active pointer keeps all machine-local Reqly state in one file the config loaders already read and preserves unknown keys (the AuthManager config type has an index signature). `list_workspaces` was added because the spec's stated goal is "full agent control over workspace setup" - without a read tool an agent cannot discover what exists before linking or activating, and the MCP Coverage Rule requires new data to be readable through MCP.
+
+## 2026-07-04 - VS Code extension is a thin REST client with zero runtime dependencies
+
+**Decision:** The extension (T-240/241) talks only to the existing `localhost:4242/api/*` REST routes through a vscode-free `api.ts`, ships no bundler and no runtime npm dependencies, and previews requests by opening the actual on-disk YAML in a read-only virtual document instead of re-serializing API JSON.
+
+**Why:** Tool-first principle - the server already exposes everything the extension needs, so duplicating engine logic (or importing `src/engine` across package boundaries) would create a second implementation to keep correct. Zero runtime deps keeps the VSIX small (~70KB), removes bundler config, and makes `vsce package --no-dependencies` trivially correct in the npm-workspaces repo. Showing the real YAML file means the preview always matches what is committed to git, which is the format developers and agents actually edit.
 
 ## 2026-07-03 - Bundled server runs via ELECTRON_RUN_AS_NODE shim, not a pkg/ncc-compiled binary
 

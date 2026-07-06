@@ -10,6 +10,7 @@ import { HistoryStore } from '../engine/history-store.js';
 import { FlowManager } from '../engine/flow-manager.js';
 import { MockServer } from '../engine/mock-server.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
+import { createDefaultWorkspaceManager } from '../engine/workspace-manager.js';
 import { SpecLoader } from '../engine/spec-loader.js';
 import { ScriptVariableStore } from '../engine/script-variables.js';
 import { createDefaultSecretRegistry } from '../engine/secret-providers/index.js';
@@ -59,12 +60,13 @@ async function main() {
   }
 
   if (parsed.command === 'workspace') {
-    const action = parsed.args[0] as 'add' | 'remove' | 'list';
-    if (!['add', 'remove', 'list'].includes(action)) {
-      console.error('Usage: reqly workspace <add|remove|list> [path]');
+    const action = parsed.args[0] as import('./workspace-command.js').WorkspaceAction;
+    if (!['add', 'remove', 'list', 'create', 'link', 'use'].includes(action)) {
+      const { WORKSPACE_USAGE } = await import('./workspace-command.js');
+      console.error(WORKSPACE_USAGE);
       process.exit(1);
     }
-    await handleWorkspaceCommand(action, parsed.args[1]);
+    await handleWorkspaceCommand(action, parsed.args.slice(1));
     process.exit(0);
   }
 
@@ -176,6 +178,7 @@ async function main() {
     flowManager,
     mockServer,
     dotEnvLoader,
+    workspaceManager: createDefaultWorkspaceManager(),
     specLoader: new SpecLoader(),
     scriptVariableStore,
     secretRegistry,

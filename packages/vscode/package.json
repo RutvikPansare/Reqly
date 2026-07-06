@@ -1,0 +1,160 @@
+{
+  "name": "reqly",
+  "displayName": "Reqly",
+  "description": "Prompt-first, agent-native API client. Browse collections, run requests, and switch environments without leaving your editor.",
+  "version": "0.1.0",
+  "publisher": "reqly",
+  "license": "ISC",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RutvikPansare/Reqly.git",
+    "directory": "packages/vscode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "api",
+    "rest",
+    "http",
+    "graphql",
+    "grpc",
+    "mcp",
+    "postman",
+    "bruno"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "reqly",
+          "title": "Reqly",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "reqly": [
+        {
+          "id": "reqlyCollections",
+          "name": "Collections",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "reqlyCollections",
+        "contents": "Reqly server is not running.\nStart it with `reqly start` in a terminal, or open the Reqly desktop app.\n[Retry](command:reqly.refreshCollections)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "reqly.runRequest",
+        "title": "Reqly: Run Request",
+        "icon": "$(play)"
+      },
+      {
+        "command": "reqly.runCollection",
+        "title": "Reqly: Run Collection",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "reqly.switchEnvironment",
+        "title": "Reqly: Switch Environment"
+      },
+      {
+        "command": "reqly.startProxy",
+        "title": "Reqly: Start Proxy"
+      },
+      {
+        "command": "reqly.openUI",
+        "title": "Reqly: Open UI"
+      },
+      {
+        "command": "reqly.refreshCollections",
+        "title": "Reqly: Refresh Collections",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "reqly.refreshCollections",
+          "when": "view == reqlyCollections",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "reqly.runRequest",
+          "when": "view == reqlyCollections && viewItem == reqlyRequest",
+          "group": "inline"
+        },
+        {
+          "command": "reqly.runCollection",
+          "when": "view == reqlyCollections && viewItem == reqlyCollection",
+          "group": "inline"
+        }
+      ]
+    },
+    "yamlValidation": [
+      {
+        "fileMatch": [
+          "**/.reqly/*/*.yaml",
+          "!**/.reqly/*/collection.yaml",
+          "!**/.reqly/flows/*.yaml"
+        ],
+        "url": "./schemas/reqly-request.schema.json"
+      },
+      {
+        "fileMatch": "**/.reqly/*/collection.yaml",
+        "url": "./schemas/reqly-collection-meta.schema.json"
+      },
+      {
+        "fileMatch": "**/.reqly/environments.yaml",
+        "url": "./schemas/reqly-environments.schema.json"
+      },
+      {
+        "fileMatch": "**/.reqly/flows/*.yaml",
+        "url": "./schemas/reqly-flow.schema.json"
+      }
+    ],
+    "configuration": {
+      "title": "Reqly",
+      "properties": {
+        "reqly.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:4242",
+          "description": "Base URL of the local Reqly server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/generate-schemas.mjs && tsc -p tsconfig.json",
+    "generate-schemas": "node scripts/generate-schemas.mjs",
+    "watch": "tsc -w -p tsconfig.json",
+    "package": "npm run build && vsce package --no-dependencies",
+    "publish": "npm run build && vsce publish --no-dependencies",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "ts-json-schema-generator": "^2.9.0",
+    "typescript": "^5.0.0"
+  }
+}

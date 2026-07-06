@@ -1,0 +1,268 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/FlowConfig",
+  "definitions": {
+    "FlowConfig": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FlowDataRow"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FlowStep"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "FlowDataRow": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "FlowStep": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RunStep"
+        },
+        {
+          "$ref": "#/definitions/ExtractStep"
+        },
+        {
+          "$ref": "#/definitions/AssertStep"
+        },
+        {
+          "$ref": "#/definitions/PollStep"
+        },
+        {
+          "$ref": "#/definitions/ConditionalStep"
+        }
+      ]
+    },
+    "RunStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "run"
+        },
+        "id": {
+          "type": "string"
+        },
+        "collection": {
+          "type": "string"
+        },
+        "request": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "object",
+          "properties": {
+            "times": {
+              "type": "number"
+            },
+            "on": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "delay": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "times",
+            "on",
+            "delay"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "collection",
+        "request"
+      ],
+      "additionalProperties": false
+    },
+    "ExtractStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "extract"
+        },
+        "id": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "into": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "from",
+        "into"
+      ],
+      "additionalProperties": false
+    },
+    "AssertStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "assert"
+        },
+        "id": {
+          "type": "string"
+        },
+        "assertions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Assertion"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "assertions"
+      ],
+      "additionalProperties": false
+    },
+    "Assertion": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "$ref": "#/definitions/AssertionField"
+        },
+        "path": {
+          "type": "string",
+          "description": "For body, dot-notation path like data.token"
+        },
+        "operator": {
+          "$ref": "#/definitions/AssertionOperator"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      },
+      "required": [
+        "field",
+        "operator",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "AssertionField": {
+      "type": "string",
+      "enum": [
+        "status",
+        "body",
+        "latency"
+      ]
+    },
+    "AssertionOperator": {
+      "type": "string",
+      "enum": [
+        "eq",
+        "neq",
+        "contains",
+        "lt",
+        "gt"
+      ]
+    },
+    "PollStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "poll"
+        },
+        "id": {
+          "type": "string"
+        },
+        "collection": {
+          "type": "string"
+        },
+        "request": {
+          "type": "string"
+        },
+        "until": {
+          "type": "string"
+        },
+        "maxAttempts": {
+          "type": "number"
+        },
+        "delay": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "collection",
+        "request",
+        "until",
+        "maxAttempts",
+        "delay"
+      ],
+      "additionalProperties": false
+    },
+    "ConditionalStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "conditional"
+        },
+        "id": {
+          "type": "string"
+        },
+        "if": {
+          "type": "string"
+        },
+        "then": {
+          "type": "string"
+        },
+        "else": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "if",
+        "then"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "title": "Reqly flow",
+  "description": "A Reqly test flow (.reqly/flows/<name>.yaml)"
+}

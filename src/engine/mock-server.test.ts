@@ -156,4 +156,32 @@ describe('MockServer', () => {
     await server.start('api', port);
     await expect(server.start('api', port)).rejects.toThrow('already running');
   });
+
+  // Regression: a failed listen (port already taken) used to leave the server
+  // in a corrupt "running" state - status lied, stop() threw Node's
+  // ERR_SERVER_NOT_RUNNING, and a retry was permanently blocked as
+  // "already running".
+  it('rejects and stays stoppable/restartable when the port is already in use', async () => {
+    await seed([
+      withExample({ name: 'Get', method: 'GET', url: 'https://api.x.com/ping', examples: [{ id: 'e1', name: 'ok', status: 200, headers: {}, body: null, latency: 1, savedAt: '' }] }),
+    ]);
+
+    // Occupy the port with a foreign server.
+    const blocker = net.createServer();
+    await new Promise<void>(resolve => blocker.listen(port, resolve));
+
+    try {
+      await expect(server.start('api', port)).rejects.toThrow();
+      // State must be clean, not a phantom "running".
+      expect(server.getStatus().running).toBe(false);
+      // stop() must be a safe no-op, not throw.
+      await server.stop();
+      // A retry on a free port must succeed.
+      const freePort = await getFreePort();
+      await server.start('api', freePort);
+      expect(server.getStatus()).toMatchObject({ running: true, port: freePort });
+    } finally {
+      await new Promise<void>(resolve => blocker.close(() => resolve()));
+    }
+  });
 });

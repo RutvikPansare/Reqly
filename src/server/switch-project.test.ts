@@ -28,6 +28,7 @@ function buildContext(projectDir: string): EngineContext {
     historyStore: new HistoryStore(),
     flowManager: new FlowManager(projectDir),
     dotEnvLoader: new DotEnvLoader(projectDir),
+    workspaceManager: {} as any,
     specLoader: new SpecLoader(),
     executeRequest: async () => ({ status: 200, statusText: 'OK', headers: {}, body: '', latencyMs: 0 } as any),
   };

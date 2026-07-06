@@ -31,6 +31,22 @@ describe('generateCode - curl', () => {
     expect(code).toContain('--data-raw');
     expect(code).toContain('"name"');
   });
+
+  // Regression: values containing single quotes used to break out of the
+  // shell quoting and produce an unrunnable (or dangerous) snippet.
+  it('escapes single quotes in the body for the shell', () => {
+    const code = generateCode({ ...base, method: 'POST', body: '{"name":"O\'Brien"}' }, 'curl');
+    expect(code).toContain(String.raw`O'\''Brien`);
+  });
+
+  it('escapes single quotes in the url and headers for the shell', () => {
+    const code = generateCode(
+      { ...base, url: "https://api.example.com/o'brien", headers: { 'X-Note': "it's fine" } },
+      'curl',
+    );
+    expect(code).toContain(String.raw`o'\''brien`);
+    expect(code).toContain(String.raw`it'\''s fine`);
+  });
 });
 
 describe('generateCode - fetch', () => {
@@ -60,6 +76,17 @@ describe('generateCode - fetch', () => {
     const code = generateCode({ ...base, method: 'POST', body: '{}' }, 'fetch');
     expect(code).toContain("body:");
   });
+
+  // Regression: quotes/backslashes/newlines in values used to produce
+  // syntactically broken JS string literals.
+  it('escapes single quotes and newlines in JS string literals', () => {
+    const code = generateCode(
+      { ...base, method: 'POST', headers: { 'X-Note': "it's" }, body: "line1\nit's raw" },
+      'fetch',
+    );
+    expect(code).toContain(String.raw`'X-Note': 'it\'s'`);
+    expect(code).toContain(String.raw`body: 'line1\nit\'s raw'`);
+  });
 });
 
 describe('generateCode - axios', () => {
@@ -83,5 +110,10 @@ describe('generateCode - axios', () => {
     const code = generateCode({ ...base, headers: { Accept: 'application/json' } }, 'axios');
     expect(code).toContain("headers:");
     expect(code).toContain("'Accept': 'application/json'");
+  });
+
+  it('escapes single quotes in string values', () => {
+    const code = generateCode({ ...base, method: 'POST', body: "not'json" }, 'axios');
+    expect(code).toContain(String.raw`data: 'not\'json'`);
   });
 });

@@ -184,18 +184,23 @@ All Windows Support items shipped (T-115 through T-119).
 
 ---
 
-## Later: VS Code Extension
+## Done: Regression + Self-Verification Harness
 
-**Why post-Protocol Expansion:** Cursor (the primary Reqly user's tool) is VS Code-compatible, so this extension reaches them automatically. The extension is a distribution play - it surfaces existing capability natively inside the editor without adding new engine features. Worth building once the protocol surface is complete so the extension exposes the full product.
+**T-243** (shipped 2026-07-04; queued as "T-238", renumbered - that id was already used) - End-to-end regression suite that Fable runs at the end of every task to verify its own work. Two layers: MCP tool verification (every tool in the T-243 list called against a live server with the committed fixture project, 17 assertions) and Playwright UI tests (9 key user journeys across REST, GraphQL, gRPC, Realtime workspaces). Both must be green before T-227 begins. Run via `npm run test:e2e` (see `tests/e2e/README.md`). First run caught and fixed two production bugs: optional MCP params were rejected when a tool schema had no `required` array, and gRPC reflection (`list_grpc_services`) had never worked outside unit tests.
 
-**What makes it worth building over just using localhost:4242:** the native VS Code integrations (CodeLens, command palette, status bar, YAML validation) put Reqly exactly where the developer is writing code. Embedding the full web UI as a webview is not the goal - that's what Thunder Client does and it just feels like a browser inside VS Code.
+---
 
-- [ ] **CodeLens provider** - detect `fetch()`, `axios()`, `got()`, and similar HTTP calls in JS/TS files. Show "Run with Reqly" inline above each call. On click: fire the matching saved request (or offer to create one) and show the response status + body inline below the line, similar to how VS Code shows test results inline.
-- [ ] **Collection tree view** - activity bar icon opens a sidebar panel with the collection tree: collection folders, requests, environments. Click a request to preview its config. Right-click context menu: Run, Duplicate, Delete. Talks to the running Reqly server at `localhost:4242` via the existing REST API.
-- [ ] **Status bar environment switcher** - persistent item in the VS Code status bar showing the active environment (e.g. "Reqly: dev"). Click to open a quick-pick dropdown and switch environment without leaving VS Code.
-- [ ] **Command palette** - register commands: `Reqly: Run request`, `Reqly: Run collection`, `Reqly: Switch environment`, `Reqly: Start proxy`, `Reqly: Open UI`. All keyboard-accessible via Cmd+Shift+P.
-- [ ] **YAML schema validation** - contribute a JSON schema for `.reqly/**/*.yaml` files. Red squiggles on wrong field names (e.g. `type:` instead of `field:` in assertions), autocomplete for operators and step types, hover documentation on each field.
-- [ ] **Marketplace publication** - publish to VS Code Marketplace as `reqly.reqly`. Works in Cursor, Windsurf, and any VS Code-compatible editor automatically.
+## Done: VS Code Extension
+
+**Why:** Protocol surface is complete (REST, GraphQL, gRPC, Realtime all shipped). T-225 multi-project sidebar is done. The extension is a pure distribution play - surfaces existing capability natively inside the editor. Cursor, Windsurf, and all VS Code-compatible editors get it automatically.
+
+**What makes it worth building over just using localhost:4242:** the native VS Code integrations (CodeLens, command palette, status bar, YAML validation) put Reqly exactly where the developer is writing code. Embedding the full web UI as a webview is not the goal - that's what Thunder Client does and it feels like a browser inside VS Code.
+
+- [x] **T-240** Foundation + collection tree + status bar + command palette + marketplace publish workflow (`packages/vscode/`, publishes as `reqly.reqly` on `v*` tags)
+- [x] **T-241** CodeLens: "▶ Run with Reqly" on fetch/axios/got calls in JS/TS
+- [x] **T-242** YAML schema validation for `.reqly/**/*.yaml` (schemas generated from the TS types in `src/types/`; hover docs + enum autocomplete via redhat.vscode-yaml)
+
+_(Queued as T-235/236/237; renumbered because those ids were already used. Follow-up before the first tagged release: set the `VSCE_PAT` repo secret.)_
 
 ---
 
@@ -227,7 +232,7 @@ All Windows Support items shipped (T-115 through T-119).
 
 No new file formats. Path list in `~/.reqly/config.json`. Grouped sidebar. Full MCP parity.
 
-- [ ] **T-225** Multi-project path list + grouped sidebar
+- [x] **T-225** Multi-project path list + grouped sidebar
   - `workspaceProjects: string[]` in config; `CollectionManager.loadAll()` for multiple dirs
   - CLI: `reqly workspace add/remove/list`
   - MCP: `add_workspace_project`, `remove_workspace_project`, `list_workspace_projects`
@@ -237,10 +242,10 @@ No new file formats. Path list in `~/.reqly/config.json`. Grouped sidebar. Full 
 
 Named workspaces with aliases, cross-repo flows. What makes Reqly uniquely agent-native for microservices teams.
 
-- [ ] **T-226** Formal workspace model: `~/.reqly/workspaces/<name>/workspace.yaml`
+- [x] **T-226** Formal workspace model: `~/.reqly/workspaces/<name>/workspace.yaml`
   - Named workspace with `repos: [{ alias, path }]` and optional `sharedEnv`
-  - CLI: `reqly workspace create/link/use`; MCP: `create_workspace`, `link_workspace_repo`, `use_workspace`
-  - UI: workspace dropdown in nav rail, workspace settings panel
+  - CLI: `reqly workspace create/link/use`; MCP: `create_workspace`, `link_workspace_repo`, `use_workspace`, `list_workspaces`
+  - UI: workspace dropdown above the project list in the collections sidebar, workspace settings modal (link/unlink repos, sharedEnv display)
 
 - [ ] **T-227** Cross-repo flows with `repo: <alias>` step field
   - Flow runner resolves alias to `projectDir` via active workspace config
@@ -272,12 +277,18 @@ Fast follow-on to M5 (T-124). Once the Electron DMG is published to GitHub Relea
 
 ---
 
-## Later: Team Secrets Layer
+## Done: Team Secrets Layer (completed 2026-07-06)
 
-**Why last:** Collections are YAML in git - teams already sync them via `git pull`. What can't go in git is secrets: auth tokens, environment variable values (API keys, passwords). This milestone makes sense only after there is a paying team user base to justify it - V1 is integrations with existing secret managers (no infrastructure cost), V2 is a hosted vault (significant infrastructure investment).
+**Why now:** VS Code extension, multi-project workspace, and regression harness all shipped. Collections sync via git. The last gap is secrets - API keys and tokens that can't go in git. V1 integrates with secret managers teams already have. No Reqly accounts, no custom cloud infrastructure.
 
-**V1 approach - integrate with existing secret managers, no custom cloud:** Build on tools teams already have rather than building a full vault from scratch. This is 4-6 weeks of integration work vs 3-6 months of cloud infrastructure. Custom vault comes later once there's revenue to justify it.
+**Architecture decision:** vault integrations only for V1. Enterprises don't want another secret store - they want their existing one to work with Reqly. Indie devs already pay for 1Password or Bitwarden. Reqly plugs into those. Custom hosted vault (V2) is gated on a paying user base to justify the infrastructure cost.
 
-- [ ] **1Password integration** - read secret values from a 1Password vault via the 1Password SDK (`@1password/sdk`). Developers reference `{{op://vault/item/field}}` in collection variables. Reqly resolves it at request time. MCP tool `get_secret` returns the resolved value. Zero custom cloud required.
-- [ ] **HashiCorp Vault / AWS Secrets Manager integration** - same pattern for enterprise teams. Read-only access, key referenced in collection YAML, resolved at request time. Priority driven by user demand.
-- [ ] **Team Secrets Vault (V2)** - Reqly-hosted encrypted vault for teams who don't have a dedicated secret manager. Encrypted at rest, access-controlled per team member. First true cloud infrastructure Reqly builds. Gated on having a paid user base to justify the infrastructure cost.
+**How it works:** developers put vault URIs directly in their existing `.env` file instead of raw values - `STRIPE_KEY=op://MyVault/Stripe/api_key`. Reqly's `.env` loader detects URI patterns and resolves them from the vault at request time. The collection YAML never changes. Zero new workflow, zero new files to learn. Also supports inline `{{secret:op://...}}` references directly in request fields for one-offs. `reqly secrets resolve` writes resolved values to `.env.local` for tools that don't understand vault URIs.
+
+- [x] **T-245** Infrastructure: extend `.env` loader with `SecretProvider` registry, inline `{{secret:...}}` support, `get_secret` MCP tool, `reqly secrets resolve` CLI, Settings Secrets tab - **done 2026-07-06**
+- [x] **T-246** 1Password: `op://vault/item/field` URIs, `@1password/sdk`, `OP_SERVICE_ACCOUNT_TOKEN`, `configure_secret_provider` MCP tool - **done 2026-07-06**
+- [x] **T-247** AWS Secrets Manager: `aws://secret-name` URIs, standard AWS credential chain, no Reqly credential storage - **done 2026-07-06**
+- [x] **T-248** HashiCorp Vault: `vault://secret/data/path` URIs, `VAULT_ADDR` + `VAULT_TOKEN`, direct HTTP API - **done 2026-07-06**
+- [x] **T-249** Bitwarden Secrets Manager: `bw://project/secret-name` URIs, `@bitwarden/sdk-napi` (`@bitwarden/sdk-secrets-manager` does not exist on npm) - **done 2026-07-05**
+
+**V2 (later):** Reqly-hosted encrypted vault for teams without a dedicated secret manager. Gated on revenue to justify infrastructure.
