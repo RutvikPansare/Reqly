@@ -112,7 +112,7 @@ Reqly exposes the following MCP tools for AI agents:
 
 ## Vault secrets in .env
 
-Reqly resolves vault URIs placed as values in the project's .env files: `bw://project-name/secret-name` (Bitwarden Secrets Manager, shipped) plus `op://`, `vault://`, `aws://` (recognized; their providers land next). Resolution happens when the .env file loads and re-runs on every file change. A key whose URI fails to resolve is excluded from the variable chain, and any request referencing `{{THAT_KEY}}` fails with the provider's error - a request never fires with a silently missing secret. Plain .env values behave exactly as before.
+Reqly resolves vault URIs placed as values in the project's .env files: `bw://project-name/secret-name` (Bitwarden Secrets Manager; `BITWARDENSM_ACCESS_TOKEN` + `BITWARDENSM_ORGANIZATION_ID`) and `op://vault-name/item-name/field-name` (1Password service accounts; `OP_SERVICE_ACCOUNT_TOKEN`), plus `vault://` and `aws://` (recognized; their providers land next). Resolution happens when the .env file loads and re-runs on every file change. A key whose URI fails to resolve is excluded from the variable chain, and any request referencing `{{THAT_KEY}}` fails with the provider's error - a request never fires with a silently missing secret. Plain .env values behave exactly as before.
 
 One-off inline references work in any request field without defining a variable: `{{secret:bw://project/secret}}` in a URL, header, param, or body resolves at request time and fails loudly if the provider is not configured.
 

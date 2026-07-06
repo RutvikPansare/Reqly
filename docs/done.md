@@ -2,6 +2,14 @@
 
 ## 2026-07-06
 
+- [x] **T-246** 1Password integration: `op://` URIs in `.env`
+  - `OnePasswordProvider` in `src/engine/secret-providers/onepassword.ts` via `@1password/sdk` (official service-account SDK, no CLI dependency). The SDK's `client.secrets.resolve()` accepts the full `op://vault/item/field` URI directly; `parseOpUri` validates the shape first (section segment `op://vault/item/section/field` accepted) for clear errors
+  - Token: `OP_SERVICE_ACCOUNT_TOKEN` env var wins over `secretProviders.onepassword.serviceAccountToken` in `~/.reqly/config.json`; missing token gives the documented "Set OP_SERVICE_ACCOUNT_TOKEN or configure in Settings -> Secrets" error
+  - Registered in `createDefaultSecretRegistry`, so `.env` `op://` values, inline `{{secret:op://...}}` refs, `get_secret`, `get_secret_status`, `configure_secret_provider` (provider name `onepassword`), and `reqly secrets resolve` all work with no further wiring
+  - UI: 1Password section in Settings -> Secrets with masked token input; saving re-resolves `.env` live, doubling as the connection test
+  - TDD: 9 new tests (URI parse incl. section + invalid shapes, env-over-config precedence, missing-token message, SDK resolve pass-through, SDK error surfaced). Suite 983 green
+  - Verified live: MCP stdio (status shows op:// error, get_secret paths, configure -> real SDK rejects fake token with 1Password's own message), Chrome UI (op:// row + 1Password form render, console clean)
+
 - [x] **T-245** Secret provider infrastructure: vault URI resolution in `.env`, inline `{{secret:...}}` refs, `reqly secrets resolve` CLI, Settings -> Secrets UI
   - `.env` loader (`dotenv-loader.ts`) takes the `SecretProviderRegistry`; values matching known vault prefixes resolve at load time (each distinct URI once per load). Failed resolutions are excluded from the variable record (never an empty string), surfaced via `getSecretErrors()`/`getSecretStatus()`, re-checked on every reload. Resolved secrets are masked (4 chars + "...") in `getVariables()` listings; full values only flow into request execution
   - Loud failure at request time: `execute()` gained a `secrets` context param; a request referencing a `.env` key whose vault resolution failed throws with the provider's error, and inline `{{secret:<vault-uri>}}` refs (URL, headers, params, body, GraphQL) resolve through the registry pre-substitution and throw clearly when unresolvable. Requests not touching broken keys are unaffected

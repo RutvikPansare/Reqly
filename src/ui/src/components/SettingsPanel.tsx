@@ -22,6 +22,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [secretProviders, setSecretProviders] = useState<Record<string, { configuredKeys: string[] }>>({});
   const [bwToken, setBwToken] = useState('');
   const [bwOrgId, setBwOrgId] = useState('');
+  const [opToken, setOpToken] = useState('');
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerSaved, setProviderSaved] = useState(false);
   const [workspaces, setWorkspaces] = useState<{name: string, path: string}[]>([]);
@@ -46,20 +47,16 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     }).catch(console.error);
   }, []);
 
-  const handleSaveBitwarden = async () => {
-    const config: Record<string, string> = {};
-    if (bwToken.trim()) config.accessToken = bwToken.trim();
-    if (bwOrgId.trim()) config.organizationId = bwOrgId.trim();
+  const saveProvider = async (provider: string, config: Record<string, string>, clear: () => void) => {
     if (Object.keys(config).length === 0) return;
     setSavingProvider(true);
     setProviderSaved(false);
     try {
-      const result = await configureSecretProvider('bitwarden', config);
+      const result = await configureSecretProvider(provider, config);
       setSecretStatus(result.secrets);
       const refreshed = await fetchSecretStatus();
       setSecretProviders(refreshed.providers);
-      setBwToken('');
-      setBwOrgId('');
+      clear();
       setProviderSaved(true);
       setTimeout(() => setProviderSaved(false), 2000);
     } catch (e: any) {
@@ -67,6 +64,19 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     } finally {
       setSavingProvider(false);
     }
+  };
+
+  const handleSaveBitwarden = () => {
+    const config: Record<string, string> = {};
+    if (bwToken.trim()) config.accessToken = bwToken.trim();
+    if (bwOrgId.trim()) config.organizationId = bwOrgId.trim();
+    return saveProvider('bitwarden', config, () => { setBwToken(''); setBwOrgId(''); });
+  };
+
+  const handleSaveOnePassword = () => {
+    const config: Record<string, string> = {};
+    if (opToken.trim()) config.serviceAccountToken = opToken.trim();
+    return saveProvider('onepassword', config, () => setOpToken(''));
   };
 
   const toggleLaunchAtLogin = async () => {
@@ -356,8 +366,31 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
           </div>
 
+          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              1Password
+              {secretProviders.onepassword && (
+                <span className="ml-2 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
+              )}
+            </label>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+              Service account token, stored in ~/.reqly/config.json. The OP_SERVICE_ACCOUNT_TOKEN env var takes precedence. Saving re-resolves your .env, which doubles as a connection test.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Input
+                type="password"
+                value={opToken}
+                onChange={e => setOpToken(e.target.value)}
+                placeholder="Service account token (ops_...)"
+              />
+              <Button variant="secondary" onClick={handleSaveOnePassword} disabled={savingProvider}>
+                {savingProvider ? 'Saving...' : 'Save 1Password config'}
+              </Button>
+            </div>
+          </div>
+
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            1Password (op://), AWS Secrets Manager (aws://), and HashiCorp Vault (vault://) integrations are coming next.
+            AWS Secrets Manager (aws://) and HashiCorp Vault (vault://) integrations are coming next.
           </p>
         </div>
       )}
