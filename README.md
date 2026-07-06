@@ -246,6 +246,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 | `delete_collection_variable` | Deletes a per-collection variable |
 | `set_dotenv_files` | Configures which `.env` files are auto-loaded |
 | `get_dotenv_files` | Lists the configured dotenv files |
+| `get_secret` | Resolves a vault secret URI (`bw://project/secret`) and returns a truncated preview, never the full value |
 
 **🔐 Auth**
 

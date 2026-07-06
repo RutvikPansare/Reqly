@@ -12,6 +12,8 @@ import { MockServer } from '../engine/mock-server.js';
 import { DotEnvLoader } from '../engine/dotenv-loader.js';
 import { SpecLoader } from '../engine/spec-loader.js';
 import { ScriptVariableStore } from '../engine/script-variables.js';
+import { SecretProviderRegistry } from '../engine/secret-providers/index.js';
+import { BitwardenSecretsProvider } from '../engine/secret-providers/bitwarden.js';
 import { execute as executeRequest } from '../engine/http-executor.js';
 import { TunnelManager } from '../engine/tunnel-manager.js';
 import { startServer } from '../mcp/server.js';
@@ -151,6 +153,11 @@ async function main() {
   await dotEnvLoader.load();
   dotEnvLoader.watch();
 
+  // Vault secret resolution (bw:// today; op://, vault://, aws:// as their
+  // integrations land). Registry is shared engine-wide via EngineContext.
+  const secretRegistry = new SecretProviderRegistry();
+  secretRegistry.register(new BitwardenSecretsProvider({ loadConfig: () => authManager.loadConfig() }));
+
   const context: EngineContext = {
     collectionManager,
     environmentManager,
@@ -164,6 +171,7 @@ async function main() {
     dotEnvLoader,
     specLoader: new SpecLoader(),
     scriptVariableStore,
+    secretRegistry,
     executeRequest: async (req, env, auth, truncate, _maxBodyBytes, collectionVars, collectionAuth, collectionName, runnerContext) => {
       const config = await authManager.loadConfig();
       const maxBytes = config.maxBodyBytes || 50 * 1024;

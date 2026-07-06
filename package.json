@@ -45,6 +45,7 @@
   },
   "homepage": "https://github.com/RutvikPansare/Reqly#readme",
   "dependencies": {
+    "@bitwarden/sdk-napi": "^1.0.0",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "@modelcontextprotocol/sdk": "^1.29.0",

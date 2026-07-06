@@ -1,5 +1,14 @@
 # Reqly - Done
 
+## 2026-07-05
+
+- [x] **T-249** Bitwarden Secrets Manager integration: `bw://` URIs
+  - `BitwardenSecretsProvider` in `src/engine/secret-providers/bitwarden.ts`: resolves `bw://project-name/secret-name` via `@bitwarden/sdk-napi` (the specced `@bitwarden/sdk-secrets-manager` package does not exist on npm - see decision log). Token from `BITWARDENSM_ACCESS_TOKEN` env var (wins) or `secretProviders.bitwarden.accessToken` in `~/.reqly/config.json`; missing token gives a clear "Set BITWARDENSM_ACCESS_TOKEN or configure..." error. SDK is lazy-imported and injectable, so tests mock it and the native binding only loads when a `bw://` URI is actually resolved
+  - Shipped the T-245 registry core as a dependency: `SecretProvider` interface + `SecretProviderRegistry` in `src/engine/secret-providers/index.ts` (known prefixes `op://`, `vault://`, `aws://`, `bw://`; known-but-unregistered prefix fails loudly with a "provider not configured" error). Registry wired into `EngineContext` as `secretRegistry`. Remaining T-245 scope (.env loader hook, inline `{{secret:...}}`, CLI, Settings UI) stays queued
+  - New `get_secret` MCP tool: resolves any vault URI, returns `{ resolved: true, preview }` with only the first 4 chars of the value - full secret never appears in tool output
+  - TDD: 21 new tests across `secret-provider.test.ts` (registry routing, unregistered prefix error), `bitwarden.test.ts` (URI parsing, env-over-config token precedence, project/secret matching, not-found errors), `get-secret.test.ts` (preview truncation, error paths)
+  - Verified live over MCP stdio: `get_secret` registered, `bw://` no-token error, `op://` unregistered-provider error, unknown-URI error all correct; UI at localhost:4242 regression-checked clean in Chrome
+
 ## 2026-07-03
 
 - [x] **T-239** Bundle server binary + 1-click AI agent setup wizard (queued in todo.md as "T-233"; renumbered - T-233 was already used by the landing page task)

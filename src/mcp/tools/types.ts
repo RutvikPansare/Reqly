@@ -10,6 +10,7 @@ import { MockServer } from '../../engine/mock-server.js';
 import { DotEnvLoader } from '../../engine/dotenv-loader.js';
 import { SpecLoader } from '../../engine/spec-loader.js';
 import { ScriptVariableStore } from '../../engine/script-variables.js';
+import { SecretProviderRegistry } from '../../engine/secret-providers/index.js';
 import { HttpResponse, CollectionRequest, Environment, AuthProfile } from '../../types/index.js';
 import { RunnerContext } from '../../engine/script-runner.js';
 
@@ -26,6 +27,7 @@ export interface EngineContext {
   dotEnvLoader: DotEnvLoader;
   specLoader: SpecLoader;
   scriptVariableStore?: ScriptVariableStore;
+  secretRegistry?: SecretProviderRegistry;
   executeRequest: (req: CollectionRequest, env?: Environment, auth?: AuthProfile, truncate?: boolean, maxBodyBytes?: number, collectionVars?: Record<string, string>, collectionAuth?: AuthProfile, collectionName?: string, runnerContext?: RunnerContext) => Promise<HttpResponse>;
   execChildPid?: number;
   lastMcpActivityAt?: number | null;

@@ -67,6 +67,7 @@ import * as runRealtime from './tools/run-realtime.js';
 import * as listWorkspaceProjects from './tools/list-workspace-projects.js';
 import * as addWorkspaceProject from './tools/add-workspace-project.js';
 import * as removeWorkspaceProject from './tools/remove-workspace-project.js';
+import * as getSecret from './tools/get-secret.js';
 
 const tools = [
   runRequest,
@@ -130,6 +131,7 @@ const tools = [
   listWorkspaceProjects,
   addWorkspaceProject,
   removeWorkspaceProject,
+  getSecret,
 ];
 
 import { z } from 'zod';

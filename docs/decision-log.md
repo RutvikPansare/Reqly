@@ -6,6 +6,12 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-05 - Bitwarden provider uses @bitwarden/sdk-napi; T-249 ships the T-245 registry core early (T-249)
+
+**Decision:** The Bitwarden Secrets Manager provider depends on `@bitwarden/sdk-napi` instead of the `@bitwarden/sdk-secrets-manager` package named in the T-249 spec, and T-249 ships a minimal subset of T-245's infrastructure: the `SecretProvider` interface, `SecretProviderRegistry`, and the `get_secret` MCP tool.
+
+**Why:** `@bitwarden/sdk-secrets-manager` does not exist on npm (404); `@bitwarden/sdk-napi` is Bitwarden's official Node-API binding for Secrets Manager and covers the needed surface (`loginAccessToken`, secrets list/get, projects list). The SDK is lazy-imported behind an injectable factory so tests mock it and the native binding never loads unless a `bw://` URI is resolved. T-249 was picked up before T-245: a provider with no registry to plug into and no MCP tool would be untestable and invisible to agents (MCP coverage rule), so the smallest forward-compatible core of T-245 shipped now. The rest of T-245 (.env loader resolution hook, `{{secret:...}}` inline references, `reqly secrets resolve` CLI, Settings -> Secrets UI) remains queued.
+
 ## 2026-07-03 - Bundled server runs via ELECTRON_RUN_AS_NODE shim, not a pkg/ncc-compiled binary
 
 **Decision:** The desktop app's bundled server (T-239, queued as T-233) is not compiled with `pkg` or `@vercel/ncc`. Instead we ship the plain server `dist/` plus production `node_modules` as `extraResources`, and a tiny `bin/reqly` shell shim that executes the app's own Electron binary with `ELECTRON_RUN_AS_NODE=1` pointing at the bundled entry. AI agent MCP configs point at the shim.
