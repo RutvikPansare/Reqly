@@ -6,7 +6,7 @@ export const KNOWN_PROVIDER_NAMES = ['bitwarden', 'onepassword', 'aws', 'vault']
 
 export const definition: ToolDefinition = {
   name: 'configure_secret_provider',
-  description: 'Stores secret provider credentials in ~/.reqly/config.json under secretProviders.<provider> (global config, never the project repo), then re-resolves the project\'s .env vault URIs. provider: "bitwarden" (config keys: accessToken, organizationId), "onepassword" (config key: serviceAccountToken), "aws", or "vault". config: an object of provider-specific keys, merged with any existing config for that provider. Returns { provider, configured: true, secrets } where secrets is the refreshed get_secret_status list. Config values are never echoed back. When to use: during project setup when get_secret_status shows "provider not configured" errors.',
+  description: 'Stores secret provider credentials in ~/.reqly/config.json under secretProviders.<provider> (global config, never the project repo), then re-resolves the project\'s .env vault URIs. provider: "bitwarden" (config keys: accessToken, organizationId), "onepassword" (config key: serviceAccountToken), "aws" (config key: region only - credentials always come from the standard AWS chain), or "vault". config: an object of provider-specific keys, merged with any existing config for that provider. Returns { provider, configured: true, secrets } where secrets is the refreshed get_secret_status list. Config values are never echoed back. When to use: during project setup when get_secret_status shows "provider not configured" errors.',
   inputSchema: {
     type: 'object',
     properties: {

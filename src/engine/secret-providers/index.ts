@@ -53,5 +53,7 @@ export async function createDefaultSecretRegistry(loadConfig: () => Promise<any>
   registry.register(new BitwardenSecretsProvider({ loadConfig }));
   const { OnePasswordProvider } = await import('./onepassword.js');
   registry.register(new OnePasswordProvider({ loadConfig }));
+  const { AwsSecretsProvider } = await import('./aws.js');
+  registry.register(new AwsSecretsProvider({ loadConfig }));
   return registry;
 }

@@ -2,6 +2,13 @@
 
 ## 2026-07-06
 
+- [x] **T-247** AWS Secrets Manager integration: `aws://` URIs in `.env`
+  - `AwsSecretsProvider` in `src/engine/secret-providers/aws.ts` via `@aws-sdk/client-secrets-manager` (SDK v3, lazy-imported behind an injectable client abstraction)
+  - URI formats: `aws://my-secret-name` and `aws://arn:aws:secretsmanager:...` - the ARN form's embedded region is used automatically
+  - Credentials: standard AWS credential chain only (env vars, `~/.aws/credentials`, IAM role) - Reqly stores no AWS credentials. Region precedence: `AWS_REGION`/`AWS_DEFAULT_REGION` env > ARN region > `secretProviders.aws.region`; missing region gives a clear "Set AWS_REGION" error. `SecretBinary` payloads are decoded; AWS auth errors surface with the original message intact
+  - Registered in `createDefaultSecretRegistry`: `.env` values, inline `{{secret:aws://...}}`, `get_secret`, `get_secret_status`, `reqly secrets resolve` all work. Settings -> Secrets shows an AWS section explaining the credential-chain model (no token form by design)
+  - TDD: 12 new tests (name + ARN parsing/resolution, region precedence chain, missing-region error, auth error passthrough, SecretBinary decode, empty payload). Suite 995 green
+
 - [x] **T-246** 1Password integration: `op://` URIs in `.env`
   - `OnePasswordProvider` in `src/engine/secret-providers/onepassword.ts` via `@1password/sdk` (official service-account SDK, no CLI dependency). The SDK's `client.secrets.resolve()` accepts the full `op://vault/item/field` URI directly; `parseOpUri` validates the shape first (section segment `op://vault/item/section/field` accepted) for clear errors
   - Token: `OP_SERVICE_ACCOUNT_TOKEN` env var wins over `secretProviders.onepassword.serviceAccountToken` in `~/.reqly/config.json`; missing token gives the documented "Set OP_SERVICE_ACCOUNT_TOKEN or configure in Settings -> Secrets" error

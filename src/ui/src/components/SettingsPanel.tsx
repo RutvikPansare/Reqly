@@ -389,8 +389,17 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             </div>
           </div>
 
+          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+              AWS Secrets Manager
+            </label>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              No credentials stored in Reqly - aws:// URIs use your standard AWS credential chain (env vars, ~/.aws/credentials, IAM role). Set AWS_REGION, use a full ARN in the URI, or configure secretProviders.aws.region.
+            </p>
+          </div>
+
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            AWS Secrets Manager (aws://) and HashiCorp Vault (vault://) integrations are coming next.
+            HashiCorp Vault (vault://) integration is coming next.
           </p>
         </div>
       )}
