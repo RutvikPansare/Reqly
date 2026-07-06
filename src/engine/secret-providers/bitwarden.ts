@@ -6,10 +6,10 @@ import { SecretProvider } from './index.js';
 export interface BitwardenClientLike {
   auth(): { loginAccessToken(token: string): Promise<unknown> };
   secrets(): {
-    list(organizationId?: string): Promise<{ data: Array<{ id: string; key: string; organizationId: string }> }>;
-    get(id: string): Promise<{ id: string; key: string; value: string; projectId?: string }>;
+    list(organizationId: string): Promise<{ data: Array<{ id: string; key: string; organizationId: string }> }>;
+    get(id: string): Promise<{ id: string; key: string; value: string; projectId?: string | null }>;
   };
-  projects(): { list(organizationId?: string): Promise<{ data: Array<{ id: string; name: string }> }> };
+  projects(): { list(organizationId: string): Promise<{ data: Array<{ id: string; name: string }> }> };
 }
 
 export interface BitwardenProviderOptions {
@@ -36,6 +36,8 @@ async function defaultClientFactory(): Promise<BitwardenClientLike> {
 // Resolves bw://project-name/secret-name against Bitwarden Secrets Manager.
 // Auth: machine account access token from BITWARDENSM_ACCESS_TOKEN (Bitwarden's
 // own convention) or secretProviders.bitwarden.accessToken in ~/.reqly/config.json.
+// The SDK requires the organization id on every list call, so it must be
+// provided via BITWARDENSM_ORGANIZATION_ID or secretProviders.bitwarden.organizationId.
 export class BitwardenSecretsProvider implements SecretProvider {
   readonly prefix = 'bw://';
 
@@ -45,21 +47,25 @@ export class BitwardenSecretsProvider implements SecretProvider {
     const { project, secret } = parseBwUri(uri);
 
     const config = await this.options.loadConfig();
-    const token = process.env.BITWARDENSM_ACCESS_TOKEN || config?.secretProviders?.bitwarden?.accessToken;
+    const bwConfig = config?.secretProviders?.bitwarden;
+    const token = process.env.BITWARDENSM_ACCESS_TOKEN || bwConfig?.accessToken;
     if (!token) {
       throw new Error('Bitwarden Secrets Manager token missing. Set BITWARDENSM_ACCESS_TOKEN or configure secretProviders.bitwarden.accessToken in ~/.reqly/config.json');
+    }
+    const orgId = process.env.BITWARDENSM_ORGANIZATION_ID || bwConfig?.organizationId;
+    if (!orgId) {
+      throw new Error('Bitwarden organization id missing. Set BITWARDENSM_ORGANIZATION_ID or configure secretProviders.bitwarden.organizationId in ~/.reqly/config.json');
     }
 
     const client = await (this.options.clientFactory ?? defaultClientFactory)();
     await client.auth().loginAccessToken(token);
 
-    const listed = await client.secrets().list();
+    const listed = await client.secrets().list(orgId);
     const candidates = listed.data.filter(s => s.key === secret);
     if (candidates.length === 0) {
       throw new Error(`No secret named "${secret}" found in Bitwarden Secrets Manager (URI: ${uri})`);
     }
 
-    const orgId = candidates[0]?.organizationId;
     const projects = await client.projects().list(orgId);
     const projectEntry = projects.data.find(p => p.name === project);
     if (!projectEntry) {

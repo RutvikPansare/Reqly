@@ -2,7 +2,7 @@ import { ToolDefinition, ToolHandlerResult, EngineContext } from './types.js';
 
 export const definition: ToolDefinition = {
   name: 'get_secret',
-  description: 'Resolves a vault secret URI (bw://project/secret; op://, vault://, aws:// once those providers ship) and returns { resolved: true, preview } where preview is only the first 4 characters of the value followed by "..." - the full secret value is never returned. When to use: to verify a secret referenced in .env is reachable and the provider is configured before running a collection. Errors explain which provider is missing or how to configure its token.',
+  description: 'Resolves a vault secret URI (bw://project/secret; op://, vault://, aws:// once those providers ship) and returns { resolved: true, preview } where preview is only the first 4 characters of the value followed by "..." - the full secret value is never returned. Bitwarden needs BITWARDENSM_ACCESS_TOKEN and BITWARDENSM_ORGANIZATION_ID (or secretProviders.bitwarden.{accessToken,organizationId} in ~/.reqly/config.json). When to use: to verify a secret referenced in .env is reachable and the provider is configured before running a collection. Errors explain which provider is missing or how to configure it.',
   inputSchema: {
     type: 'object',
     properties: {
