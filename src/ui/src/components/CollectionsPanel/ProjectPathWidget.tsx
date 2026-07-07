@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Lock } from 'lucide-react';
 import { OpenWorkspaceModal } from '../OpenWorkspaceModal.js';
 
 export function formatProjectPath(p: string) {
@@ -20,6 +20,7 @@ export function ProjectPathWidget({ projectPath, hasEverConnectedAgent, onSwitch
   const [editing, setEditing] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [pendingDir, setPendingDir] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const isAgentActive = hasEverConnectedAgent || window.location.port === '4242';
 
@@ -94,22 +95,50 @@ export function ProjectPathWidget({ projectPath, hasEverConnectedAgent, onSwitch
   }
 
   return (
-    <button
-      onClick={() => {
-        if (!isAgentActive) setEditing(true);
-      }}
-      className={`shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group ${isAgentActive ? 'cursor-not-allowed opacity-80' : ''}`}
-      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-      title={isAgentActive ? `This session is locked to the AI agent's active project.\nOpen the Reqly desktop app to browse other projects.` : `${projectPath}\nClick to switch project`}
-      onMouseEnter={e => { if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
-      onMouseLeave={e => { if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-    >
-      <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} className={isAgentActive ? 'opacity-50' : ''} />
-      <div className="min-w-0 flex-1">
-        <div className="font-mono font-medium truncate" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
-        <div className="font-mono truncate" style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{display}</div>
-      </div>
-      <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-muted)' }}>change</span>
-    </button>
+    <div className="relative">
+      <button
+        onClick={() => {
+          if (!isAgentActive) setEditing(true);
+        }}
+        className={`shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group ${isAgentActive ? 'cursor-default opacity-80' : ''}`}
+        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+        title={isAgentActive ? undefined : `${projectPath}\nClick to switch project`}
+        onMouseEnter={e => { 
+          if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; 
+          else setShowTooltip(true);
+        }}
+        onMouseLeave={e => { 
+          if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; 
+          else setShowTooltip(false);
+        }}
+      >
+        <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} className={isAgentActive ? 'opacity-50' : ''} />
+        <div className="min-w-0 flex-1">
+          <div className="font-mono font-medium truncate" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
+          <div className="font-mono truncate" style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{display}</div>
+        </div>
+        {isAgentActive ? (
+          <Lock size={11} style={{ color: 'var(--text-muted)', flexShrink: 0, opacity: 0.6 }} />
+        ) : (
+          <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-muted)' }}>change</span>
+        )}
+      </button>
+      {isAgentActive && showTooltip && (
+        <div className="absolute top-full left-0 mt-1 z-50 text-left"
+          style={{
+            background: 'var(--surface-0)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: '6px',
+            padding: '8px 10px',
+            maxWidth: '220px',
+          }}
+        >
+          <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Project locked to agent session</div>
+          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            An AI agent is actively using this project. To switch folders: stop the agent session, or use the Reqly desktop app.
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

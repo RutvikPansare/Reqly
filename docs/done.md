@@ -919,3 +919,8 @@
 - [x] **T-208** Fix variable autocomplete dropdown clipping using React portal (`useVarCompletion`)
 - [x] **T-209** Expand global variable auto-detection (`{{`) to GraphQL CodeMirrors, gRPC inputs/CodeMirrors, and Realtime URL/Event/Topic inputs
 - [x] **T-210** Reduce padding and font size for gRPC Proto File section
+
+- [x] **T-252** (UI Polish) Lock icon + improved tooltip on agent-locked project widget
+  - Replaced the "change" span with a lock icon when an agent is active.
+  - Implemented a custom tooltip for locked projects providing clear information.
+  - Updated button cursors to accurately reflect locked status.
