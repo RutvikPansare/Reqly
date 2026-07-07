@@ -70,6 +70,23 @@ describe('exportToPostman', () => {
     expect(del.request.method).toBe('DELETE');
     expect(del.request.header).toEqual([]);
   });
+
+  // Regression: query params live in req.params (agents are told to use it over
+  // inline URLs), but export dropped them entirely - the exported request would
+  // hit the endpoint with no query string.
+  it('exports req.params as Postman url.query and in the raw url', () => {
+    const col: Collection = {
+      name: 'Q', requests: [
+        { id: '1', name: 'Search', method: 'GET', url: 'https://api.example.com/search', params: { q: 'term', page: '2' } },
+      ],
+    };
+    const item = JSON.parse(exportToPostman(col)).item[0];
+    expect(item.request.url.query).toEqual(
+      expect.arrayContaining([{ key: 'q', value: 'term' }, { key: 'page', value: '2' }]),
+    );
+    expect(item.request.url.raw).toContain('q=term');
+    expect(item.request.url.raw).toContain('page=2');
+  });
 });
 
 describe('exportToOpenApi', () => {
@@ -103,5 +120,19 @@ describe('exportToOpenApi', () => {
     const parsed = JSON.parse(exportToOpenApi(sampleCollection));
     const postOp = parsed.paths['/users']['post'];
     expect(postOp.requestBody).toBeDefined();
+  });
+
+  it('exports req.params as OpenAPI query parameters', () => {
+    const col: Collection = {
+      name: 'Q', requests: [
+        { id: '1', name: 'Search', method: 'GET', url: 'https://api.example.com/search', params: { q: 'term' } },
+      ],
+    };
+    const op = JSON.parse(exportToOpenApi(col)).paths['/search']['get'];
+    expect(op.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'q', in: 'query' }),
+      ]),
+    );
   });
 });

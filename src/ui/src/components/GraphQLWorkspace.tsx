@@ -351,9 +351,13 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
     }
     if (operationName.trim()) body.operationName = operationName.trim();
     const allHeaders = { 'Content-Type': 'application/json', ...enabledHeaders };
-    const headerArgs = Object.entries(allHeaders).map(([k, v]) => `-H '${k}: ${v}'`).join(' ');
-    const bodyArg = `-d '${JSON.stringify(body).replace(/'/g, "\\'")}'`;
-    const curlCmd = `curl -X POST ${headerArgs} ${bodyArg} '${url}'`;
+    // POSIX single-quote escaping (close, escaped quote, reopen). The previous
+    // `\'` form is invalid inside single quotes and broke any header/body/url
+    // value that contained a quote.
+    const shq = (s: string) => s.replace(/'/g, `'\\''`);
+    const headerArgs = Object.entries(allHeaders).map(([k, v]) => `-H '${shq(`${k}: ${v}`)}'`).join(' ');
+    const bodyArg = `-d '${shq(JSON.stringify(body))}'`;
+    const curlCmd = `curl -X POST ${headerArgs} ${bodyArg} '${shq(url)}'`;
     navigator.clipboard.writeText(curlCmd).catch(() => {});
     setCurlCopied(true);
     setTimeout(() => setCurlCopied(false), 2000);

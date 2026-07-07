@@ -35,6 +35,30 @@ export class AuthManager {
     }
   }
 
+  /**
+   * Loads the config for a read-modify-write cycle. Unlike loadConfig (which
+   * tolerates a corrupt file by returning defaults for pure reads), this throws
+   * when the file exists but is not valid JSON - saving a `{}` derived from a
+   * corrupt file back to disk would silently wipe every profile, workspace, and
+   * secret-provider entry.
+   */
+  private async loadConfigForWrite(): Promise<ConfigFile> {
+    if (!existsSync(this.configPath)) {
+      return {};
+    }
+    const content = await fs.readFile(this.configPath, 'utf8');
+    if (content.trim() === '') {
+      return {};
+    }
+    try {
+      return JSON.parse(content);
+    } catch {
+      throw new Error(
+        `Refusing to modify ${this.configPath}: the file exists but is not valid JSON. Fix or remove it before retrying.`,
+      );
+    }
+  }
+
   private async saveConfig(config: ConfigFile): Promise<void> {
     const dir = path.dirname(this.configPath);
     if (!existsSync(dir)) {
@@ -45,7 +69,7 @@ export class AuthManager {
   }
 
   async createProfile(profile: Omit<AuthProfile, 'id'>): Promise<AuthProfile> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     const profiles = config.authProfiles || [];
 
     const newProfile: AuthProfile = {
@@ -61,7 +85,7 @@ export class AuthManager {
   }
 
   async updateProfile(id: string, updates: Partial<AuthProfile>): Promise<AuthProfile> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     const profiles = config.authProfiles || [];
     const index = profiles.findIndex(p => p.id === id);
     if (index === -1) throw new AuthProfileNotFoundError(`Auth profile ${id} not found`);
@@ -88,7 +112,7 @@ export class AuthManager {
   }
 
   async deleteProfile(id: string): Promise<void> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     const profiles = config.authProfiles || [];
     
     const index = profiles.findIndex(p => p.id === id);
@@ -107,7 +131,7 @@ export class AuthManager {
   }
 
   async setActiveProject(projectDir: string): Promise<void> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     config.activeProject = projectDir;
     await this.saveConfig(config);
   }
@@ -118,7 +142,7 @@ export class AuthManager {
   }
 
   async setDotenvFiles(files: string[]): Promise<void> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     config.dotenvFiles = files;
     await this.saveConfig(config);
   }
@@ -127,7 +151,7 @@ export class AuthManager {
   // ~/.reqly/config.json - never in the project's .reqly/ so tokens never
   // touch git. Merges per provider so partial updates keep existing keys.
   async setSecretProviderConfig(provider: string, providerConfig: Record<string, string>): Promise<void> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     config.secretProviders = config.secretProviders || {};
     config.secretProviders[provider] = { ...config.secretProviders[provider], ...providerConfig };
     await this.saveConfig(config);
@@ -200,7 +224,7 @@ export class AuthManager {
   }
 
   async addWorkspaceProject(projectPath: string): Promise<void> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     const projects = config.workspaceProjects || [];
     if (!projects.includes(projectPath)) {
       projects.push(projectPath);
@@ -210,7 +234,7 @@ export class AuthManager {
   }
 
   async removeWorkspaceProject(projectPath: string): Promise<void> {
-    const config = await this.loadConfig();
+    const config = await this.loadConfigForWrite();
     if (!config.workspaceProjects) return;
     config.workspaceProjects = config.workspaceProjects.filter(p => p !== projectPath);
     await this.saveConfig(config);

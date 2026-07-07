@@ -96,6 +96,21 @@ describe('script-runner', () => {
     expect(consoleLogs[0]).toBe('[log] {"a":1}');
   });
 
+  // Regression: a circular object passed to console.log threw inside JSON.stringify,
+  // which aborted the entire script - logging must never crash user code.
+  it('console.log of a circular object does not abort the script', () => {
+    const ctx: ScriptContext = { env: {}, request: {} };
+    const { consoleLogs } = runScript(
+      'const a = { name: "x" }; a.self = a; console.log(a); console.log("after");',
+      ctx,
+    );
+    // Both logs present; the circular one is rendered, not a script-error abort.
+    expect(consoleLogs).toHaveLength(2);
+    expect(consoleLogs[0]).toContain('[log]');
+    expect(consoleLogs[0]).not.toContain('Script error');
+    expect(consoleLogs[1]).toBe('[log] after');
+  });
+
   it('script error is captured as [error] log and does not throw', () => {
     const ctx: ScriptContext = { env: {}, request: {} };
     const { consoleLogs } = runScript('throw new Error("oops")', ctx);

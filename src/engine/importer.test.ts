@@ -332,6 +332,48 @@ get {
       importFromFile('/nonexistent/file.json', 'postman', manager)
     ).rejects.toThrow('File not found');
   });
+
+  // Regression: two requests with the same name used to silently overwrite each
+  // other (addRequest is an upsert), losing data and over-reporting the count.
+  it('keeps all requests when two share the same name (suffixes the collision)', async () => {
+    const postman = {
+      info: { name: 'Dupes' },
+      item: [
+        { name: 'Login', request: { method: 'POST', url: 'https://x.com/a', header: [] } },
+        { name: 'Login', request: { method: 'GET', url: 'https://x.com/b', header: [] } },
+      ],
+    };
+    const filePath = path.join(tmpDir, 'dupes.json');
+    await fs.writeFile(filePath, JSON.stringify(postman));
+
+    const result = await importFromFile(filePath, 'postman', manager);
+    expect(result.requestsImported).toBe(2);
+    const col = await manager.getCollection('Dupes');
+    expect(col.requests).toHaveLength(2);
+    // Both original URLs survive - neither was clobbered.
+    expect(col.requests.map(r => r.url).sort()).toEqual(['https://x.com/a', 'https://x.com/b']);
+  });
+
+  // Regression: a request whose name sanitizes to an empty string used to be
+  // written as ".yaml"; with the path-safety guard it would throw and abort the
+  // whole import. The importer must guarantee a usable name.
+  it('imports a request whose name is empty after sanitization', async () => {
+    const postman = {
+      info: { name: 'EmptyName' },
+      item: [
+        { name: '   ', request: { method: 'GET', url: 'https://x.com/ok', header: [] } },
+      ],
+    };
+    const filePath = path.join(tmpDir, 'emptyname.json');
+    await fs.writeFile(filePath, JSON.stringify(postman));
+
+    const result = await importFromFile(filePath, 'postman', manager);
+    expect(result.requestsImported).toBe(1);
+    const col = await manager.getCollection('EmptyName');
+    expect(col.requests).toHaveLength(1);
+    expect(col.requests[0].name.length).toBeGreaterThan(0);
+    expect(col.requests[0].url).toBe('https://x.com/ok');
+  });
 });
 
 // ── importFromContent ───────────────────────────────────────────────────────

@@ -235,7 +235,7 @@ export async function updateRequest(collectionName: string, oldRequestName: stri
 }
 
 export async function deleteRequest(collectionName: string, requestName: string) {
-  const res = await fetch(`/api/collections/${collectionName}/requests/${requestName}`, {
+  const res = await fetch(`/api/collections/${encodeURIComponent(collectionName)}/requests/${encodeURIComponent(requestName)}`, {
     method: 'DELETE'
   });
   if (!res.ok) throw new Error('Failed to delete request');

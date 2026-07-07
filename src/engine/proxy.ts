@@ -83,10 +83,13 @@ export class ProxyServer {
       return;
     }
 
-    let reqBody = '';
-    req.on('data', chunk => reqBody += chunk);
+    // Buffer as bytes, not string concatenation: coercing binary/gzipped
+    // chunks through a JS string corrupts them and breaks content-length.
+    const reqChunks: Buffer[] = [];
+    req.on('data', chunk => reqChunks.push(chunk as Buffer));
 
     req.on('end', () => {
+      const reqBuffer = Buffer.concat(reqChunks);
       // Capture response
       const proxyReq = http.request({
         hostname: url.hostname,
@@ -95,26 +98,28 @@ export class ProxyServer {
         method: req.method,
         headers: req.headers
       }, (proxyRes) => {
-        let resBody = '';
-        proxyRes.on('data', chunk => resBody += chunk);
-        
+        const resChunks: Buffer[] = [];
+        proxyRes.on('data', chunk => resChunks.push(chunk as Buffer));
+
         proxyRes.on('end', async () => {
-          const latency = Date.now() - start;
-          
+          const resBuffer = Buffer.concat(resChunks);
+
           try {
             await this.captureRequest(collectionName, {
               id: Date.now().toString(),
               method: (req.method || 'GET') as any,
               url: url.toString(),
               headers: req.headers as Record<string, string>,
-              body: reqBody
+              // Only text bodies are stored as strings; binary request bodies
+              // are captured lossily but that never affects the forwarded bytes.
+              body: reqBuffer.toString()
             });
           } catch (e) {
             console.error('Failed to capture request', e);
           }
-          
+
           res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
-          res.end(resBody);
+          res.end(resBuffer);
         });
       });
 
@@ -123,7 +128,7 @@ export class ProxyServer {
         res.end(err.message);
       });
 
-      if (reqBody) proxyReq.write(reqBody);
+      if (reqBuffer.length) proxyReq.write(reqBuffer);
       proxyReq.end();
     });
   }

@@ -220,6 +220,17 @@ describe('CollectionManager', () => {
       await manager.createCollection('TestCol');
       await expect(manager.renameCollection('TestCol', 'flows')).rejects.toThrow(/reserved/i);
     });
+
+    // Read-path traversal: getRequest/getCollection build a filesystem path from
+    // the name, so a `../` name would disclose YAML files outside the project.
+    it('rejects reading a request whose name escapes the collection dir', async () => {
+      await manager.createCollection('TestCol');
+      await expect(manager.getRequest('TestCol', '../../etc/hosts')).rejects.toThrow(/invalid/i);
+    });
+
+    it('rejects reading a collection whose name escapes the base dir', async () => {
+      await expect(manager.getCollection('../../etc')).rejects.toThrow(/invalid/i);
+    });
   });
 
   describe('moveRequest', () => {

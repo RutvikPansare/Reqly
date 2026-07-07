@@ -105,7 +105,16 @@ export interface ScriptResult {
 }
 
 function formatArgs(...args: unknown[]): string {
-  return args.map(a => (a !== null && typeof a === 'object') ? JSON.stringify(a) : String(a)).join(' ');
+  return args.map(a => {
+    if (a === null || typeof a !== 'object') return String(a);
+    try {
+      return JSON.stringify(a);
+    } catch {
+      // Circular structures (or values with throwing toJSON) must not crash
+      // the script - fall back to a best-effort string form.
+      try { return String(a); } catch { return '[unserializable]'; }
+    }
+  }).join(' ');
 }
 
 export function runScript(script: string, context: ScriptContext): ScriptResult {

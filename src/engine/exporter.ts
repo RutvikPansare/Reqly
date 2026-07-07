@@ -26,16 +26,29 @@ function extractHost(url: string): string {
   }
 }
 
+// Appends req.params to the raw URL as a query string, preserving any query
+// already present in the URL.
+function rawUrlWithParams(url: string, params?: Record<string, string>): string {
+  const entries = Object.entries(params ?? {});
+  if (entries.length === 0) return url;
+  const qs = entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+  return url + (url.includes('?') ? '&' : '?') + qs;
+}
+
 function toPostmanItem(req: CollectionRequest) {
+  const paramEntries = Object.entries(req.params ?? {});
   const item: any = {
     name: req.name,
     request: {
       method: req.method,
       header: toPostmanHeaders(req.headers),
       url: {
-        raw: req.url,
+        raw: rawUrlWithParams(req.url, req.params),
         host: [extractHost(req.url)],
         path: extractPath(req.url).split('/').filter(Boolean),
+        // Query params live in req.params, not the raw URL - emit them so they
+        // survive the round-trip (the importer reads url.query).
+        ...(paramEntries.length ? { query: paramEntries.map(([key, value]) => ({ key, value })) } : {}),
       },
     },
     response: [],
@@ -90,6 +103,11 @@ export function exportToOpenApi(collection: Collection): string {
     // Headers as parameters
     for (const [name, schema] of Object.entries(req.headers ?? {})) {
       operation.parameters.push({ name, in: 'header', schema: { type: 'string' }, example: schema });
+    }
+    // Query params (req.params) as OpenAPI query parameters - dropping them
+    // would export an endpoint that ignores its query string.
+    for (const [name, value] of Object.entries(req.params ?? {})) {
+      operation.parameters.push({ name, in: 'query', schema: { type: 'string' }, example: value });
     }
     if (operation.parameters.length === 0) delete operation.parameters;
 

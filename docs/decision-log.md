@@ -6,6 +6,30 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-06 - Realtime panels are keyed by tab id; UI guards run after all hooks (T-253)
+
+**Decision:** The realtime workspace renders each protocol panel with `key={activeTabId}`, and long-form components guard their output only after every hook has run (no early return between hooks). The GraphQL "Copy as cURL" builder uses the same POSIX `'\''` escaping as the engine code generator.
+
+**Why:** React reconciles by element type + position, so a same-type panel rendered without a distinct key is reused across tab switches - the realtime panels hold their WebSocket/EventSource/Socket.IO/MQTT connection in component state, so reuse meant the previous tab's live socket stayed open and its messages leaked into the next tab. Keying by tab id forces a remount so the unmount cleanup runs. The hook-guard ordering is the Rules of Hooks: a conditional return between hook calls makes the hook count depend on props, which crashes on the next differing render. These are latent in normal flows (tabs always carry a request) but are real correctness landmines, cheap to close.
+
+## 2026-07-06 - Config mutations refuse a corrupt file instead of overwriting it; reads stay lenient (T-252)
+
+**Decision:** `AuthManager` gained a `loadConfigForWrite` used by every read-modify-write method (create/update/delete profile, set active project, dotenv files, secret provider config, workspace add/remove). It returns `{}` for a missing or empty file but throws for a file that exists and is not valid JSON. Pure reads (`loadConfig`, secret-provider config lookups, `maxBodyBytes`) keep returning `{}` on corrupt so read paths degrade to defaults. The two Express config-write routes share a pure `mergeConfigPatch` helper with the same rule (409 on corrupt).
+
+**Why:** The old `loadConfig` swallowed JSON parse errors and returned `{}`, so any mutation on a corrupt `~/.reqly/config.json` wrote that `{}` back and silently wiped every auth profile, workspace, and secret-provider entry. Reads genuinely want defaults on corrupt (a broken file shouldn't crash `run_request`), but a blind write is unrecoverable data loss - so the split is by operation, not global.
+
+## 2026-07-06 - Realtime capture arms its deadline before connecting; exports carry query params (T-252)
+
+**Decision:** The buffered realtime capture (`run_realtime`) arms a connect-deadline timer at function start for all four transports and clears it on connect, in addition to the existing post-connect capture window. Collection export (Postman + OpenAPI) now serializes `req.params` as query params.
+
+**Why:** The capture window was only started inside the connect handler, so a socket that never opened left the promise pending forever - and since MCP tool calls block the agent, a single unreachable realtime endpoint would hang the whole session. The deadline must cover the connect phase, not just the capture phase. For exports: Reqly deliberately stores query params in `req.params` (the `create_request` tool instructs agents to use it rather than hardcoding a query string), so an exporter that reads only `url` silently produced requests with no query string and broke round-trips through Postman.
+
+## 2026-07-06 - gRPC calls always carry a deadline and always close their channel; the script vm is not a trust boundary (T-252)
+
+**Decision:** Every gRPC call (unary and all three streaming modes) now sets a deadline (unary default 30s via `timeoutMs`, streaming via the existing `streamTimeout`) and closes its client channel on every exit path. `protoFile` is resolved through a shared `resolveProtoPath` guard. Separately, the pre/post-request script sandbox (`vm.runInNewContext`) is documented as NOT a security boundary - a confirmed escape reaches the real `process` and defeats the `require` allowlist - and evaluating `isolated-vm` was filed as its own task rather than done here.
+
+**Why:** grpc-js waits for channel readiness indefinitely, so a call to an unreachable server hung forever (verified), and client streaming had no timeout even in principle; unclosed channels leaked a socket/fd per call. These are reliability defects for a tool whose pitch is reliability. The vm escape is real but its proper fix (a native V8-isolate dependency) is an architecture decision that must not be smuggled into a bug-fix pass - collections are trusted-ish today, and the honest move is to surface the limitation and decide deliberately.
+
 ## 2026-07-06 - .env vault resolution fails soft at load, loud at request time (T-245)
 
 **Decision:** When a vault URI in `.env` cannot resolve, the loader records the error and excludes the key from the variable record instead of throwing. The executor throws only when a request actually references the failed key, or when an inline `{{secret:...}}` reference fails. Resolved secrets are masked in every listing path (`getVariables`, UI Variables tab, MCP `get_variables`) and flow full-value only into request execution.

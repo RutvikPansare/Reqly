@@ -75,6 +75,7 @@ export class CollectionManager {
   }
 
   async getCollection(name: string): Promise<Collection> {
+    assertSafeName('collection', name);
     const colPath = path.join(this.baseDir, name);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${name} not found`);
@@ -228,6 +229,8 @@ export class CollectionManager {
   }
 
   async getRequest(collectionName: string, requestName: string): Promise<CollectionRequest> {
+    assertSafeName('collection', collectionName);
+    assertSafeName('request', requestName);
     const colPath = path.join(this.baseDir, collectionName);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${collectionName} not found`);

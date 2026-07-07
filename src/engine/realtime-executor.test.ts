@@ -140,6 +140,28 @@ describe('runRealtimeCapture - WebSocket', () => {
     expect(result.errorMessage).toContain('ECONNREFUSED');
   });
 
+  // Regression: the capture timeout used to be armed only inside the 'open'
+  // handler, so a socket that never connects (unreachable host, stalled
+  // upgrade) never resolved and hung the whole run_realtime call.
+  it('resolves within the capture timeout even if the socket never opens', async () => {
+    const ws = makeFakeWs(); // never emits 'open', 'error', or 'close'
+    const adapters: RealtimeAdapters = { createWebSocket: () => ws };
+
+    const start = Date.now();
+    const result = await runRealtimeCapture(
+      { type: 'websocket', url: 'ws://10.255.255.1:9999', config: {} },
+      { captureTimeout: 0.2 },
+      adapters,
+    );
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(2000); // did not hang
+    expect(result.messages.some(m => m.source === 'server')).toBe(false);
+    // The connection never established - surfaced as an error, not a silent empty success.
+    expect(result.isError).toBe(true);
+    expect(ws.close).toHaveBeenCalled();
+  });
+
   it('caps messages at 500 and sets truncated: true', async () => {
     const ws = makeFakeWs();
     const adapters: RealtimeAdapters = { createWebSocket: () => ws };

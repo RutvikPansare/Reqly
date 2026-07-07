@@ -88,8 +88,7 @@ function flattenPostmanItems(items: any[]): CollectionRequest[] {
       const headers = parsePostmanHeaders(req.header ?? []);
       const body: string | undefined = req.body?.raw || undefined;
       const method = ((req.method as string) ?? 'GET').toUpperCase() as HttpMethod;
-      const name = ((item.name as string) ?? 'Request')
-        .replace(/[/\\:*?"<>|]/g, '-').slice(0, 50).trim();
+      const name = sanitizeName((item.name as string) ?? 'Request');
       const cr: CollectionRequest = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         name, method, url,
@@ -159,7 +158,10 @@ export function parseBruno(
 // ── Insomnia v4 parser ───────────────────────────────────────────────────────
 
 function sanitizeName(name: string): string {
-  return (name || 'Request').replace(/[/\\:*?"<>|]/g, '-').slice(0, 50).trim();
+  // Strip path-unsafe characters, cap length, and guarantee a non-empty result:
+  // an empty name is rejected by CollectionManager (path-safety guard).
+  const cleaned = (name || 'Request').replace(/[/\\:*?"<>|]/g, '-').slice(0, 50).trim();
+  return cleaned || 'Request';
 }
 
 export function parseInsomnia(content: string): { collectionName: string; requests: CollectionRequest[] } {
@@ -285,8 +287,18 @@ async function persistRequests(
   manager: CollectionManager
 ): Promise<void> {
   await manager.createCollection(collectionName);
+  // addRequest is an upsert keyed by name, so same-named imports would silently
+  // overwrite each other. Suffix collisions so every request is preserved.
+  const usedNames = new Set<string>();
   for (const req of requests) {
-    await manager.addRequest(collectionName, req);
+    let name = req.name;
+    if (usedNames.has(name)) {
+      let suffix = 1;
+      while (usedNames.has(`${req.name} (${suffix})`)) suffix++;
+      name = `${req.name} (${suffix})`;
+    }
+    usedNames.add(name);
+    await manager.addRequest(collectionName, { ...req, name });
   }
 }
 

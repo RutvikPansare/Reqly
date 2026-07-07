@@ -1,6 +1,12 @@
 import * as grpcLoader from '@grpc/proto-loader';
 import * as grpcJs from '@grpc/grpc-js';
 import * as path from 'path';
+import { resolveProtoPath } from './grpc-runner.js';
+
+/** Closes a client channel, ignoring errors - cleanup must never mask a result. */
+function closeQuietly(stub: unknown): void {
+  try { grpcJs.closeClient(stub as Parameters<typeof grpcJs.closeClient>[0]); } catch { /* ignore */ }
+}
 
 // ---------------------------------------------------------------------------
 // grpc-streaming.ts  (T-168)
@@ -51,41 +57,6 @@ export interface GrpcStreamRequest {
 // Shared helper: load proto and build stub
 // ---------------------------------------------------------------------------
 
-async function loadStub(
-  protoFile: string,
-  service: string,
-  protosDir: string,
-): Promise<{ stub: any; error?: string }> {
-  const protoPath = path.join(protosDir, protoFile);
-
-  let packageDef: grpcLoader.PackageDefinition;
-  try {
-    packageDef = await grpcLoader.load(protoPath, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
-      includeDirs: [protosDir],
-    });
-  } catch (err: any) {
-    return { stub: null, error: `Failed to load proto '${protoFile}': ${err?.message ?? String(err)}` };
-  }
-
-  const pkgObject = grpcJs.loadPackageDefinition(packageDef) as any;
-  const parts = service.split('.');
-  let ServiceCtor: any = pkgObject;
-  for (const p of parts) ServiceCtor = ServiceCtor?.[p];
-
-  if (typeof ServiceCtor !== 'function') {
-    return { stub: null, error: `Service '${service}' not found in proto package` };
-  }
-
-  const creds = grpcJs.credentials.createInsecure();
-  void creds; // used below by callers that instantiate the stub
-  return { stub: ServiceCtor, error: undefined };
-}
-
 function buildMeta(metadata?: Record<string, string>): InstanceType<typeof grpcJs.Metadata> {
   const meta = new grpcJs.Metadata();
   if (metadata) {
@@ -98,7 +69,10 @@ async function resolveStub(
   req: GrpcStreamRequest,
   protosDir: string,
 ): Promise<{ stub: any; error?: string }> {
-  const protoPath = path.join(protosDir, req.protoFile);
+  const protoPath = resolveProtoPath(protosDir, req.protoFile);
+  if (!protoPath) {
+    return { stub: null, error: `protoFile '${req.protoFile}' resolves outside the protos directory` };
+  }
 
   let packageDef: grpcLoader.PackageDefinition;
   try {
@@ -150,16 +124,21 @@ export async function runGrpcServerStream(
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    let call: any;
     const finish = (truncated: boolean, isError?: boolean, errorMessage?: string) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      // On timeout the stream is still open - cancel it so grpc-js releases
+      // the call, then close the channel to free the socket.
+      if (truncated && call?.cancel) { try { call.cancel(); } catch { /* ignore */ } }
+      closeQuietly(stub);
       resolve({ messages, truncated, isError, errorMessage });
     };
 
     timer = setTimeout(() => finish(true), timeoutMs);
 
-    const call = stub[req.method](req.message ?? {}, meta);
+    call = stub[req.method](req.message ?? {}, meta);
 
     call.on('data', (data: any) => {
       messages.push({ data, timestamp: new Date().toISOString(), direction: 'received' });
@@ -190,19 +169,32 @@ export async function runGrpcClientStream(
   }
 
   const meta = buildMeta(req.metadata);
+  const timeoutMs = (req.streamTimeout ?? 5) * 1000;
   const start = Date.now();
 
   return new Promise(resolve => {
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let call: any;
 
     const finish = (result: GrpcClientStreamResult) => {
       if (settled) return;
       settled = true;
+      if (timer) clearTimeout(timer);
+      closeQuietly(stub);
       resolve(result);
     };
 
+    // A client-streaming server replies exactly once. Without a deadline, a
+    // server that never sends its single response leaves this promise pending
+    // forever - guard with the same timeout the streaming variants use.
+    timer = setTimeout(() => {
+      if (call?.cancel) { try { call.cancel(); } catch { /* ignore */ } }
+      finish({ response: null, latency: Date.now() - start, isError: true, errorMessage: `Client stream timed out after ${timeoutMs}ms` });
+    }, timeoutMs);
+
     // Client streaming: server replies ONCE - use callback (not .on('data'))
-    const call = stub[req.method](meta, (err: any, response: any) => {
+    call = stub[req.method](meta, (err: any, response: any) => {
       if (err) {
         finish({ response: null, latency: Date.now() - start, isError: true, errorMessage: err?.details ?? err?.message ?? String(err) });
       } else {
@@ -245,16 +237,19 @@ export async function runGrpcBidiStream(
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    let call: any;
     const finish = (truncated: boolean, isError?: boolean, errorMessage?: string) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (truncated && call?.cancel) { try { call.cancel(); } catch { /* ignore */ } }
+      closeQuietly(stub);
       resolve({ messages, truncated, isError, errorMessage });
     };
 
     timer = setTimeout(() => finish(true), timeoutMs);
 
-    const call = stub[req.method](meta);
+    call = stub[req.method](meta);
 
     call.on('data', (data: any) => {
       messages.push({ data, timestamp: new Date().toISOString(), direction: 'received' });

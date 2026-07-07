@@ -90,10 +90,15 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'websocket', label: 'WebSocket' }, { id: 'sse', label: 'Server-Sent Events' }, { id: 'socketio', label: 'Socket.IO' }, { id: 'mqtt', label: 'MQTT' }]} />
         <div className="relative min-h-0 flex-1">
-          {activeTab?.protocol === 'websocket' && props && <WebSocketPanel {...props} />}
-          {activeTab?.protocol === 'sse' && props && <SSEPanel {...props} />}
-          {activeTab?.protocol === 'socketio' && props && <SocketIOPanel {...props} />}
-          {activeTab?.protocol === 'mqtt' && props && <MQTTPanel {...props} />}
+          {/* key by tab id: switching between two same-protocol tabs must
+              remount the panel so its unmount cleanup closes the previous
+              tab's live connection and resets messages/status. Without it,
+              React reuses the instance and the old socket leaks with its
+              messages bleeding into the new tab. */}
+          {activeTab?.protocol === 'websocket' && props && <WebSocketPanel key={activeTabId} {...props} />}
+          {activeTab?.protocol === 'sse' && props && <SSEPanel key={activeTabId} {...props} />}
+          {activeTab?.protocol === 'socketio' && props && <SocketIOPanel key={activeTabId} {...props} />}
+          {activeTab?.protocol === 'mqtt' && props && <MQTTPanel key={activeTabId} {...props} />}
         </div>
         {saveModalOpen && <SaveToCollectionModal request={{ type: activeTab?.protocol || 'websocket', url: activeTab?.url || '', realtime: activeTab?.realtime || {} }} defaultName={activeTab?.tabName || ''} onClose={() => setSaveModalOpen(false)} onSaved={handleSaved} />}
       </div>

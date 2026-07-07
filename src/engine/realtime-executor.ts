@@ -165,20 +165,30 @@ function captureWebSocket(
     const messages: RealtimeMessage[] = [];
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
 
     const finish = (truncated: boolean, isError?: boolean, errorMessage?: string) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (connectTimer) clearTimeout(connectTimer);
       try { ws.close(); } catch {}
       resolve({ messages, truncated, isError, errorMessage });
     };
+
+    // Guarantee resolution: if the socket never opens (unreachable host,
+    // stalled upgrade), this fires so the capture can't hang forever.
+    connectTimer = setTimeout(
+      () => finish(false, true, 'Connection timed out before it opened'),
+      captureTimeoutMs,
+    );
 
     const protocols = req.config.protocols ?? [];
     const createWs = adapters.createWebSocket ?? ((url, protos) => new WebSocket(url, protos) as unknown as WsLike);
     const ws = createWs(req.url, protocols.length > 0 ? protocols : undefined);
 
     ws.on('open', () => {
+      if (connectTimer) { clearTimeout(connectTimer); connectTimer = undefined; }
       push(messages, makeMsg('info', 'connected'));
       timer = setTimeout(() => finish(messages.length >= RING_BUFFER_MAX), captureTimeoutMs);
 
@@ -218,20 +228,28 @@ function captureSSE(
     const messages: RealtimeMessage[] = [];
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
 
     const finish = (truncated: boolean, isError?: boolean, errorMessage?: string) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (connectTimer) clearTimeout(connectTimer);
       try { es.close(); } catch {}
       resolve({ messages, truncated, isError, errorMessage });
     };
+
+    connectTimer = setTimeout(
+      () => finish(false, true, 'Connection timed out before it opened'),
+      captureTimeoutMs,
+    );
 
     const createES = adapters.createEventSource ?? ((url) => new EventSource(url) as unknown as EsLike);
     const es = createES(req.url);
     const eventType = req.config.eventType ?? 'message';
 
     es.onopen = () => {
+      if (connectTimer) { clearTimeout(connectTimer); connectTimer = undefined; }
       push(messages, makeMsg('info', 'connected'));
       timer = setTimeout(() => finish(messages.length >= RING_BUFFER_MAX), captureTimeoutMs);
     };
@@ -269,14 +287,21 @@ function captureSocketIO(
     const messages: RealtimeMessage[] = [];
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
 
     const finish = (truncated: boolean, isError?: boolean, errorMessage?: string) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (connectTimer) clearTimeout(connectTimer);
       try { socket.disconnect(); } catch {}
       resolve({ messages, truncated, isError, errorMessage });
     };
+
+    connectTimer = setTimeout(
+      () => finish(false, true, 'Connection timed out before it opened'),
+      captureTimeoutMs,
+    );
 
     const ioOpts: Record<string, any> = {};
     if (req.config.path) ioOpts.path = req.config.path;
@@ -288,6 +313,7 @@ function captureSocketIO(
     const socket = createSio(req.url, ioOpts);
 
     socket.on('connect', () => {
+      if (connectTimer) { clearTimeout(connectTimer); connectTimer = undefined; }
       push(messages, makeMsg('info', 'connected'));
       timer = setTimeout(() => finish(messages.length >= RING_BUFFER_MAX), captureTimeoutMs);
 
@@ -329,14 +355,21 @@ function captureMQTT(
     const messages: RealtimeMessage[] = [];
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
 
     const finish = (truncated: boolean, isError?: boolean, errorMessage?: string) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (connectTimer) clearTimeout(connectTimer);
       try { client.end(true); } catch {}
       resolve({ messages, truncated, isError, errorMessage });
     };
+
+    connectTimer = setTimeout(
+      () => finish(false, true, 'Connection timed out before it opened'),
+      captureTimeoutMs,
+    );
 
     const cfg = req.config;
     const connectOpts: mqtt.IClientOptions = {};
@@ -350,6 +383,7 @@ function captureMQTT(
     const client = createMqtt(req.url, connectOpts);
 
     client.on('connect', () => {
+      if (connectTimer) { clearTimeout(connectTimer); connectTimer = undefined; }
       push(messages, makeMsg('info', 'connected'));
       timer = setTimeout(() => finish(messages.length >= RING_BUFFER_MAX), captureTimeoutMs);
 

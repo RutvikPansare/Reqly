@@ -165,6 +165,7 @@ vi.mock('@grpc/proto-loader', () => ({
   loadSync: vi.fn(() => ({})),
 }));
 
+import * as grpcJsForStreaming from '@grpc/grpc-js';
 import { runGrpcServerStream, runGrpcClientStream, runGrpcBidiStream } from './grpc-streaming.js';
 
 // ---------------------------------------------------------------------------
@@ -320,5 +321,57 @@ describe('grpc-streaming - bidirectional streaming (T-168)', () => {
     );
 
     expect(result.truncated).toBe(true);
+  }, 10_000);
+});
+
+// ---------------------------------------------------------------------------
+// T-251: hardening - client-stream deadline, channel cleanup, proto path safety
+// ---------------------------------------------------------------------------
+
+describe('grpc-streaming hardening (T-251)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _sMock.serverStreamMessages = [{ v: 1 }];
+    _sMock.serverStreamError = null;
+    _sMock.clientStreamResponse = { ok: true };
+    _sMock.clientStreamError = null;
+    _sMock.clientStreamNeverReplies = false;
+    _sMock.delay = 0;
+    _sMock.cancelSpy = vi.fn();
+    _sMock.closeClientSpy = vi.fn();
+  });
+
+  it('client streaming times out instead of hanging when the server never replies', async () => {
+    _sMock.clientStreamNeverReplies = true;
+    const result = await runGrpcClientStream(
+      { ...BASE, method: 'ClientStream', messages: [{ x: 1 }], streamTimeout: 0.1 },
+      '/tmp/protos',
+    );
+    expect(result.isError).toBe(true);
+    expect(result.errorMessage).toMatch(/timed out|deadline/i);
+  }, 10_000);
+
+  it('closes the channel after server streaming ends', async () => {
+    await runGrpcServerStream({ ...BASE, method: 'ServerStream', message: {} }, '/tmp/protos');
+    expect(vi.mocked(grpcJsForStreaming.closeClient)).toHaveBeenCalled();
+  }, 10_000);
+
+  it('closes the channel after client streaming ends', async () => {
+    await runGrpcClientStream({ ...BASE, method: 'ClientStream', messages: [{ x: 1 }] }, '/tmp/protos');
+    expect(vi.mocked(grpcJsForStreaming.closeClient)).toHaveBeenCalled();
+  }, 10_000);
+
+  it('closes the channel after bidi streaming ends', async () => {
+    await runGrpcBidiStream({ ...BASE, method: 'BidiStream', messages: [{ x: 1 }] }, '/tmp/protos');
+    expect(vi.mocked(grpcJsForStreaming.closeClient)).toHaveBeenCalled();
+  }, 10_000);
+
+  it('rejects a protoFile that escapes the protos dir (server stream)', async () => {
+    const result = await runGrpcServerStream(
+      { ...BASE, protoFile: '../../etc/passwd', method: 'ServerStream', message: {} },
+      '/tmp/protos',
+    );
+    expect(result.isError).toBe(true);
+    expect(result.errorMessage).toMatch(/protos/i);
   }, 10_000);
 });

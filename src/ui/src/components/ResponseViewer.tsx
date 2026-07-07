@@ -162,7 +162,9 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
     );
   }
 
-  const { status, latency, body, headers, diff, contractViolations, contractMatch, _isHistorical, _timestamp } = response || {};
+  // headers defaults to {} - some responses (errors, historical entries) arrive
+  // without a headers field, and the raw tab calls Object.entries(headers).
+  const { status, latency, body, headers = {}, diff, contractViolations, contractMatch, _isHistorical, _timestamp } = response || {};
   const hasDiff = diff && (diff.statusChanged || diff.latencyDelta !== 0 || diff.bodyChanges?.length > 0);
   const isError = status >= 400;
   const hasContract = contractMatch != null;

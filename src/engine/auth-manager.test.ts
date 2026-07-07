@@ -83,6 +83,26 @@ describe('AuthManager', () => {
     expect(await manager.listProfiles()).toHaveLength(1);
   });
 
+  // Regression: a mutation used to load a corrupt config as {} and then write
+  // that back, silently wiping every profile/workspace/secret-provider entry.
+  it('refuses to mutate when the config file is present but corrupt (no wipe)', async () => {
+    fs.writeFileSync(tmpFile, '{ corrupt : not json ');
+
+    await expect(
+      manager.createProfile({ name: 'X', type: AuthType.BEARER, credentials: {} }),
+    ).rejects.toThrow(/valid JSON/i);
+
+    // The corrupt file is left untouched, not overwritten with a fresh config.
+    expect(fs.readFileSync(tmpFile, 'utf8')).toBe('{ corrupt : not json ');
+  });
+
+  it('treats an empty config file as an empty config on mutation (no throw)', async () => {
+    fs.writeFileSync(tmpFile, '');
+    const profile = await manager.createProfile({ name: 'Y', type: AuthType.BEARER, credentials: {} });
+    expect(profile.id).toBeDefined();
+    expect(await manager.listProfiles()).toHaveLength(1);
+  });
+
   it('defaults to [".env"] when dotenv files were never set', async () => {
     expect(await manager.getDotenvFiles()).toEqual(['.env']);
   });

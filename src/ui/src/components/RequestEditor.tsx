@@ -78,10 +78,6 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
     return () => window.removeEventListener('reqly-reload', loadColData);
   }, [request?._collection]);
 
-  if (!request) {
-    return <div className="h-full flex items-center justify-center text-gray-500">Select a request to edit</div>;
-  }
-
   const [activeTab, setActiveTab] = useState('params');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState('GET');
@@ -353,6 +349,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
 
   // CodeMirror completion extension for {{variable}} syntax in the body editor
   const varCompletionExtension = useVarCompletion(availableVariables);
+
+  // Guard the OUTPUT only, after every hook has run. Placing this earlier (an
+  // early return between hook calls) is a Rules-of-Hooks violation: if `request`
+  // ever toggles falsy<->truthy on this instance, the hook count changes between
+  // renders and React crashes the tree.
+  if (!request) {
+    return <div className="h-full flex items-center justify-center text-gray-500">Select a request to edit</div>;
+  }
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-1)' }}>

@@ -42,6 +42,28 @@ function injectGrpcAuth(auth: any, metadata: Record<string, string>) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Shallow-merges a config patch onto the existing config file contents.
+ * A missing file (existingRaw === null) starts fresh. A file that exists but
+ * fails to parse must NOT be silently treated as empty - that would wipe the
+ * user's auth profiles, workspaces, and secret provider config. In that case
+ * we refuse and let the caller surface an error.
+ */
+export function mergeConfigPatch(
+  existingRaw: string | null,
+  patch: Record<string, unknown>,
+): { next: Record<string, unknown> } | { error: string } {
+  let current: Record<string, unknown> = {};
+  if (existingRaw !== null) {
+    try {
+      current = JSON.parse(existingRaw);
+    } catch {
+      return { error: 'Existing config file is not valid JSON; refusing to overwrite it.' };
+    }
+  }
+  return { next: { ...current, ...patch } };
+}
 export function startExpressServer(context: EngineContext, port: number = 4242) {
   const app = express();
   
@@ -1613,15 +1635,20 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
 
   app.post('/api/config', async (req, res) => {
     try {
-      let currentConfig = {};
+      let existingRaw: string | null = null;
       try {
-        const data = await fs.readFile(globalConfigPath, 'utf-8');
-        currentConfig = JSON.parse(data);
-      } catch (e: any) {}
-      
-      const newConfig = { ...currentConfig, ...req.body };
-      await fs.writeFile(globalConfigPath, JSON.stringify(newConfig, null, 2));
-      res.json(newConfig);
+        existingRaw = await fs.readFile(globalConfigPath, 'utf-8');
+      } catch (e: any) {
+        if (e.code !== 'ENOENT') throw e; // real read error, not "no file yet"
+      }
+
+      const merged = mergeConfigPatch(existingRaw, req.body || {});
+      if ('error' in merged) {
+        return res.status(409).json({ error: merged.error });
+      }
+      await fs.mkdir(path.dirname(globalConfigPath), { recursive: true });
+      await fs.writeFile(globalConfigPath, JSON.stringify(merged.next, null, 2));
+      res.json(merged.next);
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -1678,13 +1705,18 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     const supported = !!process.env.REQLY_DESKTOP;
     if (!supported) return res.json({ enabled: false, supported: false });
     const enabled = !!req.body.enabled;
-    let currentConfig: any = {};
+    let existingRaw: string | null = null;
     try {
-      currentConfig = JSON.parse(await fs.readFile(globalConfigPath, 'utf-8'));
-    } catch { /* no existing config */ }
-    currentConfig.launchAtLogin = enabled;
+      existingRaw = await fs.readFile(globalConfigPath, 'utf-8');
+    } catch (e: any) {
+      if (e.code !== 'ENOENT') return res.status(500).json({ error: e.message });
+    }
+    const merged = mergeConfigPatch(existingRaw, { launchAtLogin: enabled });
+    if ('error' in merged) {
+      return res.status(409).json({ error: merged.error });
+    }
     await fs.mkdir(path.dirname(globalConfigPath), { recursive: true });
-    await fs.writeFile(globalConfigPath, JSON.stringify(currentConfig, null, 2));
+    await fs.writeFile(globalConfigPath, JSON.stringify(merged.next, null, 2));
     res.json({ enabled, supported: true });
   });
 
