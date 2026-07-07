@@ -105,7 +105,9 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
   useEffect(() => {
     if (tab !== 'mock') return;
     fetchCollections().then((data: any) => {
-      const names: string[] = (data.collections || []).map((c: any) => c.name || c);
+      // /api/collections returns a bare array of collections, not { collections }.
+      const list = Array.isArray(data) ? data : (data.collections || []);
+      const names: string[] = list.map((c: any) => c.name || c);
       setCollections(names);
       if (!mockCollection && names.length > 0) setMockCollection(names[0]);
     }).catch(() => {});
