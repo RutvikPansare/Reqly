@@ -49,8 +49,12 @@ export interface RunResult {
 }
 
 export interface CollectionRunResult {
+  collection?: string;
   results?: unknown[];
-  summary?: { total: number; passed: number; failed: number };
+  // The server returns these flat (not nested under `summary`).
+  total?: number;
+  passed?: number;
+  failed?: number;
   [key: string]: unknown;
 }
 

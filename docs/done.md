@@ -1,5 +1,12 @@
 # Reqly - Done
 
+## 2026-07-07
+
+- [x] **T-254** Desktop + VS Code package audit: 2 bugs fixed (completes the full-codebase sweep)
+  - **VS Code collection-run summary never rendered (`packages/vscode/src/commands.ts` + `api.ts`):** `reqly.runCollection` read `result.summary.{total,passed,failed}`, but the server returns those fields flat (`{ collection, total, passed, failed, results }`) - so the run output always dumped raw JSON and the "N request(s) failed" warning never fired. Now reads the flat fields; `CollectionRunResult` type corrected.
+  - **Desktop setup flag wiped a corrupt config (`packages/desktop/src/agent-config.ts`):** `markSetupComplete` caught a JSON parse error and rewrote `~/.reqly/config.json` as just `{ setupComplete: true }`, wiping every auth profile / workspace / secret provider - the same data-loss class fixed in T-252 for the engine. Now distinguishes missing/empty (fine) from corrupt-but-present (refuse to overwrite); path made injectable and covered by a new `agent-config.test.ts` (vitest).
+  - Audited clean: the rest of the VS Code extension (`api.ts` error/encoding handling, `codelens-detect.ts`, `codelens.ts`, `tree.ts`, `preview.ts`, `statusBar.ts`, `extension.ts`) and the Electron shell (`main.ts` crash/watchdog/quit lifecycle from T-244, `reqly-resolver.ts`, `logger.ts`, `SetupWizard.ts`). Full suite 1032 green; vscode + root `tsc --noEmit` clean.
+
 ## 2026-07-06
 
 - [x] **T-253** UI component audit (React `src/ui/`): 6 logic/crash bugs fixed

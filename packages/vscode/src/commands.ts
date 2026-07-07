@@ -120,15 +120,16 @@ export function registerCommands(context: vscode.ExtensionContext, deps: Command
         );
         output.appendLine('');
         output.appendLine(`══ Collection run: ${collection.name}`);
-        const summary = result.summary;
-        if (summary) {
-          output.appendLine(`   ${summary.passed}/${summary.total} passed, ${summary.failed} failed`);
+        // The server returns total/passed/failed at the top level.
+        const hasSummary = typeof result.total === 'number';
+        if (hasSummary) {
+          output.appendLine(`   ${result.passed}/${result.total} passed, ${result.failed} failed`);
         } else {
           output.appendLine(JSON.stringify(result, null, 2));
         }
         output.show(true);
-        if (summary && summary.failed > 0) {
-          vscode.window.showWarningMessage(`Reqly: ${summary.failed} request(s) failed in ${collection.name}`);
+        if (hasSummary && (result.failed ?? 0) > 0) {
+          vscode.window.showWarningMessage(`Reqly: ${result.failed} request(s) failed in ${collection.name}`);
         }
       } catch (e) {
         showError(e);

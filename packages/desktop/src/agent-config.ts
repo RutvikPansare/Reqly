@@ -146,22 +146,30 @@ export function injectMcpConfig(agentId: AgentId, resolved: ResolvedReqly): Inje
 /** setupComplete flag in ~/.reqly/config.json suppresses the first-launch wizard. */
 const REQLY_CONFIG = path.join(os.homedir(), '.reqly', 'config.json');
 
-export function isSetupComplete(): boolean {
+export function isSetupComplete(configPath: string = REQLY_CONFIG): boolean {
   try {
-    return !!JSON.parse(fs.readFileSync(REQLY_CONFIG, 'utf8')).setupComplete;
+    return !!JSON.parse(fs.readFileSync(configPath, 'utf8')).setupComplete;
   } catch {
     return false;
   }
 }
 
-export function markSetupComplete(): void {
+export function markSetupComplete(configPath: string = REQLY_CONFIG): void {
   let config: any = {};
-  try {
-    config = JSON.parse(fs.readFileSync(REQLY_CONFIG, 'utf8'));
-  } catch {
-    // no config yet
+  if (fs.existsSync(configPath)) {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    if (raw.trim() !== '') {
+      try {
+        config = JSON.parse(raw);
+      } catch {
+        // Corrupt-but-present config: refuse to overwrite, or we would wipe
+        // every auth profile / workspace / secret-provider entry. Leaving the
+        // flag unset just re-shows the wizard next launch (recoverable).
+        return;
+      }
+    }
   }
   config.setupComplete = true;
-  fs.mkdirSync(path.dirname(REQLY_CONFIG), { recursive: true });
-  fs.writeFileSync(REQLY_CONFIG, JSON.stringify(config, null, 2) + '\n', 'utf8');
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf8');
 }
