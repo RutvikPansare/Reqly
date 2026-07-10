@@ -904,11 +904,26 @@ This starts your dev server with a public HTTPS URL. Any requests hitting that U
 
 ## Star History
 
-[![GitHub stars](https://img.shields.io/github/stars/RutvikPansare/Reqly?style=social)](https://star-history.com/#RutvikPansare/Reqly)
+<p align="center">
+  If Reqly saved you time, a star helps other AI-native developers find it.
+</p>
 
-<!-- The star-history.com chart badge (api.star-history.com/svg) currently 503s -
-GitHub restricted its starred-data API to repo owners/collaborators with a
-scoped token, which the static badge endpoint can't provide. Using a
-shields.io stargazer-count badge instead since it only needs the public
-stargazers_count field. The link still goes to star-history.com's interactive
-chart for anyone who wants to add their own token there. -->
+<p align="center">
+  <a href="https://github.com/RutvikPansare/Reqly/stargazers">
+    <img src="https://img.shields.io/github/stars/RutvikPansare/Reqly?style=for-the-badge&logo=github&color=f2cc60&labelColor=1a1a1a" alt="GitHub stars">
+  </a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/RutvikPansare/Reqly/main/.github/assets/star-history-dark.svg">
+    <img src="https://raw.githubusercontent.com/RutvikPansare/Reqly/main/.github/assets/star-history-light.svg" alt="Star history chart">
+  </picture>
+</p>
+
+<!-- Self-hosted chart, not a third-party embed: api.star-history.com and
+starchart.cc both 503 now that GitHub restricts starred_at timestamps to repo
+admins/collaborators - a static <img> pointed at a third-party badge service
+has no way to supply a token. scripts/generate-star-chart.mjs fetches real
+stargazer data with a repo-scoped token and renders these SVGs directly;
+.github/workflows/star-history.yml regenerates and commits them daily. -->

@@ -1,0 +1,41 @@
+name: Update star history chart
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # daily at 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate chart
+        # Prefers a STAR_HISTORY_PAT secret (a PAT with repo read access,
+        # needed because GitHub restricts starred_at timestamps to repo
+        # admins/collaborators). Falls back to the default GITHUB_TOKEN,
+        # which may or may not have sufficient permission - if it doesn't,
+        # this step fails with a message telling you to add the PAT.
+        run: node scripts/generate-star-chart.mjs RutvikPansare/Reqly
+        env:
+          GITHUB_TOKEN: ${{ secrets.STAR_HISTORY_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- .github/assets/star-history-light.svg .github/assets/star-history-dark.svg; then
+            echo "No change."
+            exit 0
+          fi
+          git add .github/assets/star-history-light.svg .github/assets/star-history-dark.svg
+          git commit -m "chore: update star history chart"
+          git push
