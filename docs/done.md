@@ -2,6 +2,12 @@
 
 ## 2026-07-10
 
+- [x] **T-261** Fix project-switcher folder button permanently disabled at the default port, or after any agent ever connected
+  - `ProjectPathWidget.tsx`'s `isAgentActive` check was `hasEverConnectedAgent || window.location.port === '4242'` - the port check meant the folder-open button was dead on arrival for every plain browser session at the default agent port regardless of real agent activity, and `hasEverConnectedAgent` is a permanent once-true-forever flag (set on the first MCP tool call for the life of the server process), not the "in the last 60 seconds" freshness the feature's own docs describe. On top of the wrong signal, the click handler fully blocked opening the switcher (`if (!isAgentActive) setEditing(true)`) instead of the documented "soft, non-blocking warning."
+  - Fix: dropped the port check entirely (port has nothing to do with agent activity). Threaded the `lastMcpActivityAt` timestamp `GET /api/project` already returns (previously fetched and ignored) through `useCollectionState` into `ProjectPathWidget`, and derive `isAgentActive` from a 60s freshness window instead of a permanent flag, re-evaluated every 5s so the warning clears itself without a reload. The button now always opens `OpenWorkspaceModal` on click; the lock icon + tooltip are informational only.
+  - Verified in browser: clicking the folder-open button at `:4242` (previously a dead no-op) now opens the Open Workspace modal correctly.
+
+
 - [x] **T-260** Add folder picker to workspace repo-link forms
   - Both places that let a user type a filesystem path to link a repo now have a folder-icon button that opens the native OS folder dialog, reusing the existing `GET /api/open-folder-picker` endpoint from T-128 (osascript on macOS, PowerShell on Windows) - no new backend code needed.
   - `WorkspaceSwitcher.tsx`'s `WorkspaceSettingsModal` (named workspace repo-alias linking, T-226) and `SettingsPanel.tsx`'s Workspace tab (flat multi-project `reqly workspace add`) both gained the button between their path input and the confirm button.

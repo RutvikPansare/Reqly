@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FolderOpen, Lock } from 'lucide-react';
 import { OpenWorkspaceModal } from '../OpenWorkspaceModal.js';
 
@@ -10,19 +10,33 @@ export function formatProjectPath(p: string) {
   return { name, display };
 }
 
+// How long a switch warning stays up after an agent's last MCP tool call -
+// matches the window this project's docs describe ("in the last 60 seconds").
+const AGENT_ACTIVITY_WINDOW_MS = 60_000;
+
 interface ProjectPathWidgetProps {
   projectPath: string;
-  hasEverConnectedAgent?: boolean;
+  lastMcpActivityAt?: string | null;
   onSwitch: (p: string) => void;
 }
 
-export function ProjectPathWidget({ projectPath, hasEverConnectedAgent, onSwitch }: ProjectPathWidgetProps) {
+export function ProjectPathWidget({ projectPath, lastMcpActivityAt, onSwitch }: ProjectPathWidgetProps) {
   const [editing, setEditing] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [pendingDir, setPendingDir] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  // Re-render every few seconds so the warning clears itself once activity
+  // ages out of the window, without needing a page reload.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(id);
+  }, []);
 
-  const isAgentActive = hasEverConnectedAgent || window.location.port === '4242';
+  // Non-blocking: this only decides whether to show a warning before the
+  // switch, never whether the switch is allowed. A permanent "an agent once
+  // connected" flag would stay locked forever after a single tool call.
+  const isAgentActive = !!lastMcpActivityAt && now - new Date(lastMcpActivityAt).getTime() < AGENT_ACTIVITY_WINDOW_MS;
 
   const doSwitch = async (target: string, createIfMissing = false) => {
     setSwitching(true);
@@ -97,28 +111,26 @@ export function ProjectPathWidget({ projectPath, hasEverConnectedAgent, onSwitch
   return (
     <div className="relative">
       <button
-        onClick={() => {
-          if (!isAgentActive) setEditing(true);
-        }}
-        className={`shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group ${isAgentActive ? 'cursor-default opacity-80' : ''}`}
+        onClick={() => setEditing(true)}
+        className="shrink-0 w-full flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors group"
         style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-        title={isAgentActive ? undefined : `${projectPath}\nClick to switch project`}
-        onMouseEnter={e => { 
-          if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; 
-          else setShowTooltip(true);
+        title={`${projectPath}\nClick to switch project`}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
+          if (isAgentActive) setShowTooltip(true);
         }}
-        onMouseLeave={e => { 
-          if (!isAgentActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; 
-          else setShowTooltip(false);
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+          setShowTooltip(false);
         }}
       >
-        <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} className={isAgentActive ? 'opacity-50' : ''} />
+        <FolderOpen size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
         <div className="min-w-0 flex-1">
           <div className="font-mono font-medium truncate" style={{ fontSize: '0.75rem', color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
           <div className="font-mono truncate" style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{display}</div>
         </div>
         {isAgentActive ? (
-          <Lock size={11} style={{ color: 'var(--text-muted)', flexShrink: 0, opacity: 0.6 }} />
+          <Lock size={11} style={{ color: '#f59e0b', flexShrink: 0 }} />
         ) : (
           <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-muted)' }}>change</span>
         )}
@@ -133,9 +145,9 @@ export function ProjectPathWidget({ projectPath, hasEverConnectedAgent, onSwitch
             maxWidth: '220px',
           }}
         >
-          <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Project locked to agent session</div>
+          <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Agent recently active</div>
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            An AI agent is actively using this project. To switch folders: stop the agent session, or use the Reqly desktop app.
+            An AI agent made a tool call here in the last minute. Switching now will change that agent's project context too - still safe to do, just a heads up.
           </div>
         </div>
       )}

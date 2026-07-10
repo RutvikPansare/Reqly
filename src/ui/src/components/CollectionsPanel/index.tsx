@@ -33,7 +33,7 @@ export function CollectionsPanel({ activeRequest, onSelectRequest, onRunCollecti
   return (
     <div className="p-3 flex flex-col gap-3 relative min-h-full">
       <WorkspaceSwitcher />
-      {s.projectPath && <ProjectPathWidget projectPath={s.projectPath} hasEverConnectedAgent={s.hasEverConnectedAgent} onSwitch={s.setProjectPath} />}
+      {s.projectPath && <ProjectPathWidget projectPath={s.projectPath} lastMcpActivityAt={s.lastMcpActivityAt} onSwitch={s.setProjectPath} />}
 
       <div className="-mx-3 -mt-1" style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
         <SidebarEnvSection />

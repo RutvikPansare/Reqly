@@ -28,12 +28,14 @@ export function useCollectionState(onSelectRequest: (req: any, col: string) => v
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
   const [moveModal, setMoveModal] = useState<MoveModalState | null>(null);
   const [hasEverConnectedAgent, setHasEverConnectedAgent] = useState(false);
+  const [lastMcpActivityAt, setLastMcpActivityAt] = useState<string | null>(null);
 
   const loadData = () => {
     fetchCollections().then(setCollections).catch(console.error);
     fetch('/api/project').then(r => r.json()).then(d => {
       setProjectPath(d.path);
       setHasEverConnectedAgent(d.hasEverConnectedAgent);
+      setLastMcpActivityAt(d.lastMcpActivityAt ?? null);
     }).catch(() => {});
   };
 
@@ -140,6 +142,7 @@ export function useCollectionState(onSelectRequest: (req: any, col: string) => v
   return {
     collections, setCollections, projectPath, setProjectPath,
     hasEverConnectedAgent, setHasEverConnectedAgent,
+    lastMcpActivityAt,
     expandedCols, setExpandedCols, expandedReqs, setExpandedReqs,
     creatingCol, setCreatingCol, newColName, setNewColName,
     addingReqTo, newReqName, setNewReqName,
