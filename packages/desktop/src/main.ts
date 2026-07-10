@@ -233,10 +233,18 @@ async function spawnServerIfNeeded(): Promise<number | null> {
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', REQLY_DESKTOP: '1', REQLY_ELECTRON: '1' },
     });
   } else {
+    // The brew/npm shim scripts start with `#!/usr/bin/env node` - when
+    // Electron is launched from Finder/Dock (not a terminal), its inherited
+    // PATH is the minimal GUI default and doesn't include Homebrew's
+    // /opt/homebrew/bin or /usr/local/bin, so `env node` can't resolve and
+    // the shim dies with "env: node: No such file or directory" (exit 127).
+    // Prepend the common install locations so the shebang always finds node.
+    const nodeDirs = ['/opt/homebrew/bin', '/usr/local/bin'];
+    const augmentedPath = [...nodeDirs, process.env.PATH || ''].filter(Boolean).join(path.delimiter);
     spawnedServer = spawn(resolved.command, ['start'], {
       stdio: 'pipe',
       detached: false,
-      env: { ...process.env, REQLY_DESKTOP: '1', REQLY_ELECTRON: '1' },
+      env: { ...process.env, PATH: augmentedPath, REQLY_DESKTOP: '1', REQLY_ELECTRON: '1' },
     });
   }
   const child = spawnedServer;
