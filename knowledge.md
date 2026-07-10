@@ -75,6 +75,38 @@ Connections are long-lived - potentially open for minutes or hours. A server-sid
 | **No cloud** | No Reqly cloud. No sync subscription. Collections travel with the repo via git. |
 | **Response diffing** | Detects what changed between runs - status, latency, body. No other mainstream API client does this. |
 
+## Publishing & Releases
+
+Three independently-versioned distribution channels. They do NOT auto-sync - each needs its own explicit publish/release step, and it's easy to update one and forget the others (this has happened - see T-256/257/258 in `docs/decision-log.md` and `docs/done.md` for the incident where the Homebrew formula silently drifted 3+ versions behind because it pointed at a different, abandoned npm package name).
+
+- **npm package (`getreqly`)** - the CLI + MCP server + web UI, source of truth for `package.json`'s `name`/`version`.
+  1. Bump `version` in root `package.json` AND `package-lock.json` (both the top-level `version` field and the `packages[""].version` field - npm checks both).
+  2. `npm run build` (root) - compiles `dist/`, builds and copies the UI into `dist/ui`. Always do this before publish; `npm publish` ships whatever is currently in `dist/`, not what's in `src/`.
+  3. `npm publish` from the repo root. Requires `npm login` (checked via `npm whoami`) and, if 2FA is enabled on the account, an interactive browser approval (`npm publish` prints a `npmjs.com/auth/cli/...` URL) - this step cannot be completed non-interactively.
+  4. Publishing the same version twice 409s ("cannot publish over previously published version") - always bump first.
+  5. Only `package.json`'s `"files"` array ships (`dist`, `packages/reqly-middleware/*`, `example/reqly-starter`, `README.md`, `llms.txt`) - changes to `packages/desktop/` or `packages/vscode/` do NOT require an npm publish, they have their own channels below.
+
+- **Homebrew formula (CLI)** - separate repo `RutvikPansare/homebrew-reqly`, tap's default branch is `master` (NOT `main` - confirm with `git remote show origin | grep HEAD` before assuming). `Formula/reqly.rb` pins an exact npm tarball `url` + `sha256`, so it never silently follows npm - it must be updated by hand after every npm publish you want CLI users to receive via `brew upgrade`.
+  1. After `npm publish`, get the tarball URL and sha256: `npm view getreqly@<version> dist.tarball`, then `curl -sL <tarball-url> -o /tmp/pkg.tgz && shasum -a 256 /tmp/pkg.tgz` (npm's own `dist.shasum` is sha1, not the sha256 Homebrew formulas need).
+  2. Edit `Formula/reqly.rb`'s `url` and `sha256` to match.
+  3. **Test locally before pushing** - `brew tap <you>/<any-throwaway-name> /local/path/to/homebrew-reqly` (tapping a local git checkout works, but only picks up committed changes, not working-tree edits - commit first), then `brew install <you>/<throwaway-name>/reqly`, confirm `reqly --version` matches, `brew test <you>/<throwaway-name>/reqly`. Clean up after: `brew uninstall reqly && brew untap <you>/<throwaway-name>`.
+  4. Push the formula commit to `master` on `RutvikPansare/homebrew-reqly`.
+
+- **Homebrew cask (Desktop app)** - same tap repo, `Casks/reqly.rb`, must also live on `master` (the cask was built on a `main` branch in this repo's history and was invisible to `brew install --cask` for a long stretch as a result - Homebrew reads whichever branch is the tap's actual default). Points at a GitHub Release DMG asset on `RutvikPansare/Reqly`, not npm.
+  1. Build the DMG: see Desktop App build steps below.
+  2. Publish a GitHub Release with the DMG (and optionally the `.zip`) attached: `gh release create v<version> path/to/Reqly-<version>-arm64.dmg --repo RutvikPansare/Reqly --title "..." --notes "..."`. The release tag's commit must already be pushed to `origin` - `gh release create` cannot tag a commit GitHub doesn't have.
+  3. `shasum -a 256` the DMG, put the value + matching `version` into `Casks/reqly.rb`'s `url` (which templates `Reqly-#{version}-arm64.dmg` against the release tag).
+  4. Test locally the same way as the formula (`brew install --cask <you>/<throwaway-name>/reqly`) before pushing to `master`. **Careful:** `brew uninstall --cask` deletes `/Applications/Reqly.app` outright (no trash) - if you're using the app yourself, back up or be ready to rebuild before testing an uninstall.
+  5. Currently arm64-only (`depends_on arch: :arm64`) - no x64/universal build exists yet.
+
+- **Desktop App (Electron) build steps**, needed before either the cask release or local `npm run dist` testing:
+  1. `npm run build` (root) - server + UI into `dist/`.
+  2. `scripts/build-desktop-resources.sh --skip-build` (or without the flag to also do step 1) - stages `dist/` + production `node_modules` into `packages/desktop/resources/server` for bundling.
+  3. `cd packages/desktop && npm run build` - compiles `main.ts` etc.
+  4. `npx electron-builder` (from `packages/desktop/`) - produces `release/Reqly-<version>-arm64.dmg` and `.zip`. Known local-machine failure mode: dmg-builder shells out to an unversioned `python` command; if `xcode-select` can't resolve it (common when only `python3` is on `PATH`, no bare `python`), the DMG target fails with exit 72 while the `.zip` target still succeeds in the same run - fix by ensuring a `python` (not just `python3`) resolves on `PATH` (e.g. `sudo ln -sf /usr/local/bin/python3 /usr/local/bin/python`).
+  5. The app is unsigned/unnotarized (no Apple Developer account - see decision-log). A DMG downloaded manually keeps the quarantine flag, so first launch needs right-click > Open > Open anyway; a `brew install --cask` install has quarantine stripped automatically and does not need this.
+  6. `packages/desktop/package.json`'s `version` (currently `0.1.0`) is independent of the root `getreqly` npm version - they track different products (desktop shell vs CLI/server) and are bumped separately.
+
 ## Architecture
 - **Runtime:** Node.js + TypeScript
 - **Server:** Express/Fastify serving MCP stdio interface and localhost web UI.
