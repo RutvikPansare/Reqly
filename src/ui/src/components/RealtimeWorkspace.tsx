@@ -10,6 +10,7 @@ import { SaveToCollectionModal } from './SaveToCollectionModal.js';
 import { updateRequest } from '../api.js';
 import { useAvailableVariables } from '../hooks/useAvailableVariables.js';
 import { useVarCompletion } from '../hooks/useVarCompletion.js';
+import { ResizablePanel } from './ResizablePanel.js';
 
 export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest?: any; onUpdate?: (state: any) => void }) {
   const { tabs, activeTabId, activeTab, addTab, closeTab, updateTab, loadTab, setActiveTabId } = useWorkspaceTabs('realtime', 'websocket', 'New WebSocket');
@@ -82,11 +83,11 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="w-72 shrink-0 border-r flex flex-col bg-sidebar" style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}>
+      <ResizablePanel defaultWidth={288} storageKey="reqly:realtime-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} defaultRequestType="websocket" />
         </div>
-      </div>
+      </ResizablePanel>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'websocket', label: 'WebSocket' }, { id: 'sse', label: 'Server-Sent Events' }, { id: 'socketio', label: 'Socket.IO' }, { id: 'mqtt', label: 'MQTT' }]} />
         <div className="relative min-h-0 flex-1">

@@ -20,6 +20,7 @@ import { VariableInput } from './VariableInput';
 import type { VariableItem } from './VariableInput';
 import { fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
 import { SaveToCollectionModal } from './SaveToCollectionModal';
+import { ResizablePanel } from './ResizablePanel';
 
 const INTROSPECTION_QUERY = getIntrospectionQuery();
 
@@ -704,11 +705,11 @@ export function GraphQLWorkspace({ initialRequest, onUpdate }: { initialRequest?
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="w-72 shrink-0 border-r flex flex-col bg-sidebar" style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}>
+      <ResizablePanel defaultWidth={288} storageKey="reqly:graphql-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['graphql', 'graphql-subscription']} defaultRequestType="graphql" />
         </div>
-      </div>
+      </ResizablePanel>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceTabBar tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTabId} onClose={closeTab} onNew={addTab} protocols={[{ id: 'graphql', label: 'GraphQL' }, { id: 'graphql-subscription', label: 'GraphQL Subscription' }]} />
         <div className="relative min-h-0 flex-1">

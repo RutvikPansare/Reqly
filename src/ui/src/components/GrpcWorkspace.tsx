@@ -18,6 +18,7 @@ import { useVarCompletion } from '../hooks/useVarCompletion';
 import { CollapsibleJson } from './InteractiveJsonTree';
 import { fetchEnvironments, getCollectionVariables, fetchDotenvFiles, updateRequest } from '../api';
 import { SaveToCollectionModal } from './SaveToCollectionModal.js';
+import { ResizablePanel } from './ResizablePanel.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -898,7 +899,7 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: { initialRequest?: a
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="w-72 shrink-0 border-r flex flex-col bg-sidebar" style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}>
+      <ResizablePanel defaultWidth={288} storageKey="reqly:grpc-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           <CollectionsPanel
             activeRequest={activeTab}
@@ -908,7 +909,7 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: { initialRequest?: a
             defaultRequestType="grpc"
           />
         </div>
-      </div>
+      </ResizablePanel>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceTabBar
           tabs={tabs}

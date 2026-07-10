@@ -5,6 +5,7 @@ import { methodColorClass, requestBadgeInfo } from './lib/colors';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useServerEvents } from './hooks/useServerEvents';
 import { NavRail } from './components/NavRail';
+import { ResizablePanel } from './components/ResizablePanel';
 import type { NavPanel } from './components/NavRail';
 import { CollectionsPanel } from './components/CollectionsPanel';
 import { EnvironmentsPanel } from './components/EnvironmentsPanel';
@@ -548,7 +549,7 @@ function App() {
           }}
         />
         {activePanel !== 'graphql' && activePanel !== 'grpc' && activePanel !== 'realtime' && (
-          <aside className="w-64 flex flex-col overflow-hidden min-h-0" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--border)' }}>
+          <ResizablePanel defaultWidth={256} storageKey="reqly:sidebar-width" className="flex-col min-h-0" style={{ background: 'var(--surface-1)' }}>
             <div className="flex-1 overflow-y-auto min-h-0">
               {activePanel === 'collections' && (
                 <CollectionsPanel
@@ -575,7 +576,7 @@ function App() {
                 />
               )}
             </div>
-          </aside>
+          </ResizablePanel>
         )}
 
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 relative" style={{ background: 'var(--surface-1)' }}>
