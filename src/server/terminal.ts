@@ -2,6 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createRequire } from 'module';
 import * as pty from 'node-pty';
 import { IPty } from 'node-pty';
 
@@ -10,11 +11,17 @@ import { IPty } from 'node-pty';
 // here), which makes every pty.spawn() fail with "posix_spawnp failed."
 // Self-heal it once at startup rather than depending on every consumer's
 // install/packaging step getting file permissions right.
+//
+// Must use createRequire: this compiles to ESM, where a bare `require` is a
+// ReferenceError - which the catch below used to swallow, silently skipping
+// the chmod and leaving the bundled desktop app's terminal dead on arrival.
+const cjsRequire = createRequire(import.meta.url);
+
 function ensureSpawnHelperExecutable() {
   if (process.platform === 'win32') return;
   try {
     const helper = path.join(
-      path.dirname(require.resolve('node-pty/package.json')),
+      path.dirname(cjsRequire.resolve('node-pty/package.json')),
       'prebuilds',
       `${process.platform}-${process.arch}`,
       'spawn-helper'
