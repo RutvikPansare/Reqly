@@ -38,7 +38,6 @@ export function ResizablePanel({
     return defaultWidth;
   });
   const [isDragging, setIsDragging] = useState(false);
-  const [isHover, setIsHover] = useState(false);
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -74,27 +73,19 @@ export function ResizablePanel({
     };
   }, [minWidth, cap, storageKey]);
 
-  const glowing = isDragging || isHover;
-
   return (
-    <div className={`relative shrink-0 flex ${className}`} style={{ ...style, width, transition: isDragging ? 'none' : 'width 0.1s ease-out' }}>
+    <div className={`relative shrink-0 flex ${className} ${isDragging ? 'select-none' : ''}`} style={{ ...style, width, transition: isDragging ? 'none' : 'width 0.1s ease-out' }}>
       <div className="flex-1 overflow-hidden min-h-0 flex flex-col min-w-0">
         {children}
       </div>
+      {/* Drag handle - thickens and turns blue on hover/drag, matching SplitPane's request/response divider (no glow) */}
       <div
         onMouseDown={onMouseDown}
-        onMouseEnter={() => setIsHover(true)}
-        onMouseLeave={() => setIsHover(false)}
-        className="absolute top-0 -right-1.5 h-full w-3 cursor-col-resize z-10 flex justify-center"
+        className="absolute top-0 -right-0.5 h-full w-[6px] cursor-col-resize group z-10 flex justify-center"
         title="Drag to resize"
       >
         <div
-          className="h-full w-px"
-          style={{
-            background: glowing ? '#3b82f6' : 'var(--border)',
-            boxShadow: glowing ? '0 0 6px 1px rgba(59, 130, 246, 0.8)' : 'none',
-            transition: 'background 0.1s ease-out, box-shadow 0.1s ease-out',
-          }}
+          className={`h-full w-px transition-all duration-75 ${isDragging ? 'bg-blue-500 w-[2px]' : 'bg-[var(--border)] group-hover:bg-blue-500 group-hover:w-[2px]'}`}
         />
       </div>
     </div>

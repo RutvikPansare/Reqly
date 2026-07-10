@@ -83,7 +83,7 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <ResizablePanel defaultWidth={288} storageKey="reqly:realtime-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
+      <ResizablePanel defaultWidth={256} storageKey="reqly:realtime-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           <CollectionsPanel activeRequest={activeTab} onSelectRequest={(req, col) => loadTab({ ...req, _collection: col })} onRunCollection={() => {}} typeFilter={['websocket', 'sse', 'socketio', 'mqtt']} defaultRequestType="websocket" />
         </div>

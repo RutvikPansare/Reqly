@@ -899,7 +899,7 @@ export function GrpcWorkspace({ initialRequest, onUpdate }: { initialRequest?: a
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <ResizablePanel defaultWidth={288} storageKey="reqly:grpc-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
+      <ResizablePanel defaultWidth={256} storageKey="reqly:grpc-sidebar-width" className="flex-col" style={{ background: 'var(--surface-1)' }}>
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           <CollectionsPanel
             activeRequest={activeTab}
