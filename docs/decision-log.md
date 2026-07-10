@@ -6,6 +6,18 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-09 - Built the ephemeral-port readback plumbing T-256 deferred (T-257)
+
+**Decision:** Electron now gets a real OS-assigned ephemeral port again - `index.ts` targets port `0` when `REQLY_ELECTRON` is set, and `main.ts` reads the actual bound port back out of the shared lock file (`resolveElectronPort`, polling on the spawned child's pid) instead of hardcoding `localhost:4242`. Agent path is untouched (still defaults to 4242).
+
+**Why:** This is exactly the plumbing T-256 (below) flagged as missing and said to revisit "if a real need... shows up." That need showed up: running the Electron app and an agent server (or two Electron instances against different projects) at the same time should not have one blocked on the other's claim to 4242. With the readback in place, Electron no longer contends for 4242 at all, so the old other-kind-fallback safety net in `shouldFallbackToEphemeralPort` is now dead for the Electron side (kept for the agent side, in case a stray old-build Electron process is still holding 4242 during upgrade).
+
+## 2026-07-09 - Electron and agent both target port 4242; no ephemeral-port readback (T-256, superseded by T-257 above)
+
+**Decision:** Dropped the originally-planned "Electron gets its own OS-assigned ephemeral port, agent gets 4242" split. Both now target 4242, distinguished only by lock `type` for reap/fallback decisions - a live lock of the *other* kind falls back to an ephemeral port to avoid `EADDRINUSE`, but that's a rare-race safety net, not the normal path.
+
+**Why:** `packages/desktop/src/main.ts` hardcodes `SERVER_URL = 'http://localhost:4242'` for `probeServer()` and `win.loadURL()`. Building the ephemeral-port design correctly would have required reading the real bound port back out of the lock file after spawn and threading it through the window-load path - real plumbing, not yet built. Turning on `REQLY_ELECTRON` (needed anyway to fix T-255's dead Electron branch) without that plumbing would have made Electron spawn a server its own window could never reach. Single fixed port is what was already working in practice (by accident, since `REQLY_ELECTRON` was never being set) - keeping it deliberately avoids new complexity for a split that has no current consumer. Revisit if a real need for Electron/agent port isolation shows up.
+
 ## 2026-07-06 - Realtime panels are keyed by tab id; UI guards run after all hooks (T-253)
 
 **Decision:** The realtime workspace renders each protocol panel with `key={activeTabId}`, and long-form components guard their output only after every hook has run (no early return between hooks). The GraphQL "Copy as cURL" builder uses the same POSIX `'\''` escaping as the engine code generator.
