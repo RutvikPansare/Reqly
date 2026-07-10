@@ -1,6 +1,11 @@
 # Reqly - Done
 
-## 2026-07-09
+## 2026-07-10
+
+- [x] **T-258** Fix Electron CLI-spawn failing under GUI PATH (found verifying T-257 end-to-end)
+  - **Root cause:** `packages/desktop/src/main.ts` spawns the resolved Homebrew/npm CLI shim (`#!/usr/bin/env node`) with `{ ...process.env }`. Electron launched from Finder/Dock inherits the OS's minimal GUI-launch PATH, which excludes `/opt/homebrew/bin` and `/usr/local/bin` - so `env node` failed to resolve, the shim exited 127 immediately, and every respawn attempt silently died before writing a port to the lock file. The app was permanently stuck on the "Still trying to reach the Reqly server" reconnect screen.
+  - **Fix:** prepend `/opt/homebrew/bin` and `/usr/local/bin` to the spawned child's `PATH` for the brew/npm branch (bundled-binary branch unaffected - it runs via `process.execPath` in `ELECTRON_RUN_AS_NODE` mode, no shebang involved).
+  - Verified end-to-end: killed a stray 24h-old manually-started `reqly start` holding port 4242, rebuilt `dist/` + desktop resources + a fresh DMG, reinstalled to `/Applications`, launched - lock file now shows `{ type: "electron", port: 49847 }` (a real OS-assigned ephemeral port, not 4242) and the UI loaded and fired live requests.
 
 - [x] **T-257** Finish Electron/agent port isolation - real ephemeral port + readback (completes what T-256 deferred)
   - **`src/server/index.ts`:** Electron now defaults `targetPort` to `0` (OS-assigned) instead of `4242` when `REQLY_ELECTRON` is set. Agents still default to `4242` unchanged. The `shouldFallbackToEphemeralPort` reap-safety-net is now agent-only (`!isElectron && ...`) since Electron never contends for 4242 in the first place.
