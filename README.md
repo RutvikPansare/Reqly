@@ -904,4 +904,11 @@ This starts your dev server with a public HTTPS URL. Any requests hitting that U
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=RutvikPansare/Reqly&type=Date)](https://star-history.com/#RutvikPansare/Reqly)
+[![GitHub stars](https://img.shields.io/github/stars/RutvikPansare/Reqly?style=social)](https://star-history.com/#RutvikPansare/Reqly)
+
+<!-- The star-history.com chart badge (api.star-history.com/svg) currently 503s -
+GitHub restricted its starred-data API to repo owners/collaborators with a
+scoped token, which the static badge endpoint can't provide. Using a
+shields.io stargazer-count badge instead since it only needs the public
+stargazers_count field. The link still goes to star-history.com's interactive
+chart for anyone who wants to add their own token there. -->
