@@ -18,14 +18,16 @@
   <a href="https://www.npmjs.com/package/getreqly"><img src="https://img.shields.io/npm/v/getreqly.svg" alt="npm version"></a>
   <a href="https://github.com/RutvikPansare/Reqly/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/getreqly.svg" alt="license"></a>
   <a href="https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml"><img src="https://github.com/RutvikPansare/Reqly/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/RutvikPansare/Reqly/releases"><img src="https://img.shields.io/github/v/release/RutvikPansare/Reqly?label=desktop%20app" alt="Latest release"></a>
 </p>
 
 <p align="center">
-  <a href="#installation">Install</a> ·
+  <a href="#installation-45-seconds">Install</a> ·
   <a href="#the-full-zero-human-pipeline">How it works</a> ·
-  <a href="#what-your-agent-can-do">MCP Tools</a> ·
-  <a href="#flows">Flows</a> ·
-  <a href="#faq">FAQ</a>
+  <a href="#what-your-agent-can-do-45-seconds">MCP Tools</a> ·
+  <a href="#flows-60-seconds">Flows</a> ·
+  <a href="#faq">FAQ</a> ·
+  <a href="https://github.com/RutvikPansare/Reqly/releases">Releases</a>
 </p>
 
 Your agent reads your codebase, builds the collection, writes the assertions, exports the GitHub Actions workflow, and ships it to CI. You never touch it.
@@ -70,22 +72,23 @@ Collections are plain YAML in `.reqly/` in your repo. Git-native, human-readable
 
 ## Table of Contents
 
-- [Installation](#installation)
+- [Installation](#installation-45-seconds)
 - [How It Works](#the-full-zero-human-pipeline)
-- [MCP Tools](#what-your-agent-can-do)
-- [CLI Runner](#cli-runner)
-- [Flows](#flows)
+- [MCP Tools](#what-your-agent-can-do-45-seconds)
+- [CLI Runner](#cli-runner-45-seconds)
+- [Flows](#flows-60-seconds)
 - [AWS SigV4 Auth](#aws-signature-version-4-sigv4-authentication)
-- [Exporting Collections](#-exporting-collections)
+- [Exporting Collections](#-exporting-collections-30-seconds)
 - [Mock Server](#mock-server)
-- [Capture Inbound Requests](#capture-inbound-requests-middleware)
-- [Collections and Assertions](#how-collections-work)
+- [Capture Inbound Requests](#capture-inbound-requests-middleware-45-seconds)
+- [Collections and Assertions](#how-collections-work-30-seconds)
 - [Proof](#proof-30-seconds)
-- [Why Reqly](#why-reqly-beats-postman-insomnia-and-bruno-for-ai-native-developers)
-- [Recently Shipped](#recently-shipped)
+- [Why Reqly](#why-reqly-beats-postman-insomnia-and-bruno-for-ai-native-developers-45-seconds)
+- [Recently Shipped](#recently-shipped-30-seconds)
 - [Contributing](#contributing-60-seconds)
 - [FAQ](#faq)
 - [Star History](#star-history)
+- [Releases](https://github.com/RutvikPansare/Reqly/releases)
 
 ## Proof (30 seconds)
 
