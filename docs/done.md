@@ -2,6 +2,10 @@
 
 ## 2026-07-10
 
+- [x] **T-259** Fix CI failure (unguarded pty resize/write crash) + vsce-publish tag collision with desktop releases
+  - `src/server/terminal.ts`'s WS message handler called `session.pty.write()`/`.resize()` with no guard against the pty having already exited between the client sending the message and it being handled - node-pty throws synchronously (ioctl EBADF) in that case, an uncaught exception that fails the whole CI run even with all 1046 tests passing. Wrapped `write`/`resize`/kill's `write('\x03')` in try/catch, matching the existing `s.pty.kill()` guard in `cleanupSession`.
+  - `.github/workflows/vsce-publish.yml` shared the same `v*` tag trigger as `release.yml` (desktop builds) - today's `v0.1.0` desktop release tag also fired a VS Code Marketplace publish attempt. Two real bugs found underneath: the build itself failed (`packages/vscode/tsconfig.json` had no `@types/node`, so `fs`/`path` imports in `src/preview.ts` didn't resolve - added the missing devDependency) and no `VSCE_PAT` repo secret exists (`gh secret list` returns nothing) - that step will keep failing until it's added manually (only the Marketplace-account owner can create it). Rescoped the trigger to `vscode-v*` so future desktop releases don't collide with it.
+
 - [x] **T-258** Fix Electron CLI-spawn failing under GUI PATH (found verifying T-257 end-to-end)
   - **Root cause:** `packages/desktop/src/main.ts` spawns the resolved Homebrew/npm CLI shim (`#!/usr/bin/env node`) with `{ ...process.env }`. Electron launched from Finder/Dock inherits the OS's minimal GUI-launch PATH, which excludes `/opt/homebrew/bin` and `/usr/local/bin` - so `env node` failed to resolve, the shim exited 127 immediately, and every respawn attempt silently died before writing a port to the lock file. The app was permanently stuck on the "Still trying to reach the Reqly server" reconnect screen.
   - **Fix:** prepend `/opt/homebrew/bin` and `/usr/local/bin` to the spawned child's `PATH` for the brew/npm branch (bundled-binary branch unaffected - it runs via `process.execPath` in `ELECTRON_RUN_AS_NODE` mode, no shebang involved).
