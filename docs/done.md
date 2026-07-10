@@ -2,6 +2,11 @@
 
 ## 2026-07-10
 
+- [x] **T-260** Add folder picker to workspace repo-link forms
+  - Both places that let a user type a filesystem path to link a repo now have a folder-icon button that opens the native OS folder dialog, reusing the existing `GET /api/open-folder-picker` endpoint from T-128 (osascript on macOS, PowerShell on Windows) - no new backend code needed.
+  - `WorkspaceSwitcher.tsx`'s `WorkspaceSettingsModal` (named workspace repo-alias linking, T-226) and `SettingsPanel.tsx`'s Workspace tab (flat multi-project `reqly workspace add`) both gained the button between their path input and the confirm button.
+  - Verified in browser: both buttons fire `/api/open-folder-picker` correctly, no console errors; picker returns `{ cancelled: true }` in this sandboxed shell (no Accessibility permission for osascript), same known limitation as T-128 - works with a real native dialog on the user's actual machine.
+
 - [x] **T-259** Fix CI failure (unguarded pty resize/write crash) + vsce-publish tag collision with desktop releases
   - `src/server/terminal.ts`'s WS message handler called `session.pty.write()`/`.resize()` with no guard against the pty having already exited between the client sending the message and it being handled - node-pty throws synchronously (ioctl EBADF) in that case, an uncaught exception that fails the whole CI run even with all 1046 tests passing. Wrapped `write`/`resize`/kill's `write('\x03')` in try/catch, matching the existing `s.pty.kill()` guard in `cleanupSession`.
   - `.github/workflows/vsce-publish.yml` shared the same `v*` tag trigger as `release.yml` (desktop builds) - today's `v0.1.0` desktop release tag also fired a VS Code Marketplace publish attempt. Two real bugs found underneath: the build itself failed (`packages/vscode/tsconfig.json` had no `@types/node`, so `fs`/`path` imports in `src/preview.ts` didn't resolve - added the missing devDependency) and no `VSCE_PAT` repo secret exists (`gh secret list` returns nothing) - that step will keep failing until it's added manually (only the Marketplace-account owner can create it). Rescoped the trigger to `vscode-v*` so future desktop releases don't collide with it.

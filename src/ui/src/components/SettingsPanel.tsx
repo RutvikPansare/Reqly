@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Plus, ChevronRight } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Plus, ChevronRight, Folder } from 'lucide-react';
 import { Modal, ModalFooter } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -144,6 +144,16 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       window.dispatchEvent(new Event('reqly-reload'));
     } catch (e: any) {
       alert(e.message);
+    }
+  };
+
+  const handleBrowseWorkspace = async () => {
+    try {
+      const res = await fetch('/api/open-folder-picker');
+      const data = await res.json();
+      if (data.path) setNewWorkspace(data.path);
+    } catch {
+      // ignore
     }
   };
 
@@ -307,6 +317,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               placeholder="/Users/name/projects/api"
               onKeyDown={e => e.key === 'Enter' && handleAddWorkspace()}
             />
+            <Button variant="secondary" onClick={handleBrowseWorkspace} title="Browse for folder"><Folder size={13} /></Button>
             <Button variant="secondary" onClick={handleAddWorkspace}><Plus size={13} /> Add</Button>
           </div>
         </div>

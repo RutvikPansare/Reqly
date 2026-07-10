@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Boxes, Check, ChevronDown, Plus, Settings2, Trash2, X } from 'lucide-react';
+import { Boxes, Check, ChevronDown, Folder, Plus, Settings2, Trash2, X } from 'lucide-react';
 import type { NamedWorkspace } from '../api.js';
 import {
   createNamedWorkspace,
@@ -195,6 +195,16 @@ function WorkspaceSettingsModal({ workspace, onClose }: { workspace: NamedWorksp
     }
   };
 
+  const handleBrowse = async () => {
+    try {
+      const res = await fetch('/api/open-folder-picker');
+      const data = await res.json();
+      if (data.path) setRepoPath(data.path);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div
@@ -245,6 +255,14 @@ function WorkspaceSettingsModal({ workspace, onClose }: { workspace: NamedWorksp
             onChange={e => setRepoPath(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleLink(); }}
           />
+          <button
+            onClick={handleBrowse}
+            title="Browse for folder"
+            className="rounded flex items-center justify-center shrink-0 transition-colors"
+            style={{ width: '24px', height: '24px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+          >
+            <Folder size={12} />
+          </button>
           <button
             onClick={handleLink}
             className="text-xs px-2 py-1 rounded transition-colors"
