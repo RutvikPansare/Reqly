@@ -166,15 +166,20 @@ export function attachTerminal(server: Server, getProjectRoot: () => string): We
         return;
       }
 
-      // Normal messages after attach.
+      // Normal messages after attach. The underlying pty can exit between a
+      // client sending a message and it being handled here (process already
+      // dead, cleanupSession already ran) - node-pty throws synchronously
+      // from write()/resize() on a dead pty (ioctl EBADF), which is an
+      // uncaught exception if not guarded, same as the kill() case in
+      // cleanupSession above.
       if (!session) return;
-      if (msg.type === 'input')  { session.pty.write(msg.data); }
+      if (msg.type === 'input') { try { session.pty.write(msg.data); } catch { /* pty already gone */ } }
       else if (msg.type === 'resize') {
         const c = Math.max(1, Number(msg.cols));
         const r = Math.max(1, Number(msg.rows));
-        if (c && r) session.pty.resize(c, r);
+        if (c && r) { try { session.pty.resize(c, r); } catch { /* pty already gone */ } }
       } else if (msg.type === 'kill') {
-        session.pty.write('\x03');  // Ctrl+C to foreground process group
+        try { session.pty.write('\x03'); } catch { /* pty already gone */ }  // Ctrl+C to foreground process group
       }
     });
 

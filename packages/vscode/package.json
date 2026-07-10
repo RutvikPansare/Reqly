@@ -152,6 +152,7 @@
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.0.0",
     "ts-json-schema-generator": "^2.9.0",
