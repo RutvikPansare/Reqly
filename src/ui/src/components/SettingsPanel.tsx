@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Plus, ChevronRight } from 'lucide-react';
 import { Modal, ModalFooter } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -30,6 +30,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const [workspaces, setWorkspaces] = useState<{name: string, path: string}[]>([]);
   const [newWorkspace, setNewWorkspace] = useState('');
   const [fixingGitignore, setFixingGitignore] = useState(false);
+  const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
   useEffect(() => {
     import('../api').then(({ fetchDotenvFiles, fetchLoginItem, fetchGitignoreStatus }) => {
@@ -344,95 +345,114 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             )}
           </div>
 
-          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Bitwarden Secrets Manager
-              {secretProviders.bitwarden && (
-                <span className="ml-2 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
-              )}
+          <div className="pt-3 flex flex-col gap-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Providers
             </label>
-            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-              Stored in ~/.reqly/config.json (never in the repo). BITWARDENSM_ACCESS_TOKEN and BITWARDENSM_ORGANIZATION_ID env vars take precedence.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Input
-                type="password"
-                value={bwToken}
-                onChange={e => setBwToken(e.target.value)}
-                placeholder="Machine account access token"
-              />
-              <Input
-                value={bwOrgId}
-                onChange={e => setBwOrgId(e.target.value)}
-                placeholder="Organization ID"
-              />
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" onClick={handleSaveBitwarden} disabled={savingProvider}>
-                  {savingProvider ? 'Saving...' : 'Save Bitwarden config'}
-                </Button>
-                {providerSaved && <span className="text-xs" style={{ color: 'var(--accent)' }}>Saved - .env re-resolved</span>}
-              </div>
-            </div>
-          </div>
 
-          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              1Password
-              {secretProviders.onepassword && (
-                <span className="ml-2 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
-              )}
-            </label>
-            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-              Service account token, stored in ~/.reqly/config.json. The OP_SERVICE_ACCOUNT_TOKEN env var takes precedence. Saving re-resolves your .env, which doubles as a connection test.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Input
-                type="password"
-                value={opToken}
-                onChange={e => setOpToken(e.target.value)}
-                placeholder="Service account token (ops_...)"
-              />
-              <Button variant="secondary" onClick={handleSaveOnePassword} disabled={savingProvider}>
-                {savingProvider ? 'Saving...' : 'Save 1Password config'}
-              </Button>
-            </div>
-          </div>
+            {([
+              { id: 'bitwarden', name: 'Bitwarden Secrets Manager', configured: !!secretProviders.bitwarden },
+              { id: 'onepassword', name: '1Password', configured: !!secretProviders.onepassword },
+              { id: 'aws', name: 'AWS Secrets Manager', configured: false },
+              { id: 'vault', name: 'HashiCorp Vault', configured: !!secretProviders.vault },
+            ] as const).map(p => {
+              const isOpen = expandedProvider === p.id;
+              return (
+                <div key={p.id} className="rounded overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                  <button
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm"
+                    style={{ background: 'var(--surface-3)', color: 'var(--text-primary)' }}
+                    onClick={() => setExpandedProvider(isOpen ? null : p.id)}
+                  >
+                    <ChevronRight size={13} style={{ transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', color: 'var(--text-muted)' }} />
+                    <span className="flex-1 text-left font-medium">{p.name}</span>
+                    {p.configured && (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
+                    )}
+                  </button>
 
-          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              AWS Secrets Manager
-            </label>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              No credentials stored in Reqly - aws:// URIs use your standard AWS credential chain (env vars, ~/.aws/credentials, IAM role). Set AWS_REGION, use a full ARN in the URI, or configure secretProviders.aws.region.
-            </p>
-          </div>
+                  {isOpen && (
+                    <div className="p-3" style={{ borderTop: '1px solid var(--border)' }}>
+                      {p.id === 'bitwarden' && (
+                        <>
+                          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                            Stored in ~/.reqly/config.json (never in the repo). BITWARDENSM_ACCESS_TOKEN and BITWARDENSM_ORGANIZATION_ID env vars take precedence.
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            <Input
+                              type="password"
+                              value={bwToken}
+                              onChange={e => setBwToken(e.target.value)}
+                              placeholder="Machine account access token"
+                            />
+                            <Input
+                              value={bwOrgId}
+                              onChange={e => setBwOrgId(e.target.value)}
+                              placeholder="Organization ID"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button variant="secondary" onClick={handleSaveBitwarden} disabled={savingProvider}>
+                                {savingProvider ? 'Saving...' : 'Save Bitwarden config'}
+                              </Button>
+                              {providerSaved && <span className="text-xs" style={{ color: 'var(--accent)' }}>Saved - .env re-resolved</span>}
+                            </div>
+                          </div>
+                        </>
+                      )}
 
-          <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              HashiCorp Vault
-              {secretProviders.vault && (
-                <span className="ml-2 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'var(--accent)', color: '#fff' }}>Configured</span>
-              )}
-            </label>
-            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-              KV v2 token auth, stored in ~/.reqly/config.json. VAULT_ADDR and VAULT_TOKEN env vars take precedence.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Input
-                value={vaultAddr}
-                onChange={e => setVaultAddr(e.target.value)}
-                placeholder="Vault address (https://vault.example.com:8200)"
-              />
-              <Input
-                type="password"
-                value={vaultToken}
-                onChange={e => setVaultToken(e.target.value)}
-                placeholder="Vault token"
-              />
-              <Button variant="secondary" onClick={handleSaveVault} disabled={savingProvider}>
-                {savingProvider ? 'Saving...' : 'Save Vault config'}
-              </Button>
-            </div>
+                      {p.id === 'onepassword' && (
+                        <>
+                          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                            Service account token, stored in ~/.reqly/config.json. The OP_SERVICE_ACCOUNT_TOKEN env var takes precedence. Saving re-resolves your .env, which doubles as a connection test.
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            <Input
+                              type="password"
+                              value={opToken}
+                              onChange={e => setOpToken(e.target.value)}
+                              placeholder="Service account token (ops_...)"
+                            />
+                            <Button variant="secondary" onClick={handleSaveOnePassword} disabled={savingProvider}>
+                              {savingProvider ? 'Saving...' : 'Save 1Password config'}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {p.id === 'aws' && (
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          No credentials stored in Reqly - aws:// URIs use your standard AWS credential chain (env vars, ~/.aws/credentials, IAM role). Set AWS_REGION, use a full ARN in the URI, or configure secretProviders.aws.region.
+                        </p>
+                      )}
+
+                      {p.id === 'vault' && (
+                        <>
+                          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                            KV v2 token auth, stored in ~/.reqly/config.json. VAULT_ADDR and VAULT_TOKEN env vars take precedence.
+                          </p>
+                          <div className="flex flex-col gap-2">
+                            <Input
+                              value={vaultAddr}
+                              onChange={e => setVaultAddr(e.target.value)}
+                              placeholder="Vault address (https://vault.example.com:8200)"
+                            />
+                            <Input
+                              type="password"
+                              value={vaultToken}
+                              onChange={e => setVaultToken(e.target.value)}
+                              placeholder="Vault token"
+                            />
+                            <Button variant="secondary" onClick={handleSaveVault} disabled={savingProvider}>
+                              {savingProvider ? 'Saving...' : 'Save Vault config'}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
