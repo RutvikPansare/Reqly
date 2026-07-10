@@ -35,7 +35,7 @@ import { handleExecCommand } from './exec-command.js';
 import { handleImportCommand } from './import-command.js';
 import { handleInitCommand } from './init-command.js';
 import { handleWorkspaceCommand } from './workspace-command.js';
-import { writeLock, readLock, clearLock, isProcessAlive } from './lock.js';
+import { writeLock, readLock, clearLock, killWithEscalation, shouldReapStaleLock, shouldFallbackToEphemeralPort } from './lock.js';
 
 async function main() {
   const parsed = parseArgs(process.argv);
@@ -201,38 +201,30 @@ async function main() {
 
   const isElectron = !!process.env.REQLY_ELECTRON;
   const testPort = Number(process.env.REQLY_TEST_PORT) || 0;
+  const lockType: 'electron' | 'agent' = isElectron ? 'electron' : 'agent';
 
-  // Determine which port to use before starting the server.
-  // Electron: always use port 0 (OS-assigned ephemeral port, never 4242).
-  // Agent: try 4242. If an existing agent owns it, kill it and take over.
-  //        If an Electron process owns it, fall back to an OS-assigned port.
-  let targetPort: number;
-  let lockType: 'electron' | 'agent';
+  // Electron gets an OS-assigned ephemeral port so it can run independently
+  // of any agent server already on 4242 (T-257, completing the port-readback
+  // plumbing that T-256 deferred). main.ts reads the real bound port back out
+  // of the lock file after spawn and points its window at that, instead of
+  // assuming 4242. Agents still default to 4242 - that's the well-known port
+  // AI coding agents are configured to hit.
+  let targetPort = testPort || (isElectron ? 0 : 4242);
 
-  if (isElectron) {
-    targetPort = testPort || 0;
-    lockType = 'electron';
-  } else {
-    targetPort = testPort || 4242;
-    lockType = 'agent';
-
-    if (!testPort) {
-      const existing = await readLock().catch(() => null);
-      if (existing && isProcessAlive(existing.pid)) {
-        const existingType = (existing as any).type ?? 'agent';
-        if (existingType === 'agent') {
-          // Kill the old agent so we can take over port 4242.
-          try {
-            process.kill(existing.pid, 'SIGTERM');
-            await new Promise(r => setTimeout(r, 600));
-          } catch {
-            // Kill failed - fall through and let EADDRINUSE handle it.
-          }
-        } else if (existingType === 'electron') {
-          // Electron owns 4242. Don't kill it - use an OS-assigned port instead.
-          targetPort = 0;
-        }
-      }
+  if (!testPort) {
+    const existing = await readLock().catch(() => null);
+    if (shouldReapStaleLock(existing, lockType)) {
+      // A stale lock of our own kind (crashed/force-quit prior instance) -
+      // reap it before taking the port. Escalates to SIGKILL if it doesn't
+      // exit in time, instead of a blind wait that lets a slow-exiting
+      // process survive and pile up (T-255).
+      await killWithEscalation(existing!.pid);
+    } else if (!isElectron && shouldFallbackToEphemeralPort(existing, lockType)) {
+      // Agent path only: a live Electron lock already owns 4242 - don't kill
+      // it, fall back to an OS-assigned port instead of racing into
+      // EADDRINUSE. Electron never targets 4242 in the first place now, so
+      // this fallback no longer applies to it.
+      targetPort = 0;
     }
   }
 

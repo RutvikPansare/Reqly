@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { writeLock, readLock, clearLock, isProcessAlive, LOCK_PATH } from './lock.js';
+import { spawn, ChildProcess } from 'child_process';
+import { writeLock, readLock, clearLock, isProcessAlive, killWithEscalation, shouldReapStaleLock, shouldFallbackToEphemeralPort, LOCK_PATH } from './lock.js';
 
 describe('lock', () => {
   beforeEach(() => {
@@ -71,5 +72,100 @@ describe('lock', () => {
     await writeLock('/Users/test/project', 4242, 'agent');
     const lock = await readLock();
     expect(lock!.type).toBe('agent');
+  });
+
+  describe('killWithEscalation', () => {
+    const spawned: ChildProcess[] = [];
+
+    afterEach(() => {
+      for (const child of spawned) {
+        if (child.pid && isProcessAlive(child.pid)) {
+          try { process.kill(child.pid, 'SIGKILL'); } catch { /* already dead */ }
+        }
+      }
+      spawned.length = 0;
+    });
+
+    function spawnChild(script: string): ChildProcess {
+      const child = spawn(process.execPath, ['-e', script], { stdio: 'ignore' });
+      spawned.push(child);
+      return child;
+    }
+
+    it('resolves quickly when the process exits on SIGTERM alone', async () => {
+      const child = spawnChild('setInterval(() => {}, 1000);');
+      await new Promise(r => setTimeout(r, 100)); // let it actually start
+
+      const start = Date.now();
+      await killWithEscalation(child.pid!, { pollIntervalMs: 20, timeoutMs: 2000 });
+      const elapsed = Date.now() - start;
+
+      expect(isProcessAlive(child.pid!)).toBe(false);
+      expect(elapsed).toBeLessThan(1000); // resolved via SIGTERM, not the 2s SIGKILL fallback
+    });
+
+    it('escalates to SIGKILL when the process ignores SIGTERM', async () => {
+      const child = spawnChild("process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);");
+      await new Promise(r => setTimeout(r, 100));
+
+      const start = Date.now();
+      await killWithEscalation(child.pid!, { pollIntervalMs: 20, timeoutMs: 300 });
+      const elapsed = Date.now() - start;
+
+      expect(isProcessAlive(child.pid!)).toBe(false);
+      expect(elapsed).toBeGreaterThanOrEqual(300);
+    });
+
+    it('resolves cleanly for a pid that is already dead', async () => {
+      await expect(killWithEscalation(999999)).resolves.not.toThrow();
+    });
+  });
+
+  describe('shouldReapStaleLock', () => {
+    it('returns false when there is no existing lock', () => {
+      expect(shouldReapStaleLock(null, 'electron')).toBe(false);
+    });
+
+    it('returns false when the existing lock pid is dead', () => {
+      expect(shouldReapStaleLock({ pid: 999999, projectDir: '/x', port: 4242, startedAt: '', type: 'electron' }, 'electron')).toBe(false);
+    });
+
+    it('returns true for a live stale electron lock when starting as electron', () => {
+      expect(shouldReapStaleLock({ pid: process.pid, projectDir: '/x', port: 51234, startedAt: '', type: 'electron' }, 'electron')).toBe(true);
+    });
+
+    it('returns false for a live agent lock when starting as electron (different type, leave it alone)', () => {
+      expect(shouldReapStaleLock({ pid: process.pid, projectDir: '/x', port: 4242, startedAt: '', type: 'agent' }, 'electron')).toBe(false);
+    });
+
+    it('returns true for a live stale agent lock when starting as agent', () => {
+      expect(shouldReapStaleLock({ pid: process.pid, projectDir: '/x', port: 4242, startedAt: '', type: 'agent' }, 'agent')).toBe(true);
+    });
+
+    it('returns false for a live electron lock when starting as agent (fall back to port 0 instead)', () => {
+      expect(shouldReapStaleLock({ pid: process.pid, projectDir: '/x', port: 51234, startedAt: '', type: 'electron' }, 'agent')).toBe(false);
+    });
+  });
+
+  describe('shouldFallbackToEphemeralPort', () => {
+    it('returns false when there is no existing lock', () => {
+      expect(shouldFallbackToEphemeralPort(null, 'electron')).toBe(false);
+    });
+
+    it('returns false when the existing lock pid is dead (nothing to fall back from)', () => {
+      expect(shouldFallbackToEphemeralPort({ pid: 999999, projectDir: '/x', port: 4242, startedAt: '', type: 'agent' }, 'electron')).toBe(false);
+    });
+
+    it('returns false when the existing live lock is the same type (that case reaps instead)', () => {
+      expect(shouldFallbackToEphemeralPort({ pid: process.pid, projectDir: '/x', port: 4242, startedAt: '', type: 'agent' }, 'agent')).toBe(false);
+    });
+
+    it('returns true when a live agent owns 4242 and electron is starting', () => {
+      expect(shouldFallbackToEphemeralPort({ pid: process.pid, projectDir: '/x', port: 4242, startedAt: '', type: 'agent' }, 'electron')).toBe(true);
+    });
+
+    it('returns true when a live electron owns 4242 and an agent is starting', () => {
+      expect(shouldFallbackToEphemeralPort({ pid: process.pid, projectDir: '/x', port: 4242, startedAt: '', type: 'electron' }, 'agent')).toBe(true);
+    });
   });
 });
