@@ -12,10 +12,16 @@ import { log, LOG_PATH } from './logger';
 
 // ---------------------------------------------------------------------------
 // Reqly Desktop - thin Electron launcher around the existing `reqly start`
-// server. The server is NEVER modified: it runs on localhost:4242 exactly as
-// it does for CLI users. This process only spawns it (if not already running)
-// and opens a chromium window pointing at it. See the architecture principle
-// in docs/todo.md (M5 - Desktop App).
+// server. The server is NEVER modified: this process only spawns it (if not
+// already running) and opens a chromium window pointing at it. See the
+// architecture principle in docs/todo.md (M5 - Desktop App).
+//
+// Port isolation (T-257): Electron's server gets an OS-assigned ephemeral
+// port (`REQLY_ELECTRON=1` makes `index.ts` target port 0) so it runs
+// independently of any agent server already on 4242. Since the port isn't
+// known ahead of time, this process reads it back out of the shared lock
+// file (~/.reqly/running.json, written by the server after it binds) rather
+// than assuming a fixed URL - see `resolveElectronPort` below.
 //
 // Resilience contract (T-240): the window must never sit on a dead blank
 // page. Every failure mode - renderer crash, failed load, server death - is
@@ -23,7 +29,6 @@ import { log, LOG_PATH } from './logger';
 // (reload, reconnect loop, or server respawn).
 // ---------------------------------------------------------------------------
 
-const SERVER_URL = 'http://localhost:4242';
 const LOCK_PATH = path.join(os.homedir(), '.reqly', 'running.json');
 
 // Reference to the server child process - only set if WE spawned it. A
@@ -34,6 +39,15 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 
+// The port the currently-live Electron-owned server is bound to. Resolved
+// after spawn (or reuse) via `resolveElectronPort`; null means "not known
+// yet" (server missing, or lock file not written yet).
+let activePort: number | null = null;
+
+function serverUrl(port: number): string {
+  return `http://localhost:${port}`;
+}
+
 // The main process itself must never die silently: log and keep running.
 process.on('uncaughtException', err => {
   log.error(`Uncaught exception in main process: ${err.stack || err.message}`);
@@ -43,12 +57,12 @@ process.on('unhandledRejection', reason => {
   log.error(`Unhandled rejection in main process: ${detail}`);
 });
 
-// Probes the server with a single GET. Resolves true on any HTTP response
+// Probes a server with a single GET. Resolves true on any HTTP response
 // (even a 404), false on a connection error. Used both for the initial
 // "is it already running?" check and the post-spawn readiness poll.
-function probeServer(): Promise<boolean> {
+function probeServer(port: number): Promise<boolean> {
   return new Promise(resolve => {
-    const req = http.get(SERVER_URL, res => {
+    const req = http.get(serverUrl(port), res => {
       res.resume();
       resolve(true);
     });
@@ -57,15 +71,26 @@ function probeServer(): Promise<boolean> {
   });
 }
 
-// Reads the lock file and returns true only if it names a live process. This
-// is a cheaper pre-check than an HTTP probe and avoids racing a half-started
-// server. Falls back to the HTTP probe regardless.
-function lockFilePointsToLiveServer(): boolean {
+interface RunningLock {
+  pid: number;
+  projectDir: string;
+  port: number;
+  startedAt: string;
+  type: 'electron' | 'agent';
+}
+
+function readRunningLock(): RunningLock | null {
   try {
     const raw = fs.readFileSync(LOCK_PATH, 'utf8');
-    const lock = JSON.parse(raw) as { pid?: number };
-    if (!lock.pid) return false;
-    process.kill(lock.pid, 0); // throws if the pid is dead
+    return JSON.parse(raw) as RunningLock;
+  } catch {
+    return null;
+  }
+}
+
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
     return true;
   } catch {
     return false;
@@ -75,16 +100,28 @@ function lockFilePointsToLiveServer(): boolean {
 // Reads the lock file's projectDir for the tray label. Truncated to the last
 // 2 path segments so long paths don't blow out the menu width.
 function readActiveProjectLabel(): string {
-  try {
-    const raw = fs.readFileSync(LOCK_PATH, 'utf8');
-    const lock = JSON.parse(raw) as { projectDir?: string };
-    if (!lock.projectDir) return 'Active project: unknown';
-    const segments = lock.projectDir.split(path.sep).filter(Boolean);
-    const tail = segments.slice(-2).join(path.sep);
-    return `Active project: ${tail || lock.projectDir}`;
-  } catch {
-    return 'Active project: not running';
-  }
+  const lock = readRunningLock();
+  if (!lock?.projectDir) return 'Active project: not running';
+  const segments = lock.projectDir.split(path.sep).filter(Boolean);
+  const tail = segments.slice(-2).join(path.sep);
+  return `Active project: ${tail || lock.projectDir}`;
+}
+
+// Polls the lock file until it reflects a live Electron-owned server on the
+// expected pid (when given - the server we just spawned writes its OWN pid,
+// not this Electron process's pid, once it binds its ephemeral port). With
+// no pid filter, resolves against whatever live Electron lock is present -
+// used for the initial "is one already running?" check.
+async function resolveElectronPort(expectedPid?: number, timeoutMs = 15_000): Promise<number | null> {
+  const start = Date.now();
+  do {
+    const lock = readRunningLock();
+    if (lock && lock.type === 'electron' && isPidAlive(lock.pid) && (!expectedPid || lock.pid === expectedPid)) {
+      return lock.port;
+    }
+    await new Promise(r => setTimeout(r, 150));
+  } while (Date.now() - start < timeoutMs);
+  return null;
 }
 
 function showAndFocus(): void {
@@ -161,18 +198,27 @@ function respawnBudgetExhausted(): boolean {
   return respawnTimestamps.length >= MAX_RESPAWNS_PER_WINDOW;
 }
 
-async function spawnServerIfNeeded(): Promise<void> {
-  const alreadyRunning = lockFilePointsToLiveServer() || (await probeServer());
-  if (alreadyRunning) {
-    log.info('Server already running - reusing it.');
-    return;
+// Resolves with the port the Electron-owned server is reachable on, or null
+// if none could be found or spawned. Never assumes a fixed port - Electron's
+// server binds an OS-assigned ephemeral port (T-257), so the real port always
+// comes from either an existing live lock or a poll of the lock file the
+// freshly-spawned child writes after it binds.
+async function spawnServerIfNeeded(): Promise<number | null> {
+  // Check for an already-live Electron-owned server via the lock file first,
+  // then confirm with an HTTP probe. A lock-file pid check alone would pass
+  // for a zombie (process alive, port never bound - e.g. it lost the startup
+  // race), so the probe is what actually decides reuse (T-256).
+  const existingPort = await resolveElectronPort(undefined, 0);
+  if (existingPort && await probeServer(existingPort)) {
+    log.info(`Server already running on port ${existingPort} - reusing it.`);
+    return existingPort;
   }
 
   const resolved: ResolvedReqly | null = resolveReqly();
   if (!resolved) {
     log.error('No reqly server found: no CLI on PATH, no bundled binary.');
     serverMissing = true;
-    return;
+    return null;
   }
 
   log.info(`No server detected - starting via ${resolved.display}.`);
@@ -184,25 +230,36 @@ async function spawnServerIfNeeded(): Promise<void> {
     spawnedServer = spawn(process.execPath, [bundledServerEntry()], {
       stdio: 'pipe',
       detached: false,
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', REQLY_DESKTOP: '1' },
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', REQLY_DESKTOP: '1', REQLY_ELECTRON: '1' },
     });
   } else {
     spawnedServer = spawn(resolved.command, ['start'], {
       stdio: 'pipe',
       detached: false,
-      env: { ...process.env, REQLY_DESKTOP: '1' },
+      env: { ...process.env, REQLY_DESKTOP: '1', REQLY_ELECTRON: '1' },
     });
   }
-  spawnedServer.stdout?.on('data', d => log.info(`[reqly] ${d.toString().trim()}`));
-  spawnedServer.stderr?.on('data', d => log.error(`[reqly] ${d.toString().trim()}`));
-  spawnedServer.on('error', err => {
+  const child = spawnedServer;
+  child.stdout?.on('data', d => log.info(`[reqly] ${d.toString().trim()}`));
+  child.stderr?.on('data', d => log.error(`[reqly] ${d.toString().trim()}`));
+  child.on('error', err => {
     log.error(`Failed to spawn the reqly server: ${err.message}`);
   });
-  spawnedServer.on('exit', (code, signal) => {
+  child.on('exit', (code, signal) => {
     if (isQuitting) return;
     log.error(`Server process exited unexpectedly (code=${code} signal=${signal}). Watchdog will respawn it.`);
-    spawnedServer = null;
+    if (spawnedServer === child) spawnedServer = null;
   });
+
+  // The child's pid, not this process's pid, is what it writes to the lock
+  // file - filter on it so a stale lock from a different process (e.g. a CLI
+  // agent) can't be misread as this spawn succeeding.
+  const port = await resolveElectronPort(child.pid);
+  if (!port) {
+    log.error('Server spawned but never wrote its port to the lock file within the timeout.');
+    return null;
+  }
+  return port;
 }
 
 // Generation counter so a newer load request (renderer crash, failed load,
@@ -225,10 +282,13 @@ async function loadWhenServerReady(win: BrowserWindow): Promise<void> {
   const started = Date.now();
   let slowMessageShown = false;
   while (!win.isDestroyed() && generation === loadGeneration) {
-    if (await probeServer()) {
+    // Re-read activePort each iteration, not just once at entry - the
+    // watchdog can resolve a new port (server respawned on a new ephemeral
+    // port) while this loop is still polling the old one.
+    if (activePort !== null && await probeServer(activePort)) {
       try {
-        await win.loadURL(SERVER_URL);
-        log.info('UI loaded.');
+        await win.loadURL(serverUrl(activePort));
+        log.info(`UI loaded on port ${activePort}.`);
       } catch (err) {
         // Server answered the probe but the page load failed (e.g. it died
         // mid-request). did-fail-load has already logged this; keep polling.
@@ -240,7 +300,8 @@ async function loadWhenServerReady(win: BrowserWindow): Promise<void> {
     if (!slowMessageShown && Date.now() - started > 10_000) {
       slowMessageShown = true;
       log.warn('Server still unreachable after 10s - continuing to poll.');
-      win.loadURL(loadingHtml(`Still trying to reach the Reqly server on :4242. It will load automatically once the server is up. Diagnostics: ${LOG_PATH}`)).catch(() => {});
+      const portHint = activePort !== null ? ` on :${activePort}` : '';
+      win.loadURL(loadingHtml(`Still trying to reach the Reqly server${portHint}. It will load automatically once the server is up. Diagnostics: ${LOG_PATH}`)).catch(() => {});
     }
     await new Promise(r => setTimeout(r, 1000));
   }
@@ -331,7 +392,7 @@ let reconnectInFlight = false;
 function startServerWatchdog(): void {
   setInterval(async () => {
     if (serverMissing || isQuitting) return;
-    if (await probeServer()) {
+    if (activePort !== null && await probeServer(activePort)) {
       consecutiveProbeFailures = 0;
       reconnectInFlight = false;
       return;
@@ -344,7 +405,10 @@ function startServerWatchdog(): void {
     if (respawnBudgetExhausted()) {
       log.error(`Watchdog: respawn budget exhausted (${MAX_RESPAWNS_PER_WINDOW} in 10 min) - not respawning.`);
     } else {
-      await spawnServerIfNeeded();
+      // A respawn lands on a NEW ephemeral port - activePort must be updated
+      // before loadWhenServerReady polls again, or it keeps probing the dead
+      // port forever.
+      activePort = await spawnServerIfNeeded();
     }
     if (mainWindow && !mainWindow.isDestroyed()) {
       loadWhenServerReady(mainWindow);
@@ -379,7 +443,7 @@ autoUpdater.on('update-downloaded', async () => {
 app.whenReady().then(async () => {
   log.info(`Reqly Desktop starting (electron=${process.versions.electron} platform=${process.platform}).`);
   syncLoginItemFromConfig();
-  await spawnServerIfNeeded();
+  activePort = await spawnServerIfNeeded();
   createWindow();
   createTray();
   startServerWatchdog();
