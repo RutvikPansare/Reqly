@@ -6,6 +6,12 @@ Each entry records: date, the decision, and why it was taken.
 Newest entries at the top.
 -->
 
+## 2026-07-12 - API key auth: engine accepts both credential shapes; canonical type string is 'apiKey' (T-263)
+
+**Decision:** The HTTP executor and the gRPC metadata injectors treat the API key auth type case-insensitively ('apiKey' or 'apikey') and accept both credential shapes: the UI's `{ keyName, value, placement }` (custom header name, header-or-query placement) and the legacy `{ key }` (value sent under the default `x-api-key` header). New UI writes use the canonical `'apiKey'` (matching the `AuthType` enum).
+
+**Why:** The two halves had drifted: the engine only matched `'apiKey'` + `credentials.key`, while the request editor saved `'apikey'` + `{ keyName, value, placement }` - so API key auth configured in the UI silently sent nothing, and the Inherited-headers preview showed headers the engine never injected. Normalizing in the engine (rather than migrating YAML) keeps every existing saved request and auth profile working regardless of which shape wrote it; collections are plain text that users hand-edit, so being liberal in what the engine accepts is the resilient choice.
+
 ## 2026-07-09 - Built the ephemeral-port readback plumbing T-256 deferred (T-257)
 
 **Decision:** Electron now gets a real OS-assigned ephemeral port again - `index.ts` targets port `0` when `REQLY_ELECTRON` is set, and `main.ts` reads the actual bound port back out of the shared lock file (`resolveElectronPort`, polling on the spawned child's pid) instead of hardcoding `localhost:4242`. Agent path is untouched (still defaults to 4242).

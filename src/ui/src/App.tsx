@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Settings, X, Plus, ChevronDown, FolderInput } from 'lucide-react';
 import { updateRequest, fetchCollections, addRequest, fetchEnvironments, setActiveEnvironment, importCollection } from './api';
 import { methodColorClass, requestBadgeInfo } from './lib/colors';
+import { foldParamsIntoUrl } from './lib/utils';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useServerEvents } from './hooks/useServerEvents';
 import { NavRail } from './components/NavRail';
@@ -40,8 +41,10 @@ interface TabData {
 
 const isDirty = (tab: TabData): boolean => {
   if (!tab.savedRequest) return false;
-  const a = { ...tab.request };
-  const b = { ...tab.savedRequest };
+  // Fold params into the URL on both sides - the editor normalizes the live
+  // request this way, so the saved side must be compared in the same shape.
+  const a = { ...foldParamsIntoUrl(tab.request) };
+  const b = { ...foldParamsIntoUrl(tab.savedRequest) };
   // _collection is UI-only metadata, ignore in comparison.
   delete a._collection; delete b._collection;
   delete a.response; delete b.response;
@@ -393,6 +396,24 @@ function App() {
       }
       return;
     }
+    // Route non-REST requests to their dedicated workspaces without opening a
+    // REST editor tab - RequestEditor has no notion of these types, so a tab
+    // for them would just be a broken editor.
+    if (req.type === 'graphql' || req.type === 'graphql-subscription') {
+      setGraphqlRequest({ ...req, _collection: col });
+      setActivePanel('graphql');
+      return;
+    }
+    if (req.type === 'grpc') {
+      setGrpcRequest({ ...req, _collection: col });
+      setActivePanel('grpc');
+      return;
+    }
+    if (['websocket', 'sse', 'socketio', 'mqtt'].includes(req.type)) {
+      setRealtimeRequest({ ...req, _collection: col });
+      setActivePanel('realtime');
+      return;
+    }
     const tabId = `${col}-${req.name}`;
     const existing = tabs.find(t => t.id === tabId);
     if (existing) {
@@ -402,21 +423,6 @@ function App() {
       t.id = tabId;
       setTabs([...tabs, t]);
       setActiveTabId(tabId);
-    }
-    // Route graphql requests to the GraphQL workspace instead of the REST editor
-    if (req.type === 'graphql') {
-      setGraphqlRequest({ ...req, _collection: col });
-      setActivePanel('graphql');
-    }
-    // Route gRPC requests to the gRPC workspace
-    if (req.type === 'grpc') {
-      setGrpcRequest({ ...req, _collection: col });
-      setActivePanel('grpc');
-    }
-    // Route realtime requests
-    if (['websocket', 'sse', 'socketio', 'mqtt'].includes(req.type)) {
-      setRealtimeRequest({ ...req, _collection: col });
-      setActivePanel('realtime');
     }
   };
 

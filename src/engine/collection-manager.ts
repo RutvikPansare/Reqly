@@ -109,6 +109,7 @@ export class CollectionManager {
   }
 
   private async readMeta(collectionName: string): Promise<CollectionMeta> {
+    assertSafeName('collection', collectionName);
     const metaPath = path.join(this.baseDir, collectionName, META_FILE);
     if (!existsSync(metaPath)) return {};
     try {
@@ -120,6 +121,7 @@ export class CollectionManager {
   }
 
   private async writeMeta(collectionName: string, meta: CollectionMeta): Promise<void> {
+    assertSafeName('collection', collectionName);
     const colPath = path.join(this.baseDir, collectionName);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${collectionName} not found`);
@@ -213,6 +215,7 @@ export class CollectionManager {
   }
 
   async addRequest(collectionName: string, req: CollectionRequest): Promise<void> {
+    assertSafeName('collection', collectionName);
     assertSafeName('request', req.name);
     const colPath = path.join(this.baseDir, collectionName);
     if (!existsSync(colPath)) {
@@ -246,6 +249,8 @@ export class CollectionManager {
   }
 
   async deleteRequest(collectionName: string, requestName: string): Promise<void> {
+    assertSafeName('collection', collectionName);
+    assertSafeName('request', requestName);
     const colPath = path.join(this.baseDir, collectionName);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${collectionName} not found`);
@@ -260,6 +265,7 @@ export class CollectionManager {
   }
 
   async deleteCollection(name: string): Promise<void> {
+    assertSafeName('collection', name);
     const colPath = path.join(this.baseDir, name);
     if (!existsSync(colPath)) {
       throw new CollectionNotFoundError(`Collection ${name} not found`);
@@ -268,6 +274,7 @@ export class CollectionManager {
   }
 
   async renameCollection(oldName: string, newName: string): Promise<void> {
+    assertSafeName('collection', oldName);
     assertSafeName('collection', newName);
     const oldPath = path.join(this.baseDir, oldName);
     if (!existsSync(oldPath)) {
@@ -282,6 +289,7 @@ export class CollectionManager {
   }
 
   async duplicateCollection(name: string): Promise<Collection> {
+    assertSafeName('collection', name);
     const srcPath = path.join(this.baseDir, name);
     if (!existsSync(srcPath)) {
       throw new CollectionNotFoundError(`Collection ${name} not found`);
@@ -317,6 +325,7 @@ export class CollectionManager {
   }
 
   async moveRequest(collectionName: string, requestName: string, targetCollection: string): Promise<{ name: string; collection: string }> {
+    assertSafeName('collection', targetCollection);
     const original = await this.getRequest(collectionName, requestName);
 
     const targetPath = path.join(this.baseDir, targetCollection);

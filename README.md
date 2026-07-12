@@ -297,6 +297,7 @@ The agent reads your codebase and calls `create_collection` + `create_request` f
 |------|-------------|
 | `start_proxy` | Auto-captures outbound traffic into a collection |
 | `stop_proxy` | Stops traffic interception |
+| `get_proxy_status` | Reports whether the proxy is running, its port, and target collection |
 | `exec_with_proxy` | Starts the proxy and runs a dev command with it injected |
 | `install_middleware` | Returns the inbound-capture snippet for your framework |
 

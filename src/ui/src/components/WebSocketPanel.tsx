@@ -7,6 +7,7 @@ import type { UIRealtimeMessage } from './RealtimeMessageLog.js';
 import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
+import { resolveTemplateVars } from '../lib/utils.js';
 
 interface WebSocketPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; varCompletionExtension?: any; availableVariables?: any[]; }
 
@@ -26,7 +27,7 @@ export function WebSocketPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty, 
     setStatus('connecting');
     setMessages(prev => [...prev, { id: `${Date.now()}`, ts: Date.now(), source: 'info', payload: 'Connecting...' }]);
     try {
-      const ws = new WebSocket(tab.url, protocols); wsRef.current = ws;
+      const ws = new WebSocket(resolveTemplateVars(tab.url, availableVariables), protocols); wsRef.current = ws;
       ws.onopen = () => { setStatus('connected'); setMessages(prev => [...prev, { id: `${Date.now()}o`, ts: Date.now(), source: 'info', payload: 'Connected' }]); };
       ws.onmessage = e => setMessages(prev => [...prev, { id: `${Date.now()}m${Math.random()}`, ts: Date.now(), source: 'server', payload: e.data.toString() }]);
       ws.onerror = () => setMessages(prev => [...prev, { id: `${Date.now()}e${Math.random()}`, ts: Date.now(), source: 'error', payload: 'WebSocket Error' }]);

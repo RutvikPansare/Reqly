@@ -1,5 +1,21 @@
 # Reqly - Done
 
+## 2026-07-12
+
+- [x] **T-263** Feature-by-feature bug audit (logic + UI + MCP) - 12 fixes across collections, HTTP, gRPC, GraphQL, realtime, capture
+  - **Path traversal (engine):** `CollectionManager` mutation paths (`deleteCollection`, `deleteRequest`, `renameCollection` old name, `duplicateCollection`, `moveRequest` target, all meta read/writes for variables/auth/spec, `addRequest` collection name) accepted `../`-style names - Express decodes `%2F` in route params, so `DELETE /api/collections/..%2F..%2F<dir>` reached `fs.rm(recursive)` outside the project. Added `assertSafeName` guards at every entry point + 8 regression tests.
+  - **API key auth broken end-to-end:** the engine only honoured `type: 'apiKey'` with `credentials.key` (hardcoded `x-api-key` header); the request editor saved `type: 'apikey'` with `{ keyName, value, placement }` - so UI-configured API key auth silently sent no header. Engine now accepts both shapes case-insensitively, honours custom `keyName` and query placement; gRPC metadata injectors (express + run_request) fixed the same way; UI switched to canonical `'apiKey'`. 4 new executor tests.
+  - **RequestEditor mount clobber:** the live-edit `onChange` effect fired on mount before the load effect populated state, overwriting the tab's request with `url: ''` - the cause of the phantom "Unsaved changes" dot on every fresh load and of saved URLs vanishing after a panel switch. Skips the mount run now; reproduced and verified fixed in the browser.
+  - **Duplicate query params:** the editor folds `params` into the URL on load but kept the `params` object in the built request, so the executor appended every param a second time on fire/save. Editor drops `params` after folding; dirty comparisons (editor + App tab dot) normalize via a shared `foldParamsIntoUrl`.
+  - **gRPC scaffold never worked (T-166):** `create_request`'s `buildGrpcScaffold` looked for protos in `<project>/protos` (everywhere else uses `<baseDir>/protos`) and called `.find` on the proto-loader service map (an object, not an array) - both errors swallowed by the best-effort catch, so `grpcMessageScaffold` was always absent. Fixed both + real-proto test.
+  - **gRPC metadata dropped on Invoke:** the workspace sent metadata as `grpc.metadata`, which the adhoc route ignored (it only reads `request.headers`). UI now sends `headers` (same field saved YAML uses); route also merges `grpc.metadata` for agents.
+  - **Non-REST sidebar routing:** clicking a graphql/grpc/realtime request created a broken REST editor tab alongside routing to the workspace; `graphql-subscription` wasn't routed at all. Typed requests now route without creating REST tabs.
+  - **GraphQL workspace:** Send/Introspect didn't pass `_collection`, so collection variables never resolved for saved requests; save-to-collection didn't record the new location (next Save reopened the modal - same fix applied to gRPC workspace).
+  - **Realtime panels:** `{{variables}}` autocompleted in URL bars but were never resolved before connecting (WS/SSE/Socket.IO/MQTT connect directly from the browser) - added `resolveTemplateVars` applied in all four panels; realtime save dropped `id`/`headers` from the YAML (PUT replaces the whole request).
+  - **Proxy status sync:** the Capture toggle defaulted to off with no server sync - a page reload (or MCP-started proxy) showed a running proxy as stopped and the captured-request poll never started. Added `ProxyServer.getStatus()`, `GET /api/proxy/status`, UI sync on mount, and a new `get_proxy_status` MCP tool (MCP coverage rule). Verified across reload in the browser.
+  - **Misc:** deleting the selected flow left the workspace on a ghost flow; cURL import left the body-type selector on "none"; typing in the URL bar wiped disabled param rows; response-body filter string was interpolated into HTML unescaped; GraphQL subscription passed `operationName: ''`.
+  - 1063 tests green (17 new), tsc clean both roots, browser-verified: gRPC routing, HTTP fire (200 OK), proxy toggle across reload, all panels render with zero console errors.
+
 ## 2026-07-10
 
 - [x] **T-262** Fix dead terminal in the bundled desktop app (`posix_spawnp failed`)

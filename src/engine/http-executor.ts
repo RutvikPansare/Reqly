@@ -76,16 +76,26 @@ function applyAuthHeaders(
   url: string,
   method: string,
   body: unknown,
-): void {
-  if (!effectiveAuth) return;
+): string {
+  if (!effectiveAuth) return url;
   const auth: AuthProfile = { ...effectiveAuth, credentials: effectiveAuth.credentials || {} };
   if (auth.type === AuthType.BEARER && auth.credentials.token) {
     headers['Authorization'] = `Bearer ${auth.credentials.token}`;
   } else if (auth.type === AuthType.BASIC && auth.credentials.username) {
     const { username, password = '' } = auth.credentials;
     headers['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-  } else if (auth.type === AuthType.API_KEY && auth.credentials.key) {
-    headers['x-api-key'] = auth.credentials.key;
+  } else if (String(auth.type).toLowerCase() === 'apikey') {
+    // Two credential shapes coexist: the UI saves { keyName, value, placement }
+    // while older YAML/profiles use { key } (value under the default header).
+    const value = auth.credentials.value || auth.credentials.key;
+    if (value) {
+      const keyName = auth.credentials.keyName || 'x-api-key';
+      if (auth.credentials.placement === 'query') {
+        url += (url.includes('?') ? '&' : '?') + `${encodeURIComponent(keyName)}=${encodeURIComponent(value)}`;
+      } else {
+        headers[keyName] = value;
+      }
+    }
   } else if (auth.type === AuthType.OAUTH2) {
     const { accessToken } = auth.credentials;
     if (accessToken) {
@@ -112,6 +122,7 @@ function applyAuthHeaders(
       Object.assign(headers, signingOpts.headers);
     }
   }
+  return url;
 }
 
 
@@ -337,7 +348,7 @@ export async function execute(
 
     // Inject auth before firing. effectiveAuthEarly is the resolved profile with
     // the same precedence used by the generic path below.
-    applyAuthHeaders(effectiveAuthEarly, headers, url, reqMut._method, body);
+    url = applyAuthHeaders(effectiveAuthEarly, headers, url, reqMut._method, body);
 
     const startTime = Date.now();
     let response;
@@ -460,7 +471,7 @@ export async function execute(
   // (request or collection) into a concrete {type, credentials} object before passing
   // it here - the executor holds no AuthManager. OAuth2 tokens are injected as-is;
   // callers must call AuthManager.refreshOAuth2Token before execute() when expired.
-  applyAuthHeaders(effectiveAuthEarly, headers, url, reqMut._method, body);
+  url = applyAuthHeaders(effectiveAuthEarly, headers, url, reqMut._method, body);
 
   const startTime = Date.now();
   let response;

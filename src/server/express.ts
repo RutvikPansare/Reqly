@@ -24,13 +24,16 @@ import { attachTerminal } from './terminal.js';
 
 function injectGrpcAuth(auth: any, metadata: Record<string, string>) {
   const creds = auth.credentials ?? {};
-  switch (auth.type) {
+  switch (String(auth.type).toLowerCase()) {
     case 'bearer':
       if (creds.token) metadata['authorization'] = `Bearer ${creds.token}`;
       break;
-    case 'apiKey':
-      if (creds.key && creds.value) metadata[creds.key.toLowerCase()] = creds.value;
+    case 'apikey': {
+      // UI shape is { keyName, value }; legacy profiles use { key, value }.
+      const headerName = creds.keyName || creds.key;
+      if (headerName && creds.value) metadata[headerName.toLowerCase()] = creds.value;
       break;
+    }
     case 'basic':
       if (creds.username && creds.password) {
         const encoded = Buffer.from(`${creds.username}:${creds.password}`).toString('base64');
@@ -197,6 +200,10 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  app.get('/api/proxy/status', (_req, res) => {
+    res.json(context.proxyServer.getStatus());
   });
 
   app.get('/api/proxy/captured', (req, res) => {
@@ -1407,6 +1414,8 @@ export function startExpressServer(context: EngineContext, port: number = 4242) 
         if (requestBody.headers) Object.assign(metadata, requestBody.headers);
 
         const grpcCfg = requestBody.grpc;
+        // Explicit metadata on the grpc block wins over headers/auth.
+        if (grpcCfg?.metadata) Object.assign(metadata, grpcCfg.metadata);
         const protosDir = context.collectionManager.getBaseDir() + '/protos';
 
         const result = await runGrpcAdhoc({

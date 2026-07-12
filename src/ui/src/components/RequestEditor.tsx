@@ -174,7 +174,9 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
 
   const handleUrlChange = (newUrl: string) => {
     setUrl(newUrl);
-    setParamsList(parseParams(newUrl));
+    // Re-derive enabled params from the URL, but keep disabled rows - they
+    // live only in the params list, not in the URL string.
+    setParamsList(prev => [...parseParams(newUrl), ...prev.filter(p => !p.enabled)]);
   };
 
   const handleParamsChange = (newParams: KeyValuePair[]) => {
@@ -248,7 +250,12 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
       const disabledHeaders = headersList.filter(h => !h.enabled && (h.key || h.value)).map(h => ({ key: h.key, value: h.value }));
       
       const req: any = { ...request, method, url, assertions, headers: getHeadersRecord(), body: getParsedBody() };
-      
+
+      // The editor folds `params` into the URL string on load, so drop the
+      // separate params object - keeping it would make the executor append
+      // every param a second time.
+      delete req.params;
+
       if (disabledParams.length > 0) req.disabledParams = disabledParams;
       else delete req.disabledParams;
       
@@ -310,14 +317,34 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
         const req = buildRequest();
         const { _collection, _multipartFiles, ...restCurrent } = req;
         const { _collection: _c, _multipartFiles: _m, ...restOriginal } = request;
+        // The editor folds a `params` object into the URL string on load, so
+        // apply the same fold to the original before comparing - otherwise a
+        // request saved with `params` reads as dirty the moment it opens.
+        if (restOriginal.params && Object.keys(restOriginal.params).length > 0) {
+          const folded = parseParams(restOriginal.url || '');
+          Object.entries(restOriginal.params).forEach(([k, v]) => {
+            folded.push({ key: k, value: String(v), enabled: true });
+          });
+          const qIndex = (restOriginal.url || '').indexOf('?');
+          const base = qIndex === -1 ? (restOriginal.url || '') : restOriginal.url.slice(0, qIndex);
+          restOriginal.url = updateUrlWithParams(base, folded);
+        }
+        delete restOriginal.params;
         return !isDeepEqual(restCurrent, restOriginal);
       } catch {
         return false;
       }
     }, [method, url, assertions, headersList, bodyText, bodyType, multipartParts, authType, authProfileId, authCreds, preScript, postScript, request]);
 
-    // Report live edits so the parent can track dirty state.
+    // Report live edits so the parent can track dirty state. Skip the mount
+    // run: it fires before the load effect has populated the editor state, so
+    // it would report url/headers/body as empty and clobber the tab's request.
+    const hasMountedRef = useRef(false);
     useEffect(() => {
+      if (!hasMountedRef.current) {
+        hasMountedRef.current = true;
+        return;
+      }
       if (!onChange) return;
       onChange(buildRequest());
     }, [isDirty]);
@@ -417,7 +444,12 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             handleUrlChange(parsed.url);
             const newHeaders: KeyValuePair[] = Object.entries(parsed.headers || {}).map(([k, v]) => ({ key: k, value: v, enabled: true }));
             setHeadersList(newHeaders);
-            if (parsed.body) setBodyText(parsed.body);
+            if (parsed.body) {
+              setBodyText(parsed.body);
+              // Reflect the imported body in the type selector, or the body
+              // tab keeps showing "none" for a request that sends a body.
+              try { JSON.parse(parsed.body); setBodyType('json'); } catch { setBodyType('raw'); }
+            }
           }}
         />
       )}
@@ -555,14 +587,14 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
             <div className="mb-6 flex gap-4 items-center">
               <label className="text-sm font-semibold text-gray-300 w-24">Auth Type</label>
               <div className="flex gap-2 flex-wrap">
-                {['none', 'bearer', 'apikey', 'basic', 'oauth2', 'mtls', 'awsv4'].map(t => (
+                {['none', 'bearer', 'apiKey', 'basic', 'oauth2', 'mtls', 'awsv4'].map(t => (
                   <button 
                     key={t}
                     disabled={!!authProfileId}
                     className={`px-3 py-1 rounded text-sm capitalize transition-colors ${authType === t ? 'bg-blue-600 text-white' : 'bg-[var(--surface-3)] text-gray-400 hover:bg-[var(--surface-4)]'}`}
                     onClick={() => { setAuthType(t); setAuthCreds({}); }}
                   >
-                    {t === 'apikey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t === 'awsv4' ? 'AWS SigV4' : t}
+                    {t === 'apiKey' ? 'API Key' : t === 'oauth2' ? 'OAuth 2.0' : t === 'mtls' ? 'mTLS' : t === 'awsv4' ? 'AWS SigV4' : t}
                   </button>
                 ))}
               </div>
@@ -585,7 +617,7 @@ export function RequestEditor({ request, isActive, onFire, onSave, onChange }: R
                 </div>
               )}
 
-              {authType === 'apikey' && (
+              {(authType === 'apiKey' || authType === 'apikey') && (
                 <>
                   <div className="flex gap-4">
                     <div className="flex-1">

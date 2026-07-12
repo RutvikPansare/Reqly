@@ -12,6 +12,7 @@ import * as getResponse from './tools/get-response.js';
 
 import * as startProxy from './tools/start-proxy.js';
 import * as stopProxy from './tools/stop-proxy.js';
+import * as getProxyStatus from './tools/get-proxy-status.js';
 
 import * as createEnvironment from './tools/create-environment.js';
 import * as setVariable from './tools/set-variable.js';
@@ -85,6 +86,7 @@ const tools = [
   getResponse,
   startProxy,
   stopProxy,
+  getProxyStatus,
   createEnvironment,
   setVariable,
   getVariables,

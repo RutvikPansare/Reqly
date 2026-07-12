@@ -149,9 +149,9 @@ async function buildGrpcScaffold(
 ): Promise<Record<string, unknown> | undefined> {
   try {
     const path = await import('path');
-    // baseDir is `.reqly/collections` or similar; protos sit at `.reqly/protos/`
-    const reqlyDir = path.default.dirname(baseDir);
-    const protosDir = path.default.join(reqlyDir, 'protos');
+    // Protos live at `<baseDir>/protos/` - the same location run_request and
+    // the Express run route resolve them from.
+    const protosDir = path.default.join(baseDir, 'protos');
     const protoPath = path.default.join(protosDir, protoFile);
 
     const grpcLoader = await import('@grpc/proto-loader');
@@ -174,8 +174,11 @@ async function buildGrpcScaffold(
 
     if (!svcDef?.service) return undefined;
 
-    // Find the method descriptor
-    const methodDef = svcDef.service.find((m: any) => m.originalName === method || m.path?.endsWith(`/${method}`));
+    // Find the method descriptor. `service` is a map of method name ->
+    // definition (not an array), so scan its values.
+    const methodDef = Object.values(svcDef.service).find(
+      (m: any) => m.originalName === method || m.path?.endsWith(`/${method}`),
+    ) as any;
     if (!methodDef?.requestType?.type?.field) return undefined;
 
     const { scaffoldMessage } = await import('../../engine/proto-scaffold.js');

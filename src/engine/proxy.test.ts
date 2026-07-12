@@ -24,6 +24,22 @@ describe('ProxyServer', () => {
     await proxyServer.stop();
   });
 
+  // The UI toggle and MCP agents both need to read the live proxy state -
+  // without it a page reload shows the proxy as stopped while it keeps running.
+  it('reports its status via getStatus()', async () => {
+    expect(proxyServer.getStatus()).toEqual({ running: false });
+
+    await proxyServer.start({ port: 0, collectionName: 'captured' });
+    const status = proxyServer.getStatus();
+    expect(status.running).toBe(true);
+    expect(status.collectionName).toBe('captured');
+    expect(typeof status.port).toBe('number');
+    expect(status.port).toBeGreaterThan(0);
+
+    await proxyServer.stop();
+    expect(proxyServer.getStatus()).toEqual({ running: false });
+  });
+
   it('forwards a binary response body through the capture path without corrupting bytes', async () => {
     // Bytes that are NOT valid UTF-8: coercing them through a JS string
     // (resBody += chunk) mangles them. Regression guard for that bug.

@@ -558,6 +558,68 @@ describe('http-executor', () => {
     });
   });
 
+  // The UI saves API key auth as { type: 'apikey', credentials: { keyName,
+  // value, placement } }. The engine must honour that shape (custom header
+  // name, query placement, lowercase type) - not just the legacy
+  // { type: 'apiKey', credentials: { key } } form.
+  describe('API key auth (UI shape)', () => {
+    function mockOk() {
+      vi.mocked(fetch).mockReset();
+      vi.mocked(fetch).mockResolvedValue({
+        status: 200,
+        headers: new Headers({}),
+        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+        text: vi.fn().mockResolvedValue(''),
+      } as any);
+    }
+    const headersOf = () => (vi.mocked(fetch).mock.calls[0][1] as any).headers as Record<string, string>;
+    const urlOf = () => vi.mocked(fetch).mock.calls[0][0] as string;
+
+    it('sends the key under the configured keyName header', async () => {
+      mockOk();
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'http://example.com',
+        auth: { type: 'apikey' as AuthType, credentials: { keyName: 'X-Custom-Key', value: 'v123', placement: 'header' } },
+      };
+      await execute(config);
+      expect(headersOf()['X-Custom-Key']).toBe('v123');
+    });
+
+    it('defaults to x-api-key header when keyName is not set', async () => {
+      mockOk();
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'http://example.com',
+        auth: { type: 'apikey' as AuthType, credentials: { value: 'v123' } },
+      };
+      await execute(config);
+      expect(headersOf()['x-api-key']).toBe('v123');
+    });
+
+    it('appends the key as a query parameter when placement is query', async () => {
+      mockOk();
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'http://example.com/path',
+        auth: { type: 'apikey' as AuthType, credentials: { keyName: 'api_key', value: 'v123', placement: 'query' } },
+      };
+      await execute(config);
+      expect(urlOf()).toBe('http://example.com/path?api_key=v123');
+    });
+
+    it('still supports the legacy { key } credential shape', async () => {
+      mockOk();
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'http://example.com',
+        auth: { type: AuthType.API_KEY, credentials: { key: 'legacy-key' } },
+      };
+      await execute(config);
+      expect(headersOf()['x-api-key']).toBe('legacy-key');
+    });
+  });
+
   describe('mTLS auth', () => {
     let tmpDir: string;
 

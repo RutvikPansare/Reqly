@@ -5,6 +5,7 @@ import type { UIRealtimeMessage } from './RealtimeMessageLog.js';
 import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { VariableInput } from './VariableInput.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
+import { resolveTemplateVars } from '../lib/utils.js';
 
 interface SSEPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; varCompletionExtension?: any; availableVariables?: any[]; }
 
@@ -22,7 +23,7 @@ export function SSEPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty, availa
     setMessages(prev => [...prev, { id: `${Date.now()}`, ts: Date.now(), source: 'info', payload: 'Connecting to SSE...' }]);
     try {
       const eventType = tab.realtime?.eventType || 'message';
-      const evs = new EventSource(tab.url); evsRef.current = evs;
+      const evs = new EventSource(resolveTemplateVars(tab.url, availableVariables)); evsRef.current = evs;
       evs.onopen = () => { setStatus('connected'); setMessages(prev => [...prev, { id: `${Date.now()}o`, ts: Date.now(), source: 'info', payload: 'Connected' }]); };
       evs.addEventListener(eventType, (e: any) => setMessages(prev => [...prev, { id: `${Date.now()}m${Math.random()}`, ts: Date.now(), source: 'server', payload: e.data || '', event: eventType }]));
       evs.onerror = () => { evs.close(); setStatus('disconnected'); setMessages(prev => [...prev, { id: `${Date.now()}e${Math.random()}`, ts: Date.now(), source: 'error', payload: 'SSE Error: connection lost or failed to connect' }]); };

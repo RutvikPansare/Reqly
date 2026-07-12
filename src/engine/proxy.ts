@@ -9,13 +9,30 @@ export interface ProxyConfig {
   ignoreHosts?: string[];
 }
 
+export interface ProxyStatus {
+  running: boolean;
+  port?: number;
+  collectionName?: string;
+}
+
 export class ProxyServer {
   private server: http.Server | null = null;
   private collectionManager: CollectionManager;
+  private activeCollectionName: string | null = null;
   public capturedRequests: any[] = [];
 
   constructor(collectionManager: CollectionManager) {
     this.collectionManager = collectionManager;
+  }
+
+  public getStatus(): ProxyStatus {
+    if (!this.server) return { running: false };
+    const addr = this.server.address();
+    return {
+      running: true,
+      port: typeof addr === 'object' && addr ? addr.port : undefined,
+      collectionName: this.activeCollectionName ?? undefined,
+    };
   }
 
   public async start(config: ProxyConfig): Promise<void> {
@@ -33,6 +50,7 @@ export class ProxyServer {
       this.handleConnectRequest(req, clientSocket as net.Socket, head);
     });
 
+    this.activeCollectionName = config.collectionName;
     return new Promise((resolve) => {
       this.server!.listen(config.port, () => {
         resolve();
@@ -48,6 +66,7 @@ export class ProxyServer {
       }
       this.server.close((err) => {
         this.server = null;
+        this.activeCollectionName = null;
         if (err) reject(err);
         else resolve();
       });

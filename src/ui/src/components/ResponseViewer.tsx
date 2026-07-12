@@ -185,7 +185,10 @@ export function ResponseViewer({ response, isSending, request }: ResponseViewerP
         const q = bodyFilter.toLowerCase();
         const lines = (str as string).split('\n');
         const kept = lines.filter(l => l.toLowerCase().includes(q));
-        if (kept.length === 0) return `<span style="color:var(--text-muted);font-style:italic">No lines match "${bodyFilter}"</span>`;
+        if (kept.length === 0) {
+          const safe = bodyFilter.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<span style="color:var(--text-muted);font-style:italic">No lines match "${safe}"</span>`;
+        }
         return syntaxHighlight(kept.join('\n'));
       }
       return syntaxHighlight(str as string);

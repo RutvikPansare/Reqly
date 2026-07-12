@@ -4,7 +4,7 @@ import { fetchFlows, createFlow, deleteFlow } from '../api';
 
 interface FlowsPanelProps {
   selectedFlow: string | null;
-  onSelectFlow: (name: string) => void;
+  onSelectFlow: (name: string | null) => void;
   lastResults: Record<string, any>;
 }
 
@@ -42,6 +42,9 @@ export function FlowsPanel({ selectedFlow, onSelectFlow, lastResults }: FlowsPan
   const handleDelete = async (name: string) => {
     await deleteFlow(name);
     setContextMenu(null);
+    // Clear the workspace if the deleted flow was open - otherwise it keeps
+    // showing (and operating on) a flow that no longer exists.
+    if (selectedFlow === name) onSelectFlow(null);
     loadData();
   };
 

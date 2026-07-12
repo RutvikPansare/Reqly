@@ -9,6 +9,7 @@ import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import { VariableInput } from './VariableInput.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
+import { resolveTemplateVars } from '../lib/utils.js';
 
 interface MQTTPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; varCompletionExtension?: any; availableVariables?: any[]; }
 
@@ -30,7 +31,7 @@ export function MQTTPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty, varCo
     setStatus('connecting');
     setMessages(prev => [...prev, { id: `${Date.now()}`, ts: Date.now(), source: 'info', payload: 'Connecting to MQTT broker...' }]);
     try {
-      const client = mqtt.connect(tab.url, { clientId: tab.realtime?.mqttClientId || crypto.randomUUID().slice(0, 8), username: tab.realtime?.username, password: tab.realtime?.password, keepalive: tab.realtime?.keepalive ? parseInt(tab.realtime.keepalive, 10) : 60, clean: tab.realtime?.clean !== false });
+      const client = mqtt.connect(resolveTemplateVars(tab.url, availableVariables), { clientId: tab.realtime?.mqttClientId || crypto.randomUUID().slice(0, 8), username: resolveTemplateVars(tab.realtime?.username || '', availableVariables) || undefined, password: tab.realtime?.password, keepalive: tab.realtime?.keepalive ? parseInt(tab.realtime.keepalive, 10) : 60, clean: tab.realtime?.clean !== false });
       clientRef.current = client;
       client.on('connect', () => { setStatus('connected'); setMessages(prev => [...prev, { id: `${Date.now()}o`, ts: Date.now(), source: 'info', payload: 'Connected' }]); subscriptions.forEach((sub: string) => client.subscribe(sub)); });
       client.on('message', (topic, buf) => setMessages(prev => [...prev, { id: `${Date.now()}m${Math.random()}`, ts: Date.now(), source: 'server', payload: buf.toString(), topic }]));

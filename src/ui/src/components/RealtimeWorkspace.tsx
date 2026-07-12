@@ -57,7 +57,16 @@ export function RealtimeWorkspace({ initialRequest, onUpdate }: { initialRequest
     if (activeTab._collection && (activeTab.name || activeTab.tabName)) {
       if (!isDirty()) return; // nothing changed, skip silently
       try {
-        await updateRequest(activeTab._collection, activeTab.name || activeTab.tabName || '', { name: activeTab.name || activeTab.tabName, type: activeTab.protocol, url: activeTab.url, realtime: activeTab.realtime });
+        // Keep id (and headers) in the payload - PUT replaces the whole YAML
+        // request, so omitting them would strip fields from the saved file.
+        await updateRequest(activeTab._collection, activeTab.name || activeTab.tabName || '', {
+          id: activeTab.id,
+          name: activeTab.name || activeTab.tabName,
+          type: activeTab.protocol,
+          url: activeTab.url,
+          ...(activeTab.headers ? { headers: activeTab.headers } : {}),
+          realtime: activeTab.realtime,
+        });
         savedSnapshotRef.current = { url: activeTab.url || '', realtime: activeTab.realtime ?? {} };
         window.dispatchEvent(new Event('reqly-reload'));
         flashSaved();

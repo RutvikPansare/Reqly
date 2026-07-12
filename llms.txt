@@ -89,6 +89,7 @@ Reqly exposes the following MCP tools for AI agents:
 - `configure_secret_provider`: Store provider credentials as `secretProviders.<provider>` in `~/.reqly/config.json` (never the project repo) and re-resolve the .env vault URIs immediately. `{ provider: "bitwarden" | "onepassword" | "aws" | "vault", config: { ...provider-specific keys } }`. For bitwarden: `{ accessToken, organizationId }`. Config values are never echoed back; the response includes the refreshed secret status list.
 - `start_proxy`: Start the auto-capture proxy server.
 - `stop_proxy`: Stop the auto-capture proxy server.
+- `get_proxy_status`: Get the capture proxy's live state: `{ running, port?, collectionName? }`. Call before `start_proxy` to avoid a double-start error.
 - `exec_with_proxy`: Start the proxy and run a dev command with it injected.
 - `install_middleware`: Detect the project framework and return the inbound-capture middleware snippet.
 - `create_flow`, `get_flow`, `list_flows`, `delete_flow`: Manage flows (multi-step automation tests, separate from collections).

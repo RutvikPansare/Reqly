@@ -231,6 +231,67 @@ describe('CollectionManager', () => {
     it('rejects reading a collection whose name escapes the base dir', async () => {
       await expect(manager.getCollection('../../etc')).rejects.toThrow(/invalid/i);
     });
+
+    // Destructive-path traversal: deleteCollection does a recursive rm on a
+    // path built from the name, so an escaping name would delete arbitrary
+    // directories outside the base dir.
+    it('rejects deleting a collection whose name escapes the base dir', async () => {
+      const victim = fs.mkdtempSync(path.join(os.tmpdir(), 'reqly-victim-'));
+      try {
+        const rel = path.relative(tmpDir, victim);
+        await expect(manager.deleteCollection(rel)).rejects.toThrow(/invalid/i);
+        expect(fs.existsSync(victim)).toBe(true);
+      } finally {
+        fs.rmSync(victim, { recursive: true, force: true });
+      }
+    });
+
+    it('rejects deleting a request whose name escapes the collection dir', async () => {
+      await manager.createCollection('TestCol');
+      const victim = path.join(tmpDir, 'outside.yaml');
+      fs.writeFileSync(victim, 'name: outside\n');
+      await expect(manager.deleteRequest('TestCol', '../outside')).rejects.toThrow(/invalid/i);
+      expect(fs.existsSync(victim)).toBe(true);
+    });
+
+    it('rejects deleting a request from an escaping collection name', async () => {
+      await expect(manager.deleteRequest('../TestCol', 'GetUser')).rejects.toThrow(/invalid/i);
+    });
+
+    it('rejects renaming a collection whose old name escapes the base dir', async () => {
+      await expect(manager.renameCollection('../evil', 'Clean')).rejects.toThrow(/invalid/i);
+    });
+
+    it('rejects duplicating a collection whose name escapes the base dir', async () => {
+      await expect(manager.duplicateCollection('../evil')).rejects.toThrow(/invalid/i);
+    });
+
+    it('rejects moving a request into an escaping target collection name', async () => {
+      await manager.createCollection('Source');
+      await manager.addRequest('Source', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' });
+      await expect(manager.moveRequest('Source', 'GetUser', '../evil')).rejects.toThrow(/invalid/i);
+    });
+
+    // Meta read/write traversal: variables/auth/spec all resolve
+    // `<base>/<name>/collection.yaml` - an escaping name reads or writes a
+    // collection.yaml anywhere on disk.
+    it('rejects collection meta reads and writes with escaping names', async () => {
+      await expect(manager.getCollectionVariables('../evil')).rejects.toThrow(/invalid/i);
+      await expect(manager.setCollectionVariable('../evil', 'k', 'v')).rejects.toThrow(/invalid/i);
+      await expect(manager.deleteCollectionVariable('../evil', 'k')).rejects.toThrow(/invalid/i);
+      await expect(manager.getCollectionAuth('../evil')).rejects.toThrow(/invalid/i);
+      await expect(manager.setCollectionAuth('../evil', { type: 'bearer' } as any)).rejects.toThrow(/invalid/i);
+      await expect(manager.deleteCollectionAuth('../evil')).rejects.toThrow(/invalid/i);
+      await expect(manager.getCollectionSpec('../evil')).rejects.toThrow(/invalid/i);
+      await expect(manager.setCollectionSpec('../evil', { specPath: 'x' } as any)).rejects.toThrow(/invalid/i);
+      await expect(manager.deleteCollectionSpec('../evil')).rejects.toThrow(/invalid/i);
+    });
+
+    it('rejects adding a request to an escaping collection name', async () => {
+      await expect(
+        manager.addRequest('../evil', { id: 'r1', name: 'GetUser', method: 'GET', url: 'http://x.com' }),
+      ).rejects.toThrow(/invalid/i);
+    });
   });
 
   describe('moveRequest', () => {

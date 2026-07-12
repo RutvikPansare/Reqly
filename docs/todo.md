@@ -9,6 +9,11 @@ IDs never reuse - increment from the highest T-NNN in either this file or done.m
 
 ## Queue
 
+- [ ] **T-264** Scope collection mutations to the owning project (multi-project workspaces)
+  - Found during the T-263 audit: `GET /api/collections` lists collections from every workspace project (`loadAll`), but every mutation route (rename/delete/add request/settings/run) uses only the active project's `CollectionManager`. If two projects have a same-named collection, sidebar actions on the non-active project's collection silently hit the active project's copy; otherwise they 404.
+  - Fix direction: routes accept an optional `projectDir` (from `col.projectDir` the UI already receives) and resolve a scoped `CollectionManager`; UI threads it through `api.ts`. MCP tools keep operating on the active project.
+  - Related nit: clicking a project group header in the sidebar only sets local display state (`setProjectPath`) without switching the server's active project - decide whether it should call `/api/switch-project` or be non-interactive.
+
 ---
 
 ### Cross-repo Flows (post-launch)

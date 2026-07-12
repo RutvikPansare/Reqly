@@ -84,6 +84,12 @@ export function CapturePanel({ onSelectCaptured, onOpenCollection }: {
         setTunnelActive(data.active);
         setTunnelUrl(data.url || '');
       });
+    // Sync the proxy toggle with the server - the proxy may already be
+    // running (started via MCP or before a page reload).
+    fetch('/api/proxy/status')
+      .then(res => res.json())
+      .then(data => setActive(!!data.running))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

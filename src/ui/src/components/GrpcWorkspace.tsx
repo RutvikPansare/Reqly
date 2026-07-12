@@ -271,14 +271,21 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
     }
 
     const grpcCfg = buildGrpcConfig(parsed.value);
-    if (Object.keys(enabledMeta).length > 0) grpcCfg.metadata = enabledMeta;
 
     try {
       const res = await fetch('/api/run/adhoc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          request: { type: 'grpc', _collection: activeCollection, url: url.trim(), grpc: grpcCfg }
+          // Metadata travels as request.headers - the same field saved YAML
+          // uses - so the server merges it into gRPC Metadata with auth.
+          request: {
+            type: 'grpc',
+            _collection: activeCollection,
+            url: url.trim(),
+            ...(Object.keys(enabledMeta).length > 0 ? { headers: enabledMeta } : {}),
+            grpc: grpcCfg,
+          }
         }),
       });
       const data = await res.json();
@@ -342,6 +349,10 @@ export function GrpcWorkspaceInner({ initialRequest, onUpdate }: GrpcWorkspacePr
     setSaveModalOpen(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+    // Record where the request now lives so the next Save updates it in place
+    // instead of reopening the save modal.
+    setActiveCollection(collectionName);
+    setActiveRequestName(requestName);
     if (onUpdate) onUpdate({ ...reqToSave, _collection: collectionName, tabName: requestName });
   };
 

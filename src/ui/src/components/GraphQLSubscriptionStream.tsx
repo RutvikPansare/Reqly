@@ -54,7 +54,7 @@ export function GraphQLSubscriptionStream({ url, query, variables, operationName
     clientRef.current = client;
 
     const unsub = client.subscribe(
-      { query, variables: vars, operationName: operationName ?? undefined },
+      { query, variables: vars, operationName: operationName || undefined },
       {
         next(value) {
           setConnected(true);

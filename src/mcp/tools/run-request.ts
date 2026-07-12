@@ -181,16 +181,19 @@ async function handleGrpcStreaming(
 
 function injectAuthToMetadata(auth: any, metadata: Record<string, string>) {
   const creds = auth.credentials ?? {};
-  switch (auth.type) {
+  switch (String(auth.type).toLowerCase()) {
     case 'bearer':
       if (creds.token) metadata['authorization'] = `Bearer ${creds.token}`;
       break;
-    case 'apiKey':
-      if (creds.key && creds.value) {
+    case 'apikey': {
+      // UI shape is { keyName, value }; legacy profiles use { key, value }.
+      const headerName = creds.keyName || creds.key;
+      if (headerName && creds.value) {
         // inject as lowercase header name
-        metadata[creds.key.toLowerCase()] = creds.value;
+        metadata[headerName.toLowerCase()] = creds.value;
       }
       break;
+    }
     case 'basic':
       if (creds.username && creds.password) {
         const encoded = Buffer.from(`${creds.username}:${creds.password}`).toString('base64');

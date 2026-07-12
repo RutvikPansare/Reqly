@@ -263,6 +263,10 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
     setSaveModalOpen(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+    // Record where the request now lives so the next Save updates it in place
+    // instead of reopening the save modal.
+    setActiveCollection(collectionName);
+    setActiveRequestName(requestName);
     if (onUpdate) onUpdate({ ...reqToSave, _collection: collectionName, tabName: requestName });
   };
 
@@ -378,6 +382,8 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
             url,
             headers: { ...enabledHeaders },
             body: { query: INTROSPECTION_QUERY },
+            // Resolve collection variables in the URL/headers server-side.
+            ...(activeCollection ? { _collection: activeCollection } : {}),
           }
         })
       });
@@ -429,6 +435,8 @@ export function GraphQLWorkspaceInner({ initialRequest, onUpdate }: GraphQLWorks
             url,
             headers: { 'Content-Type': 'application/json', ...enabledHeaders },
             body,
+            // Resolve collection variables in the URL/headers/body server-side.
+            ...(activeCollection ? { _collection: activeCollection } : {}),
           }
         })
       });

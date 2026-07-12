@@ -9,6 +9,7 @@ import { ProtocolUrlBar } from './RealtimePanelChrome.js';
 import { SplitPane } from './SplitPane.js';
 import { VariableInput } from './VariableInput.js';
 import type { WorkspaceTab } from '../hooks/useWorkspaceTabs.js';
+import { resolveTemplateVars } from '../lib/utils.js';
 
 interface SocketIOPanelProps { tab: WorkspaceTab; onTabUpdate: (updates: Partial<WorkspaceTab>) => void; onSave: () => void; flashSaved?: boolean; isDirty?: boolean; varCompletionExtension?: any; availableVariables?: any[]; }
 
@@ -27,7 +28,7 @@ export function SocketIOPanel({ tab, onTabUpdate, onSave, flashSaved, isDirty, v
     setStatus('connecting');
     setMessages(prev => [...prev, { id: `${Date.now()}`, ts: Date.now(), source: 'info', payload: 'Connecting to Socket.IO...' }]);
     try {
-      const socket = io(tab.url, { path: tab.realtime?.path || '/socket.io', ...(tab.realtime?.authType === 'bearer' ? { auth: { token: tab.realtime?.token || '' } } : {}) });
+      const socket = io(resolveTemplateVars(tab.url, availableVariables), { path: tab.realtime?.path || '/socket.io', ...(tab.realtime?.authType === 'bearer' ? { auth: { token: resolveTemplateVars(tab.realtime?.token || '', availableVariables) } } : {}) });
       socketRef.current = socket;
       socket.on('connect', () => { setStatus('connected'); setMessages(prev => [...prev, { id: `${Date.now()}o`, ts: Date.now(), source: 'info', payload: 'Connected' }]); });
       socket.onAny((event, ...args) => setMessages(prev => [...prev, { id: `${Date.now()}m${Math.random()}`, ts: Date.now(), source: 'server', payload: args.length === 1 && typeof args[0] !== 'object' ? String(args[0]) : JSON.stringify(args, null, 2), event }]));
