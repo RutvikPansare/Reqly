@@ -42,6 +42,41 @@
   }
   ::selection { background: rgba(59,130,246,.35); }
 
+  /* ---------- ambient / interactive layer ---------- */
+  #scroll-progress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+    background: linear-gradient(90deg, var(--blue-mid), var(--green));
+    z-index: 80; pointer-events: none;
+  }
+  #cursor-glow {
+    position: fixed; top: 0; left: 0; width: 560px; height: 560px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,130,246,.16), rgba(59,130,246,.05) 42%, transparent 70%);
+    pointer-events: none; z-index: 1; opacity: 0;
+    transition: opacity .4s ease;
+    mix-blend-mode: screen;
+    will-change: transform;
+  }
+  @media (pointer: coarse) { #cursor-glow { display: none; } }
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(90px);
+    opacity: .32; pointer-events: none; z-index: -1;
+  }
+  .orb-a { width: 560px; height: 560px; top: -160px; left: -120px; background: radial-gradient(circle, rgba(37,99,235,.6), transparent 70%); animation: floatA 24s ease-in-out infinite; }
+  .orb-b { width: 460px; height: 460px; top: 32%; right: -160px; background: radial-gradient(circle, rgba(52,211,153,.4), transparent 70%); animation: floatB 28s ease-in-out infinite; }
+  .orb-c { width: 420px; height: 420px; bottom: -180px; left: 36%; background: radial-gradient(circle, rgba(96,165,250,.4), transparent 70%); animation: floatC 32s ease-in-out infinite; }
+  @keyframes floatA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(70px, 50px); } }
+  @keyframes floatB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-60px, 70px); } }
+  @keyframes floatC { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px, -60px); } }
+
+  .spotlight { position: relative; }
+  .spotlight::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%), rgba(96,165,250,.14), transparent 65%);
+    opacity: 0; transition: opacity .35s ease; pointer-events: none;
+  }
+  .spotlight:hover::after { opacity: 1; }
+
   /* ---------- shared ---------- */
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
   a { color: inherit; text-decoration: none; }
@@ -65,14 +100,23 @@
     background: var(--panel);
     color: var(--text);
     cursor: pointer;
-    transition: border-color .15s, background .15s, transform .15s;
+    position: relative;
+    transition: border-color .15s, background .15s, transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .2s;
   }
   .btn:hover { border-color: var(--blue-mid); transform: translateY(-1px); }
   .btn.primary {
     background: var(--blue);
     border: 1px solid var(--blue-mid);
+    overflow: hidden;
   }
-  .btn.primary:hover { background: var(--blue-mid); border-color: var(--blue-soft); }
+  .btn.primary::before {
+    content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,.28), transparent);
+    transform: skewX(-20deg);
+    transition: left .55s ease;
+  }
+  .btn.primary:hover::before { left: 130%; }
+  .btn.primary:hover { background: var(--blue-mid); border-color: var(--blue-soft); box-shadow: 0 10px 28px -10px rgba(37,99,235,.7); }
   .btn svg { flex-shrink: 0; }
 
   /* ---------- nav ---------- */
@@ -81,8 +125,11 @@
     backdrop-filter: blur(14px);
     background: rgba(6,9,15,.8);
     border-bottom: 1px solid var(--border);
+    transition: background .3s ease, box-shadow .3s ease;
   }
-  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  nav.scrolled { background: rgba(6,9,15,.94); box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; transition: height .3s ease; }
+  nav.scrolled .nav-inner { height: 56px; }
   .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
   .logo-mark {
     width: 30px; height: 30px; border-radius: 8px;
@@ -100,13 +147,15 @@
   /* ---------- hero ---------- */
   .hero { padding: 150px 0 90px; text-align: center; position: relative; }
   .grid-bg {
-    position: absolute; inset: 0;
+    position: absolute; inset: -40px;
     background-image:
       linear-gradient(rgba(96,165,250,.05) 1px, transparent 1px),
       linear-gradient(90deg, rgba(96,165,250,.05) 1px, transparent 1px);
     background-size: 44px 44px;
     mask-image: radial-gradient(ellipse 75% 60% at 50% 20%, black, transparent);
     pointer-events: none;
+    transition: transform .25s ease-out;
+    will-change: transform;
   }
   .pill {
     display: inline-flex; align-items: center; gap: 8px;
@@ -122,7 +171,13 @@
     font-size: clamp(40px, 6.4vw, 72px);
     font-weight: 800; letter-spacing: -.035em; line-height: 1.05;
   }
-  h1 .accent { color: var(--blue-soft); }
+  h1 .accent, .final-cta .accent {
+    background: linear-gradient(90deg, var(--blue-soft), var(--green), var(--blue-pale), var(--blue-soft));
+    background-size: 300% auto;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: accentShift 7s ease-in-out infinite;
+  }
+  @keyframes accentShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
   .hero p.lede {
     margin: 22px auto 0; max-width: 620px;
     font-size: 19px; color: var(--text-dim); line-height: 1.6;
@@ -172,6 +227,8 @@
     border: 1px solid var(--border-bright);
     border-radius: 14px;
     overflow: hidden;
+    transition: transform .3s ease-out;
+    will-change: transform;
   }
   .term-bar {
     display: flex; align-items: center; gap: 8px;
@@ -424,7 +481,6 @@
 
   /* cta */
   .final-cta { padding: 110px 0; text-align: center; }
-  .final-cta .accent { color: var(--blue-soft); }
 
   /* footer */
   footer {
@@ -443,13 +499,20 @@
   .reveal.in { opacity: 1; transform: none; }
 
   @media (prefers-reduced-motion: reduce) {
-    .arch-flow, .fedge.animated, .cursor { animation: none; }
+    .arch-flow, .fedge.animated, .cursor, .orb, h1 .accent, .final-cta .accent { animation: none; }
     .reveal { opacity: 1; transform: none; transition: none; }
     html { scroll-behavior: auto; }
+    #cursor-glow { display: none; }
   }
 </style>
 </head>
 <body>
+
+<div id="scroll-progress"></div>
+<div id="cursor-glow"></div>
+<div class="orb orb-a"></div>
+<div class="orb orb-b"></div>
+<div class="orb orb-c"></div>
 
 <nav>
   <div class="wrap nav-inner">
@@ -506,7 +569,7 @@
       <span class="tool">Claude Desktop</span>
     </div>
 
-    <div class="terminal">
+    <div class="terminal spotlight">
       <div class="term-bar">
         <span class="b r"></span><span class="b y"></span><span class="b g"></span>
         <span class="title">agent session - claude code</span>
@@ -526,39 +589,39 @@
     <h2 class="title">One engine. Thirty-plus tools.<br>Your agent drives.</h2>
     <p class="sub">Reqly is not an AI. It is an execution engine your AI connects to via MCP. Connect once, and your agent gets the full toolkit.</p>
     <div class="feat-grid">
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
         <h3>Build collections</h3><p>Agent reads your routes and scaffolds requests automatically. No YAML by hand, no clicking through forms.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
         <h3>Fire and assert</h3><p>Runs requests, checks status, body, and latency. Returns pass/fail per assertion in a structured shape agents can parse.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
         <h3>Chain flows</h3><p>Multi-step e2e sequences with extract, poll, and conditional branching. Chains REST, GraphQL, and gRPC in the same flow.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><polyline points="9 14 11 16 15 12"/></svg></div>
         <h3>Validate contracts</h3><p>Point a collection at an OpenAPI spec. Every response is checked against it automatically on every run.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div>
         <h3>Serve mocks</h3><p>Fake a backend from saved examples. Frontend dev and agent testing without a live server.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
         <h3>Capture traffic</h3><p>Proxy for outbound, one-line middleware for inbound, public tunnel for webhooks. Collections build themselves.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></div>
         <h3>Export anywhere</h3><p>Generate OpenAPI specs, Postman files, or Markdown API docs. You are never locked in.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
         <h3>Real auth support</h3><p>Bearer, API Key, Basic, OAuth 2.0 with PKCE, mTLS, and AWS SigV4 signing for API Gateway, Bedrock, AppSync, and S3.</p>
       </div>
-      <div class="feat reveal">
+      <div class="feat reveal spotlight">
         <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
         <h3>Every protocol</h3><p>REST, GraphQL with schema introspection, gRPC with server reflection, WebSocket, SSE, Socket.IO, and MQTT.</p>
       </div>
@@ -643,17 +706,17 @@
     <h2 class="title">One prompt. Tests running<br>in CI forever.</h2>
     <p class="sub">No manual Actions YAML. No environment wiring. Your agent chains Reqly's MCP tools end to end in a single session.</p>
     <div class="pipeline">
-      <div class="step reveal">
+      <div class="step reveal spotlight">
         <div class="num">STEP 01</div>
         <h3>Agent builds the collection</h3>
         <p>"Read my Express routes and build a collection with assertions." The agent calls <code>create_collection</code> and <code>create_request</code> for every endpoint it finds in your code.</p>
       </div>
-      <div class="step reveal">
+      <div class="step reveal spotlight">
         <div class="num">STEP 02</div>
         <h3>Agent writes the e2e flow</h3>
         <p>"Write a flow for the login → checkout path." The agent calls <code>create_flow</code> and <code>add_flow_step</code>, runs it, and iterates until every step is green.</p>
       </div>
-      <div class="step reveal">
+      <div class="step reveal spotlight">
         <div class="num">STEP 03</div>
         <h3>Agent ships it to CI</h3>
         <p>"Export it to CI." One call to <code>export_flow_ci</code> writes a GitHub Actions workflow that installs Reqly, runs the flow, and uploads JUnit results.</p>
@@ -668,7 +731,7 @@
     <h2 class="title">Collections are plain YAML.<br>In your repo. Diffable.</h2>
     <p class="sub">No proprietary formats, no cloud account, no binary database. Collections live in <code style="font-family:var(--mono);font-size:15px;color:var(--blue-soft)">.reqly/</code> and travel with your code via git. Your git provider is your RBAC.</p>
     <div class="code-cols">
-      <div class="code-card reveal">
+      <div class="code-card reveal spotlight">
         <div class="tabs">
           <button class="tab active" data-pane="pane-req" onclick="switchTab(this)">create-user.yaml</button>
           <button class="tab" data-pane="pane-flow" onclick="switchTab(this)">e2e-post.yaml</button>
@@ -718,7 +781,7 @@
         <span class="y-key">with</span>:
           <span class="y-key">path</span>: <span class="y-str">results.xml</span></pre>
       </div>
-      <div class="flow-card reveal">
+      <div class="flow-card reveal spotlight">
         <div class="head">flow engine · <span>run → extract → assert → branch → poll</span></div>
         <svg viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow step diagram">
           <!-- run -->
@@ -787,10 +850,10 @@
     </div>
 
     <div class="stats">
-      <div class="stat reveal"><div class="big"><span class="count" data-target="95">0</span>%</div><div class="lbl">faster scaffolding 20 REST endpoints</div></div>
-      <div class="stat reveal"><div class="big"><span class="count" data-target="88">0</span>%</div><div class="lbl">faster writing auth and validation tests</div></div>
-      <div class="stat reveal"><div class="big"><span class="count" data-target="86">0</span>%</div><div class="lbl">faster chaining login → checkout flows</div></div>
-      <div class="stat reveal"><div class="big"><span class="count" data-target="91">0</span>%</div><div class="lbl">less onboarding time: 10 min vs 120 min</div></div>
+      <div class="stat reveal spotlight"><div class="big"><span class="count" data-target="95">0</span>%</div><div class="lbl">faster scaffolding 20 REST endpoints</div></div>
+      <div class="stat reveal spotlight"><div class="big"><span class="count" data-target="88">0</span>%</div><div class="lbl">faster writing auth and validation tests</div></div>
+      <div class="stat reveal spotlight"><div class="big"><span class="count" data-target="86">0</span>%</div><div class="lbl">faster chaining login → checkout flows</div></div>
+      <div class="stat reveal spotlight"><div class="big"><span class="count" data-target="91">0</span>%</div><div class="lbl">less onboarding time: 10 min vs 120 min</div></div>
     </div>
   </div>
 </section>
@@ -801,7 +864,7 @@
     <h2 class="title">Install in seconds.<br>Runs on macOS, Linux, Windows.</h2>
     <p class="sub">No account. No telemetry. No sync. Collections stay in your repo, secrets stay on your machine.</p>
     <div class="dl-grid">
-      <div class="dl-card featured reveal">
+      <div class="dl-card featured reveal spotlight">
         <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Desktop App <span class="tag">macOS</span></h3>
         <p>Native desktop shell around the same headless engine. The MCP connection stays alive whether the window is open or closed.</p>
         <div class="dl-cmd"><span><span class="dollar">$</span>brew install --cask reqly</span>
@@ -812,7 +875,7 @@
           Download latest release
         </a>
       </div>
-      <div class="dl-card reveal">
+      <div class="dl-card reveal spotlight">
         <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> npm <span class="tag">all platforms</span></h3>
         <p>CLI, MCP server, and localhost web UI in one global install. The fastest way to get your agent connected.</p>
         <div class="dl-cmd"><span><span class="dollar">$</span>npm install -g getreqly</span>
@@ -822,7 +885,7 @@
           <button class="copy-btn" onclick="copyCmd(this, 'reqly setup')" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         </div>
       </div>
-      <div class="dl-card reveal">
+      <div class="dl-card reveal spotlight">
         <h3><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> Homebrew <span class="tag">macOS CLI</span></h3>
         <p>Prefer brew for everything? Tap and install the CLI directly. One command wires up Cursor, Claude Code, Gemini CLI, and Codex.</p>
         <div class="dl-cmd"><span><span class="dollar">$</span>brew tap RutvikPansare/reqly</span>
@@ -865,6 +928,9 @@
 </footer>
 
 <script>
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pointerFine = window.matchMedia('(pointer: fine)').matches;
+
   /* copy buttons */
   function copyCmd(btn, text) {
     navigator.clipboard.writeText(text).then(() => {
@@ -888,6 +954,78 @@
     document.getElementById(btn.dataset.pane).classList.add('active');
   }
 
+  /* nav scroll state + top progress bar */
+  const navEl = document.querySelector('nav');
+  const progressEl = document.getElementById('scroll-progress');
+  function onScroll() {
+    navEl.classList.toggle('scrolled', window.scrollY > 20);
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    progressEl.style.width = (max > 0 ? (doc.scrollTop / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* cursor-following ambient glow */
+  const cursorGlow = document.getElementById('cursor-glow');
+  if (cursorGlow && !reduceMotion && pointerFine) {
+    let tx = window.innerWidth / 2, ty = window.innerHeight / 2, cx = tx, cy = ty, started = false;
+    window.addEventListener('mousemove', e => {
+      tx = e.clientX; ty = e.clientY;
+      if (!started) { started = true; cursorGlow.style.opacity = '1'; }
+    });
+    (function raf() {
+      cx += (tx - cx) * 0.12;
+      cy += (ty - cy) * 0.12;
+      cursorGlow.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
+      requestAnimationFrame(raf);
+    })();
+  } else if (cursorGlow) {
+    cursorGlow.remove();
+  }
+
+  /* hero: 3D tilt on the terminal + parallax on the grid backdrop */
+  const heroEl = document.querySelector('.hero');
+  const terminalEl = document.querySelector('.terminal');
+  const gridBgEl = document.querySelector('.grid-bg');
+  if (heroEl && !reduceMotion && pointerFine) {
+    heroEl.addEventListener('mousemove', e => {
+      const r = heroEl.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      if (terminalEl) terminalEl.style.transform = `perspective(1200px) rotateX(${py * -3.5}deg) rotateY(${px * 5}deg)`;
+      if (gridBgEl) gridBgEl.style.transform = `translate(${px * -18}px, ${py * -18}px)`;
+    });
+    heroEl.addEventListener('mouseleave', () => {
+      if (terminalEl) terminalEl.style.transform = '';
+      if (gridBgEl) gridBgEl.style.transform = '';
+    });
+  }
+
+  /* spotlight glow that tracks the cursor within each card */
+  if (!reduceMotion) {
+    document.querySelectorAll('.spotlight').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+        card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      });
+    });
+  }
+
+  /* magnetic buttons: nudge toward the cursor within a small radius */
+  if (!reduceMotion && pointerFine) {
+    document.querySelectorAll('.btn').forEach(btn => {
+      btn.addEventListener('mousemove', e => {
+        const r = btn.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width / 2;
+        const y = e.clientY - r.top - r.height / 2;
+        btn.style.transform = `translate(${x * 0.16}px, ${y * 0.35}px)`;
+      });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+    });
+  }
+
   /* terminal typing animation */
   const termLines = [
     { kind: 'type', html: null, text: 'Read my Express routes, build a collection with assertions, write an e2e flow for login → checkout, and export it to CI' },
@@ -901,7 +1039,6 @@
   const term = document.getElementById('term');
   let termToken = 0;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   async function playTerminal() {
     const token = ++termToken;
